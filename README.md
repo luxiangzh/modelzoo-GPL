@@ -30,6 +30,6 @@ Ascend ModelZoo only provides scripts that downloads and preprocesses public da
 
 To dataset owners: we will remove or update all public content upon request if you don’t want your dataset included on Modelzoo, or wish to update it in any way. Please contact us through a Github/Gitee issue. Your understanding and contribution to this community is greatly appreciated.
 
-Ascend ModelZoo-GPL is GPLV3 licensed，Please see the LICENSE file.
+Ascend ModelZoo-GPL is GPL-3.0 license，Please see the LICENSE file.
 
 
