@@ -1,0 +1,10 @@
+# pip install -U -r requirements.txt
+Cython
+opencv-python
+matplotlib
+pillow
+tensorboard
+PyYAML>=5.3
+scipy
+tqdm
+pycocotools>=2.0.2
