@@ -1,0 +1,4 @@
+classes=80
+train=/home/xxx/coco/train2017.txt
+valid=/home/xxx/coco/val2017.txt
+names=../data/coco.names
