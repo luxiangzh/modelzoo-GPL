@@ -61,10 +61,39 @@ make install
 ```
 
 # 7.NPU 单机单卡训练指令  
-bash train_npu_1p.sh  
+yolov5s:
+
+```
+bash test/train_full_1p.sh  #训练
+bash test/train_performance_1p.sh  #性能
+```
+
+
+yolov5x:
+
+```
+bash test/train_full_1p.sh  --model_name=yolov5x --batch_size=32  #训练
+bash test/train_performance_1p.sh --model_name=yolov5x --batch_size=32  #性能 
+```
+
 
 # 8.NPU 单机八卡训练指令  
-bash train_npu_8p_mp.sh  
+yolov5s:
+
+```
+bash test/train_full_8p.sh  #训练
+bash test/train_performance_8p.sh  #性能
+```
+
+
+yolov5x:
+
+```
+bash test/train_full_8p.sh  --model_name=yolov5x --batch_size=32  #训练
+bash test/train_performance_8p.sh --model_name=yolov5x --batch_size=32  #性能 
+```
+
+
 
 # 9.NPU evalution指令  
 （1）将evaluation_npu_1p.sh 中的参数--coco_instance_path修改为数据集中的实际路径，如将该脚本修改为

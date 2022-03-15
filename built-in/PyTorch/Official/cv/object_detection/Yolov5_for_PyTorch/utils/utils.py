@@ -548,7 +548,7 @@ def build_targets(p, targets, model):
         torch.tensor([[-1.], [0.]], device=targets.device),
         torch.tensor([[0.], [-1.]], device=targets.device)
     ]
-    at = torch.arange(na).view(na, 1).repeat(1, nt_max)  # anchor tensor, same as .repeat_interleave(nt)  (1024, 3)
+    at = torch.arange(na).view(na, 1).repeat(1, nt_max).to(targets.device)  # anchor tensor, same as .repeat_interleave(nt)  (1024, 3)
     a = at.view(-1)
     a = torch.cat((a, a, a, a, a), 0)
 

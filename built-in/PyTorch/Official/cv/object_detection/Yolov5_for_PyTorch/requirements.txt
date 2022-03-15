@@ -8,3 +8,4 @@ PyYAML>=5.3
 scipy
 tqdm
 pycocotools>=2.0.2
+prefetch_generator
