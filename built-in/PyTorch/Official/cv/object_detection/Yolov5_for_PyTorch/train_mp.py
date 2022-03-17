@@ -330,7 +330,6 @@ def train(hyp, tb_writer, opt, device):
                         # tb_writer.add_graph(model, imgs)  # add model to tensorboard
 
             d_1 = time.time()
-            batch = prefetcher.next()
             # end batch ------------------------------------------------------------------------------------------------
 
         # Scheduler
