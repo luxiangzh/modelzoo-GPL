@@ -64,16 +64,14 @@ make install
 yolov5s:
 
 ```
-bash test/train_full_1p.sh  #训练
-bash test/train_performance_1p.sh  #性能
+bash train_npu_1p_v5s.sh  
 ```
 
 
 yolov5x:
 
 ```
-bash test/train_full_1p.sh  --model_name=yolov5x --batch_size=32  #训练
-bash test/train_performance_1p.sh --model_name=yolov5x --batch_size=32  #性能 
+bash train_npu_1p.sh 
 ```
 
 
@@ -81,16 +79,14 @@ bash test/train_performance_1p.sh --model_name=yolov5x --batch_size=32  #性能
 yolov5s:
 
 ```
-bash test/train_full_8p.sh  #训练
-bash test/train_performance_8p.sh  #性能
+bash train_npu_8p_mp_v5s.sh 
 ```
 
 
 yolov5x:
 
 ```
-bash test/train_full_8p.sh  --model_name=yolov5x --batch_size=32  #训练
-bash test/train_performance_8p.sh --model_name=yolov5x --batch_size=32  #性能 
+bash train_npu_8p_mp.sh  
 ```
 
 

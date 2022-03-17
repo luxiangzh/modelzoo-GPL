@@ -2,7 +2,7 @@
 
 cur_path=`pwd`
 model_name=yolov5s
-batch_size=128 
+batch_size=512
 
 for para in $*
 do
