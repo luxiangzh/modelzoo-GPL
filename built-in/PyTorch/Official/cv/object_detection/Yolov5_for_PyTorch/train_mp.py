@@ -43,30 +43,6 @@ hyp = {'optimizer': 'SGD',  # ['adam', 'SGD', None] if none, default is SGD
        'scale': 0.5,  # image scale (+/- gain)
        'shear': 0.0}  # image shear (+/- deg)
 
-class data_prefetcher():
-    def __init__(self, loader, device):
-        self.loader = iter(loader)
-        self.device = device
-        self.stream = torch.npu.Stream()
-        self.preload()
-
-    def preload(self):
-        try:
-            self.batch = next(self.loader)
-        except StopIteration:
-            self.batch = None
-            return
-
-        with torch.npu.stream(self.stream):
-            self.batch[0] = self.batch[0].to(self.device, non_blocking=True).float() / 255.0  # uint8 to float32, 0 - 255 to 0.0 - 1.0
-            self.batch[1] = self.batch[1].to(self.device, non_blocking=True)
-
-    def next(self):
-        torch.npu.current_stream().wait_stream(self.stream)
-        batch = self.batch
-        self.preload()
-        return batch
-
 def train(hyp, tb_writer, opt, device):
     print(f'Hyperparameters {hyp}')
     log_dir = tb_writer.log_dir if tb_writer else 'runs/evolution'  # run directory
@@ -273,12 +249,7 @@ def train(hyp, tb_writer, opt, device):
         optimizer.zero_grad()
         start_time = time.time()
         d_1 = time.time()
-        prefetcher = data_prefetcher(dataloader, device)
-        batch = prefetcher.next()
-        i = -1
-        while batch is not None:
-            (imgs, targets, paths, _) = batch
-            i += 1
+        for i, (imgs, targets, paths, _) in enumerate(dataloader):
             t_time = time.time()
             d_time = t_time - d_1
             ni = i + nb * epoch  # number integrated batches (since train start)
@@ -359,7 +330,6 @@ def train(hyp, tb_writer, opt, device):
                         # tb_writer.add_graph(model, imgs)  # add model to tensorboard
 
             d_1 = time.time()
-            batch = prefetcher.next()
             # end batch ------------------------------------------------------------------------------------------------
 
         # Scheduler
