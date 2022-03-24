@@ -30,8 +30,8 @@ then
 	do 
 	let p_start=0+24*i
 	let p_end=23+24*i
-	taskset -c $p_start-$p_end $CMD python3.7 train_mp.py --data coco.yaml --cfg yolov5s.yaml --addr 127.0.0.1 --weights '' --batch-size 1024 --local_rank $i --device npu --device-num 8 &
+	taskset -c $p_start-$p_end $CMD python3.7 train_mp.py --data coco.yaml --cfg yolov5s.yaml --addr 127.0.0.1 --weights '' --batch-size 512 --local_rank $i --device npu --device-num 8 &
 	done
 else
-    python3.7 train.py --data coco.yaml --cfg yolov5s.yaml --addr 127.0.0.1 --weights '' --batch-size 1024 --local_rank 0 --device npu --device-num 8
+    python3.7 train.py --data coco.yaml --cfg yolov5s.yaml --addr 127.0.0.1 --weights '' --batch-size 512 --local_rank 0 --device npu --device-num 8
 fi
