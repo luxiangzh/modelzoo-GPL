@@ -31,7 +31,7 @@ then
 		    --addr 127.0.0.1 \
 		    --weights '' \
 		    --batch-size $batch_size \
-		    --local_rank 0 \
+		    --local_rank $i \
 		    --device npu \
 		    --device-num 8 \
 		    --epochs 2 > $cur_path/test/train_performance_8p.log 2>&1 &
