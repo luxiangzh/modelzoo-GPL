@@ -4,6 +4,8 @@ import time
 from copy import deepcopy
 
 import torch
+if torch.__version__ >= "1.8.1":
+    import torch_npu
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as F
