@@ -1,5 +1,8 @@
 import argparse
 
+import torch
+if torch.__version__ >= "1.8.1":
+    import torch_npu
 import torch.distributed as dist
 import torch.nn.functional as F
 import torch.optim as optim
