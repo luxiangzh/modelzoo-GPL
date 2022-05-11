@@ -46,7 +46,8 @@ def test(data,
         # Multi-GPU disabled, incompatible with .half() https://github.com/ultralytics/yolov5/issues/99
         # if device.type != 'cpu' and torch.cuda.device_count() > 1:
         #     model = nn.DataParallel(model)
-
+    if torch.__version__ >= "1.8.1":
+        model.to('npu')
     model = amp.initialize(model, opt_level='O1', verbosity=0, loss_scale=64)
 
     # Half
