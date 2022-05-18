@@ -269,10 +269,6 @@ def train(hyp, opt, device, tb_writer=None):
                 if rank != 0:
                     dataset.indices = indices.cpu().numpy()
 
-        # Update mosaic border
-        # b = int(random.uniform(0.25 * imgsz, 0.75 * imgsz + gs) // gs * gs)
-        # dataset.mosaic_border = [b - imgsz, -b]  # height, width borders
-
         mloss = torch.zeros(4, device=device)  # mean losses
         if rank != -1:
             dataloader.sampler.set_epoch(epoch)
@@ -305,13 +301,6 @@ def train(hyp, opt, device, tb_writer=None):
                     imgs = F.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
-            # with amp.autocast(enabled=cuda):
-            #     pred = model(imgs)  # forward
-            #     loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
-            #     if rank != -1:
-            #         loss *= opt.world_size  # gradient averaged between devices in DDP mode
-            #     if opt.quad:
-            #         loss *= 4.
             pred = model(imgs)  # forward
             loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
             if rank != -1:
@@ -320,17 +309,10 @@ def train(hyp, opt, device, tb_writer=None):
                 loss *= 4.
 
             # Backward
-            # scaler.scale(loss).backward()
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
 
             # Optimize
-            # if ni % accumulate == 0:
-            #     scaler.step(optimizer)  # optimizer.step
-            #     scaler.update()
-            #     optimizer.zero_grad()
-            #     if ema:
-            #         ema.update(model)
             if ni % accumulate == 0:
                 optimizer.step()
                 optimizer.zero_grad()
@@ -350,17 +332,6 @@ def train(hyp, opt, device, tb_writer=None):
                     '%g/%g' % (epoch, epochs - 1), mem, *mloss, targets.shape[1], imgs.shape[-1])
                 pbar.set_description(s)
 
-                # Plot
-                # if plots and ni < 3:
-                #     f = save_dir / f'train_batch{ni}.jpg'  # filename
-                #     Thread(target=plot_images, args=(imgs, targets, paths, f), daemon=True).start()
-                #     # if tb_writer:
-                #     #     tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
-                #     #     tb_writer.add_graph(torch.jit.trace(model, imgs, strict=False), [])  # add model graph
-                # elif plots and ni == 10 and wandb_logger.wandb:
-                #     wandb_logger.log({"Mosaics": [wandb_logger.wandb.Image(str(x), caption=x.name) for x in
-                #                                   save_dir.glob('train*.jpg') if x.exists()]})
-
             # end batch ------------------------------------------------------------------------------------------------
         # end epoch ----------------------------------------------------------------------------------------------------
 
@@ -373,29 +344,6 @@ def train(hyp, opt, device, tb_writer=None):
             # mAP
             # ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'gr', 'names', 'stride', 'class_weights'])
             final_epoch = epoch + 1 == epochs
-
-            # # Write
-            # with open(results_file, 'a') as f:
-            #     f.write(s + '%10.4g' * 7 % results + '\n')  # append metrics, val_loss
-            # if len(opt.name) and opt.bucket:
-            #     os.system('gsutil cp %s gs://%s/results/results%s.txt' % (results_file, opt.bucket, opt.name))
-
-            # # Log
-            # tags = ['train/box_loss', 'train/obj_loss', 'train/cls_loss',  # train loss
-            #         'metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95',
-            #         'val/box_loss', 'val/obj_loss', 'val/cls_loss',  # val loss
-            #         'x/lr0', 'x/lr1', 'x/lr2']  # params
-            # for x, tag in zip(list(mloss[:-1]) + list(results) + lr, tags):
-            #     if tb_writer:
-            #         tb_writer.add_scalar(tag, x, epoch)  # tensorboard
-            #     if wandb_logger.wandb:
-            #         wandb_logger.log({tag: x})  # W&B
-
-            # # Update best mAP
-            # fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
-            # if fi > best_fitness:
-            #     best_fitness = fi
-            # wandb_logger.end_epoch(best_result=best_fitness == fi)
 
             # Save model
             if final_epoch:  # if save
@@ -412,29 +360,6 @@ def train(hyp, opt, device, tb_writer=None):
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
     if rank in [-1, 0]:
-        # Plots
-        # if plots:
-        #     plot_results(save_dir=save_dir)  # save as results.png
-        #     if wandb_logger.wandb:
-        #         files = ['results.png', 'confusion_matrix.png', *[f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R')]]
-        #         wandb_logger.log({"Results": [wandb_logger.wandb.Image(str(save_dir / f), caption=f) for f in files
-        #                                       if (save_dir / f).exists()]})
-        # Test best.pt
-        # logger.info('%g epochs completed in %.3f hours.\n' % (epoch - start_epoch + 1, (time.time() - t0) / 3600))
-        # if opt.data.endswith('coco.yaml') and nc == 80:  # if COCO
-        #     m = last # speed, mAP tests
-        #     results, _, _ = test.test(opt.data,
-        #                               batch_size=batch_size * 2,
-        #                               imgsz=imgsz_test,
-        #                               conf_thres=0.001,
-        #                               iou_thres=0.7,
-        #                               model=attempt_load(m, device).half(),
-        #                               single_cls=opt.single_cls,
-        #                               dataloader=testloader,
-        #                               save_dir=save_dir,
-        #                               save_json=True,
-        #                               plots=False,
-        #                               is_coco=is_coco)
 
         # Strip optimizers
         final = last  # final model
