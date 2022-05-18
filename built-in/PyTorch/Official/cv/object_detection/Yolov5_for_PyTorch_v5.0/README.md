@@ -71,7 +71,7 @@ bash test/train_yolov5s_full_1p.sh
 yolov5s:
 
 ```
-bash train_yolov5s_full_8p.sh 
+bash test/train_yolov5s_full_8p.sh 
 ```
 
 # 9.NPU evalution指令  
