@@ -7,7 +7,7 @@ import warnings
 from threading import Thread
 
 import torch
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 
 from utils.general import colorstr, emojis
 from utils.loggers.wandb.wandb_utils import WandbLogger
@@ -52,7 +52,8 @@ class Loggers():
         if 'tb' in self.include and not self.opt.evolve:
             prefix = colorstr('TensorBoard: ')
             self.logger.info(f"{prefix}Start with 'tensorboard --logdir {s.parent}', view at http://localhost:6006/")
-            self.tb = SummaryWriter(str(s))
+            # self.tb = SummaryWriter(str(s))
+            self.tb = None
 
         # W&B
         if wandb and 'wandb' in self.include:

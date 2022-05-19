@@ -18,6 +18,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
+if torch.__version__ >= '1.8.1':
+    import torch_npu
 import torch.distributed as dist
 import torch.nn as nn
 import yaml
@@ -25,6 +27,9 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import Adam, SGD, lr_scheduler
 from tqdm import tqdm
+
+import apex
+from apex import amp
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -54,6 +59,15 @@ LOGGER = logging.getLogger(__name__)
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
 WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
+
+
+def seed_everything():
+    seed = 1234
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
 
 
 def train(hyp,  # path/to/hyp.yaml or hyp dictionary
@@ -97,7 +111,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
     # Config
     plots = not evolve  # create plots
-    cuda = device.type != 'cpu'
+    npu = device.type != 'cpu'
     init_seeds(1 + RANK)
     with torch_distributed_zero_first(LOCAL_RANK):
         data_dict = data_dict or check_dataset(data)  # check if None
@@ -149,13 +163,15 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     if opt.adam:
         optimizer = Adam(g0, lr=hyp['lr0'], betas=(hyp['momentum'], 0.999))  # adjust beta1 to momentum
     else:
-        optimizer = SGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
+        optimizer = apex.optimizers.NpuFusedSGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
 
     optimizer.add_param_group({'params': g1, 'weight_decay': hyp['weight_decay']})  # add g1 with weight_decay
     optimizer.add_param_group({'params': g2})  # add g2 (biases)
     LOGGER.info(f"{colorstr('optimizer:')} {type(optimizer).__name__} with parameter groups "
                 f"{len(g0)} weight, {len(g1)} weight (no decay), {len(g2)} bias")
     del g0, g1, g2
+
+    model, optimizer = amp.initialize(model, optimizer, loss_scale=128, combine_grad=True)
 
     # Scheduler
     if opt.linear_lr:
@@ -173,7 +189,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         # Optimizer
         if ckpt['optimizer'] is not None:
             optimizer.load_state_dict(ckpt['optimizer'])
-            best_fitness = ckpt['best_fitness']
 
         # EMA
         if ema and ckpt.get('ema'):
@@ -195,14 +210,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     nl = model.model[-1].nl  # number of detection layers (used for scaling hyp['obj'])
     imgsz = check_img_size(opt.imgsz, gs, floor=gs * 2)  # verify imgsz is gs-multiple
 
-    # DP mode
-    if cuda and RANK == -1 and torch.cuda.device_count() > 1:
-        logging.warning('DP not recommended, instead use torch.distributed.run for best DDP Multi-GPU results.\n'
-                        'See Multi-GPU Tutorial at https://github.com/ultralytics/yolov5/issues/475 to get started.')
-        model = torch.nn.DataParallel(model)
-
     # SyncBatchNorm
-    if opt.sync_bn and cuda and RANK != -1:
+    if opt.sync_bn and npu and RANK != -1:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(device)
         LOGGER.info('Using SyncBatchNorm()')
 
@@ -238,8 +247,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         callbacks.run('on_pretrain_routine_end')
 
     # DDP mode
-    if cuda and RANK != -1:
-        model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK)
+    if npu and RANK != -1:
+        model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK, broadcast_buffers=False)
 
     # Model parameters
     hyp['box'] *= 3. / nl  # scale to layers
@@ -259,7 +268,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     maps = np.zeros(nc)  # mAP per class
     results = (0, 0, 0, 0, 0, 0, 0)  # P, R, mAP@.5, mAP@.5-.95, val_loss(box, obj, cls)
     scheduler.last_epoch = start_epoch - 1  # do not move
-    scaler = amp.GradScaler(enabled=cuda)
     stopper = EarlyStopping(patience=opt.patience)
     compute_loss = ComputeLoss(model)  # init loss class
     LOGGER.info(f'Image sizes {imgsz} train, {imgsz} val\n'
@@ -279,15 +287,15 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         # b = int(random.uniform(0.25 * imgsz, 0.75 * imgsz + gs) // gs * gs)
         # dataset.mosaic_border = [b - imgsz, -b]  # height, width borders
 
-        mloss = torch.zeros(3, device=device)  # mean losses
+        mloss = torch.zeros(4, device=device)  # mean losses
         if RANK != -1:
             train_loader.sampler.set_epoch(epoch)
-        pbar = enumerate(train_loader)
-        LOGGER.info(('\n' + '%10s' * 7) % ('Epoch', 'gpu_mem', 'box', 'obj', 'cls', 'labels', 'img_size'))
-        if RANK in [-1, 0]:
-            pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
-        for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
+        start_time = time.time()
+        d_l = time.time()
+        for i, (imgs, targets, paths, _) in enumerate(train_loader):  # batch -------------------------------------------------------------
+            t_time = time.time()
+            d_time = t_time - d_l
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255.0  # uint8 to float32, 0-255 to 0.0-1.0
 
@@ -311,85 +319,60 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     imgs = nn.functional.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
-            with amp.autocast(enabled=cuda):
-                pred = model(imgs)  # forward
-                loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
-                if RANK != -1:
-                    loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
-                if opt.quad:
-                    loss *= 4.
+            pred = model(imgs)  # forward
+            loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
+            if RANK != -1:
+                loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
+            if opt.quad:
+                loss *= 4.
 
             # Backward
-            scaler.scale(loss).backward()
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
 
             # Optimize
             if ni - last_opt_step >= accumulate:
-                scaler.step(optimizer)  # optimizer.step
-                scaler.update()
+                optimizer.step()
                 optimizer.zero_grad()
                 if ema:
-                    ema.update(model)
+                    x = torch.tensor([1.]).to(device)
+                    if device.type == 'npu':
+                        params_fp32_fused = optimizer.get_model_combined_params()
+                        ema.update(model, x, params_fp32_fused[0])
+                    else:
+                        ema.update(model, x)
                 last_opt_step = ni
+
+            if i <= 10:
+                sum_time = (time.time() - start_time) / (i + 1)
+                if i == 10:
+                    start_time = time.time()
+            else:
+                sum_time = (time.time() - start_time) / (i - 10)
+            ptime = time.time() - d_l
 
             # Log
             if RANK in [-1, 0]:
                 mloss = (mloss * i + loss_items) / (i + 1)  # update mean losses
-                mem = f'{torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0:.3g}G'  # (GB)
-                pbar.set_description(('%10s' * 2 + '%10.4g' * 5) % (
-                    f'{epoch}/{epochs - 1}', mem, *mloss, targets.shape[0], imgs.shape[-1]))
-                callbacks.run('on_train_batch_end', ni, model, imgs, targets, paths, plots, opt.sync_bn)
+                print(
+                    'Epoch:[%2g][%4g/%4g][%s][FPS:%3.1f][mTime:%3.3f][pTime:%3.3f][dTime:%3.3f] IoU:%.3f objectness:%.3f classfication:%.3f totalLoss:%.3f' % (
+                    epoch, i, nb, device, opt.batch_size / sum_time, sum_time, ptime, d_time, *mloss))
+            d_l = time.time()
             # end batch ------------------------------------------------------------------------------------------------
 
         # Scheduler
-        lr = [x['lr'] for x in optimizer.param_groups]  # for loggers
         scheduler.step()
 
+        # save every epoch
         if RANK in [-1, 0]:
-            # mAP
-            callbacks.run('on_train_epoch_end', epoch=epoch)
-            ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'names', 'stride', 'class_weights'])
-            final_epoch = (epoch + 1 == epochs) or stopper.possible_stop
-            if not noval or final_epoch:  # Calculate mAP
-                results, maps, _ = val.run(data_dict,
-                                           batch_size=batch_size // WORLD_SIZE * 2,
-                                           imgsz=imgsz,
-                                           model=ema.ema,
-                                           single_cls=single_cls,
-                                           dataloader=val_loader,
-                                           save_dir=save_dir,
-                                           plots=False,
-                                           callbacks=callbacks,
-                                           compute_loss=compute_loss)
-
-            # Update best mAP
-            fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
-            if fi > best_fitness:
-                best_fitness = fi
-            log_vals = list(mloss) + list(results) + lr
-            callbacks.run('on_fit_epoch_end', log_vals, epoch, best_fitness, fi)
-
-            # Save model
-            if (not nosave) or (final_epoch and not evolve):  # if save
-                ckpt = {'epoch': epoch,
-                        'best_fitness': best_fitness,
-                        'model': deepcopy(de_parallel(model)).half(),
-                        'ema': deepcopy(ema.ema).half(),
-                        'updates': ema.updates,
-                        'optimizer': optimizer.state_dict(),
-                        'wandb_id': loggers.wandb.wandb_run.id if loggers.wandb else None}
-
-                # Save last, best and delete
-                torch.save(ckpt, last)
-                if best_fitness == fi:
-                    torch.save(ckpt, best)
-                if (epoch > 0) and (opt.save_period > 0) and (epoch % opt.save_period == 0):
-                    torch.save(ckpt, w / f'epoch{epoch}.pt')
-                del ckpt
-                callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
-
-            # Stop Single-GPU
-            if RANK == -1 and stopper(epoch=epoch, fitness=fi):
-                break
+            final_epoch = epoch + 1 == epochs
+            ckpt = {
+                    'epoch': epoch,
+                    'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
+                    'optimizer': None if final_epoch else optimizer.state_dict()
+            }
+            torch.save(ckpt, 'yolov5_' + str(RANK) + '.pt')
+            print('ckpt saved...')
 
             # Stop DDP TODO: known issues shttps://github.com/ultralytics/yolov5/pull/4576
             # stop = stopper(epoch=epoch, fitness=fi)
@@ -405,29 +388,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     # end training -----------------------------------------------------------------------------------------------------
     if RANK in [-1, 0]:
         LOGGER.info(f'\n{epoch - start_epoch + 1} epochs completed in {(time.time() - t0) / 3600:.3f} hours.')
-        for f in last, best:
-            if f.exists():
-                strip_optimizer(f)  # strip optimizers
-                if f is best:
-                    LOGGER.info(f'\nValidating {f}...')
-                    results, _, _ = val.run(data_dict,
-                                            batch_size=batch_size // WORLD_SIZE * 2,
-                                            imgsz=imgsz,
-                                            model=attempt_load(f, device).half(),
-                                            iou_thres=0.65 if is_coco else 0.60,  # best pycocotools results at 0.65
-                                            single_cls=single_cls,
-                                            dataloader=val_loader,
-                                            save_dir=save_dir,
-                                            save_json=is_coco,
-                                            verbose=True,
-                                            plots=True,
-                                            callbacks=callbacks,
-                                            compute_loss=compute_loss)  # val best model with plots
 
-        callbacks.run('on_train_end', last, best, plots, epoch)
-        LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}")
-
-    torch.cuda.empty_cache()
+    torch.npu.empty_cache()
     return results
 
 
@@ -502,15 +464,18 @@ def main(opt, callbacks=Callbacks()):
         opt.save_dir = str(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))
 
     # DDP mode
-    device = select_device(opt.device, batch_size=opt.batch_size)
     if LOCAL_RANK != -1:
-        assert torch.cuda.device_count() > LOCAL_RANK, 'insufficient CUDA devices for DDP command'
-        assert opt.batch_size % WORLD_SIZE == 0, '--batch-size must be multiple of CUDA device count'
+        assert torch.npu.device_count() > LOCAL_RANK, 'insufficient NPU devices for DDP command'
+        assert opt.batch_size % WORLD_SIZE == 0, '--batch-size must be multiple of NPU device count'
         assert not opt.image_weights, '--image-weights argument is not compatible with DDP training'
         assert not opt.evolve, '--evolve argument is not compatible with DDP training'
-        torch.cuda.set_device(LOCAL_RANK)
-        device = torch.device('cuda', LOCAL_RANK)
-        dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo")
+        torch.npu.set_device(LOCAL_RANK)
+        device = torch.device('npu', LOCAL_RANK)
+        dist.init_process_group(backend="hccl", world_size=WORLD_SIZE, rank=RANK)
+    else:
+        # Single device training.
+        torch.npu.set_device(int(opt.device))
+        device = torch.device('npu', int(opt.device))
 
     # Train
     if not opt.evolve:
@@ -616,5 +581,6 @@ def run(**kwargs):
 
 
 if __name__ == "__main__":
+    seed_everything()
     opt = parse_opt()
     main(opt)

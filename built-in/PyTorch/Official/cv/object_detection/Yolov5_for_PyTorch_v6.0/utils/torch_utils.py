@@ -34,10 +34,10 @@ def torch_distributed_zero_first(local_rank: int):
     Decorator to make all processes in distributed training wait for each local_master to do something.
     """
     if local_rank not in [-1, 0]:
-        dist.barrier(device_ids=[local_rank])
+        dist.barrier()
     yield
     if local_rank == 0:
-        dist.barrier(device_ids=[0])
+        dist.barrier()
 
 
 def date_modified(path=__file__):
@@ -55,18 +55,23 @@ def git_describe(path=Path(__file__).parent):  # path must be a directory
         return ''  # not a git repository
 
 
-def select_device(device='', batch_size=None):
+def select_device(device='', npu_id='',batch_size=None):
     # device = 'cpu' or '0' or '0,1,2,3'
     s = f'YOLOv5 🚀 {git_describe() or date_modified()} torch {torch.__version__} '  # string
-    device = str(device).strip().lower().replace('cuda:', '')  # to string, 'cuda:0' to '0'
+
+    npu = device.lower() == 'npu'
+    npu_id = int(npu_id)
+    if npu:
+        torch.npu.set_device("npu:%d" % npu_id)
+        return torch.device('npu', npu_id)
+
     cpu = device == 'cpu'
     if cpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # force torch.cuda.is_available() = False
     elif device:  # non-cpu device requested
-        os.environ['CUDA_VISIBLE_DEVICES'] = device  # set environment variable
-        assert torch.cuda.is_available(), f'CUDA unavailable, invalid device {device} requested'  # check availability
+        assert torch.npu.is_available(), f'CUDA unavailable, invalid device {device} requested'  # check availability
 
-    cuda = not cpu and torch.cuda.is_available()
+    cuda = not cpu and torch.npu.is_available()
     if cuda:
         devices = device.split(',') if device else '0'  # range(torch.cuda.device_count())  # i.e. 0,1,6,7
         n = len(devices)  # device count
@@ -74,7 +79,7 @@ def select_device(device='', batch_size=None):
             assert batch_size % n == 0, f'batch-size {batch_size} not multiple of GPU count {n}'
         space = ' ' * (len(s) + 1)
         for i, d in enumerate(devices):
-            p = torch.cuda.get_device_properties(i)
+            p = torch.npu.get_device_properties(i)
             s += f"{'' if i == 0 else space}CUDA:{d} ({p.name}, {p.total_memory / 1024 ** 2}MB)\n"  # bytes to MB
     else:
         s += 'CPU\n'
@@ -85,8 +90,8 @@ def select_device(device='', batch_size=None):
 
 def time_sync():
     # pytorch-accurate time
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    if torch.npu.is_available():
+        torch.npu.synchronize()
     return time.time()
 
 
@@ -130,7 +135,7 @@ def profile(input, ops, n=10, device=None):
                         t[2] = float('nan')
                     tf += (t[1] - t[0]) * 1000 / n  # ms per op forward
                     tb += (t[2] - t[1]) * 1000 / n  # ms per op backward
-                mem = torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0  # (GB)
+                mem = torch.npu.memory_reserved() / 1E9 if torch.cuda.is_available() else 0  # (GB)
                 s_in = tuple(x.shape) if isinstance(x, torch.Tensor) else 'list'
                 s_out = tuple(y.shape) if isinstance(y, torch.Tensor) else 'list'
                 p = sum(list(x.numel() for x in m.parameters())) if isinstance(m, nn.Module) else 0  # parameters
@@ -139,7 +144,7 @@ def profile(input, ops, n=10, device=None):
             except Exception as e:
                 print(e)
                 results.append(None)
-            torch.cuda.empty_cache()
+            torch.npu.empty_cache()
     return results
 
 
@@ -323,17 +328,64 @@ class ModelEMA:
         for p in self.ema.parameters():
             p.requires_grad_(False)
 
-    def update(self, model):
+        self.is_fused = False
+
+    def update(self, model, x, model_params_fused=None):
         # Update EMA parameters
         with torch.no_grad():
             self.updates += 1
             d = self.decay(self.updates)
 
-            msd = model.module.state_dict() if is_parallel(model) else model.state_dict()  # model state_dict
-            for k, v in self.ema.state_dict().items():
-                if v.dtype.is_floating_point:
-                    v *= d
-                    v += (1. - d) * msd[k].detach()
+            if x.device.type == 'npu':
+                from apex.contrib.combine_tensors import combine_npu
+                d_inv = 1. - d
+                d = torch.tensor([d], device=x.device)
+
+                if not self.is_fused:
+
+                    # this process needs special attention, the order of params should be identical to model
+                    g0, g1, g2 = [], [], []  # optimizer parameter groups
+                    for v in self.ema.modules():
+                        if hasattr(v, 'bias') and isinstance(v.bias, nn.Parameter):  # bias
+                            g2.append(v.bias)
+                        if isinstance(v, nn.BatchNorm2d):  # weight (no decay)
+                            g0.append(v.weight)
+                        elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):  # weight (with decay)
+                            g1.append(v.weight)
+
+                    ema_all_params = g0 + g1 + g2
+                    self.ema_params_fused = combine_npu(ema_all_params)
+
+                    ema_all_buffers = []
+                    for name, b in self.ema.named_buffers():
+                        if b.dtype.is_floating_point:
+                            ema_all_buffers.append(b)
+                        else:
+                            continue
+                    self.ema_buffers_fused = combine_npu(ema_all_buffers)
+
+                    model_all_buffers = []
+                    for name, b in model.named_buffers():
+                        if b.dtype.is_floating_point:
+                            model_all_buffers.append(b)
+                        else:
+                            continue
+                    self.model_buffers_fused = combine_npu(model_all_buffers)
+
+                    self.is_fused = True
+
+                self.ema_params_fused *= d
+                self.ema_params_fused.add_(model_params_fused, alpha=d_inv)
+
+                self.ema_buffers_fused *= d
+                self.ema_buffers_fused.add_(self.model_buffers_fused, alpha=d_inv)
+
+            else:
+                msd = de_parallel(model).state_dict()  # model state_dict
+                for k, v in self.ema.state_dict().items():
+                    if v.dtype.is_floating_point:
+                        v *= d
+                        v += (1. - d) * msd[k].detach()
 
     def update_attr(self, model, include=(), exclude=('process_group', 'reducer')):
         # Update EMA attributes

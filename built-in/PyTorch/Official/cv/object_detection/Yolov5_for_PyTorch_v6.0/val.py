@@ -15,6 +15,9 @@ from threading import Thread
 
 import numpy as np
 import torch
+if torch.__version__ >= '1.8.1':
+    import torch_npu
+from apex import amp
 from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
@@ -113,7 +116,8 @@ def run(data,
         device = next(model.parameters()).device  # get model device
 
     else:  # called directly
-        device = select_device(device, batch_size=batch_size)
+        torch.npu.set_device(int(device))
+        device = torch.device('npu', int(device))
 
         # Directories
         save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
@@ -122,6 +126,7 @@ def run(data,
         # Load model
         check_suffix(weights, '.pt')
         model = attempt_load(weights, map_location=device)  # load FP32 model
+        model.to(device)
         gs = max(int(model.stride.max()), 32)  # grid size (max stride)
         imgsz = check_img_size(imgsz, s=gs)  # check image size
 
@@ -134,13 +139,14 @@ def run(data,
 
     # Half
     half &= device.type != 'cpu'  # half precision only supported on CUDA
-    model.half() if half else model.float()
+    if half:
+        model = amp.initialize(model, opt_level='O1')
 
     # Configure
     model.eval()
     is_coco = isinstance(data.get('val'), str) and data['val'].endswith('coco/val2017.txt')  # COCO dataset
     nc = 1 if single_cls else int(data['nc'])  # number of classes
-    iouv = torch.linspace(0.5, 0.95, 10).to(device)  # iou vector for mAP@0.5:0.95
+    iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
     niou = iouv.numel()
 
     # Dataloader
@@ -161,6 +167,7 @@ def run(data,
     loss = torch.zeros(3, device=device)
     jdict, stats, ap, ap_class = [], [], [], []
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
+        torch.npu.global_step_inc()
         t1 = time_sync()
         img = img.to(device, non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -179,6 +186,7 @@ def run(data,
             loss += compute_loss([x.float() for x in train_out], targets)[1]  # box, obj, cls
 
         # Run NMS
+        targets = targets.T
         targets[:, 2:] *= torch.Tensor([width, height, width, height]).to(device)  # to pixels
         lb = [targets[targets[:, 0] == i, 1:] for i in range(nb)] if save_hybrid else []  # for autolabelling
         t3 = time_sync()
@@ -186,6 +194,7 @@ def run(data,
         dt[2] += time_sync() - t3
 
         # Statistics per image
+        targets = targets.cpu()
         for si, pred in enumerate(out):
             labels = targets[targets[:, 0] == si, 1:]
             nl = len(labels)
@@ -222,13 +231,6 @@ def run(data,
             if save_json:
                 save_one_json(predn, jdict, path, class_map)  # append to COCO-JSON dictionary
             callbacks.run('on_val_image_end', pred, predn, path, names, img[si])
-
-        # Plot images
-        if plots and batch_i < 3:
-            f = save_dir / f'val_batch{batch_i}_labels.jpg'  # labels
-            Thread(target=plot_images, args=(img, targets, paths, f, names), daemon=True).start()
-            f = save_dir / f'val_batch{batch_i}_pred.jpg'  # predictions
-            Thread(target=plot_images, args=(img, output_to_target(out), paths, f, names), daemon=True).start()
 
     # Compute statistics
     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy

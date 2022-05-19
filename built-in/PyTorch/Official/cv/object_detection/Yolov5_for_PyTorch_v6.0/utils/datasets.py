@@ -117,6 +117,7 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
                         num_workers=nw,
                         sampler=sampler,
                         pin_memory=True,
+                        drop_last=True,
                         collate_fn=LoadImagesAndLabels.collate_fn4 if quad else LoadImagesAndLabels.collate_fn)
     return dataloader, dataset
 
@@ -601,9 +602,9 @@ class LoadImagesAndLabels(Dataset):
             # Cutouts
             # labels = cutout(img, labels, p=0.5)
 
-        labels_out = torch.zeros((nl, 6))
+        labels_out = torch.zeros((6, nl))
         if nl:
-            labels_out[:, 1:] = torch.from_numpy(labels)
+            labels_out[1:, :] = torch.from_numpy(np.ascontiguousarray(labels.T))
 
         # Convert
         img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
@@ -615,8 +616,8 @@ class LoadImagesAndLabels(Dataset):
     def collate_fn(batch):
         img, label, path, shapes = zip(*batch)  # transposed
         for i, l in enumerate(label):
-            l[:, 0] = i  # add target image index for build_targets()
-        return torch.stack(img, 0), torch.cat(label, 0), path, shapes
+            l[0, :] = i  # add target image index for build_targets()
+        return torch.stack(img, 0), torch.cat(label, 1), path, shapes
 
     @staticmethod
     def collate_fn4(batch):
