@@ -62,7 +62,7 @@ from utils.torch_utils import EarlyStopping, ModelEMA, de_parallel, select_devic
 
 import torch_npu
 
-word_size = 1
+WORLD_SIZE = 1
 
 def train(hyp,  # path/to/hyp.yaml or hyp dictionary
           opt,
@@ -342,21 +342,24 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     imgs = nn.functional.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
-            with amp.autocast(enabled=cuda):
-                pred = model(imgs)  # forward
-                loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
-                if RANK != -1:
-                    loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
-                if opt.quad:
-                    loss *= 4.
+            # with amp.autocast(enabled=cuda):
+            pred = model(imgs)  # forward
+            loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
+            if RANK != -1:
+                loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
+            if opt.quad:
+                loss *= 4.
 
             # Backward
-            scaler.scale(loss).backward()
+            # scaler.scale(loss).backward()
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
 
             # Optimize
             if ni - last_opt_step >= accumulate:
-                scaler.step(optimizer)  # optimizer.step
-                scaler.update()
+                # scaler.step(optimizer)  # optimizer.step
+                # scaler.update()
+                optimizer.step()
                 optimizer.zero_grad()
                 # if ema:
                 #     ema.update(model)
@@ -369,13 +372,20 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                         ema.update(model, x)
                 last_opt_step = ni
 
+            if i <= 10:
+                sum_time = (time.time() - start_time) / (i + 1)
+                if i == 10:
+                    start_time = time.time()
+            else:
+                sum_time = (time.time() - start_time) / (i - 10)
+
             # Log
             if RANK in [-1, 0]:
                 mloss = (mloss * i + loss_items) / (i + 1)  # update mean losses
                 mem = f'{torch.npu.memory_reserved() / 1E9 if torch.npu.is_available() else 0:.3g}G'  # (GB)
-                pbar.set_description(('%10s' * 2 + '%10.4g' * 5) % (
-                    f'{epoch}/{epochs - 1}', mem, *mloss, targets.shape[0], imgs.shape[-1]))
-                callbacks.run('on_train_batch_end', ni, model, imgs, targets, paths, plots, opt.sync_bn)
+                pbar.set_description(('%10s' * 2 + '%10.4g' * 5 + '%10.1f') % (
+                    f'{epoch}/{epochs - 1}', mem, *mloss, targets.shape[1], imgs.shape[-1], batch_size / sum_time))
+                # callbacks.run('on_train_batch_end', ni, model, imgs, targets, paths, plots, opt.sync_bn)
                 if callbacks.stop_training:
                     return
             # end batch ------------------------------------------------------------------------------------------------
@@ -470,6 +480,7 @@ def main(opt, callbacks=Callbacks()):
         os.environ['MASTER_ADDR'] = '127.0.0.1'  # master ip
         os.environ['MASTER_PORT'] = '29501'
         os.environ['RANK'] = str(opt.local_rank)
+        opt.world_size = opt.device_num
     else:
         print("1p training")
 
@@ -513,11 +524,11 @@ def main(opt, callbacks=Callbacks()):
         assert not opt.evolve, f'--evolve {msg}'
         assert opt.batch_size != -1, f'AutoBatch with --batch-size -1 {msg}, please pass a valid --batch-size'
         assert opt.batch_size % WORLD_SIZE == 0, f'--batch-size {opt.batch_size} must be multiple of WORLD_SIZE'
-        assert torch.npu.device_count() > LOCAL_RANK, 'insufficient CUDA devices for DDP command'
+        assert torch.npu.device_count() > LOCAL_RANK, 'insufficient npu devices for DDP command'
         torch.npu.set_device(LOCAL_RANK)
         device = torch.device('npu', LOCAL_RANK)
         # dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo")
-        dist.init_process_group(backend="hccl", word_size=WORLD_SIZE, RANK=RANK)
+        dist.init_process_group(backend="hccl", world_size=WORLD_SIZE, rank=RANK)
     else:
         torch.npu.set_device("npu:%d" % int(opt.device))
         print('Using NPU %s to train' % opt.device)

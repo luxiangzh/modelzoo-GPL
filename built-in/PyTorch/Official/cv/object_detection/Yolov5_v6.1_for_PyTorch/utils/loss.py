@@ -88,11 +88,11 @@ class QFocalLoss(nn.Module):
             return loss
 
 
-class DeterminiticIndex(torch.autograd.Funciton):
+class DeterministicIndex(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, indices_list):
         ctx.x = x
-        ctx.x.indices_list = indices_list
+        ctx.indices_list = indices_list
         return x[indices_list[0], indices_list[1], :, indices_list[2], indices_list[3]]
 
     @staticmethod
@@ -113,8 +113,8 @@ class ComputeLoss:
         # Define criteria
         # BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['cls_pw']], device=device))
         # BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['obj_pw']], device=device))
-        BCEcls = nn.BCEWithLogitsLoss(pos_weight=self.ft([h['cls_pw']], reduction='sum')).to(device)
-        BCEobj = nn.BCEWithLogitsLoss(pos_weight=self.ft([h['obj_pw']], reduction='mean')).to(device)
+        BCEcls = nn.BCEWithLogitsLoss(pos_weight=self.ft([h['cls_pw']]), reduction='sum').to(device)
+        BCEobj = nn.BCEWithLogitsLoss(pos_weight=self.ft([h['obj_pw']]), reduction='mean').to(device)
 
         # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf eqn 3
         # self.cp, self.cn = smooth_BCE(eps=h.get('label_smoothing', 0.0))  # positive, negative BCE targets
@@ -134,10 +134,8 @@ class ComputeLoss:
 
     def __call__(self, p, targets):  # predictions, targets, model
         device = targets.device
-        # lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
-        # tcls, tbox, indices, anchors = self.build_targets(p, targets)  # targets
         lcls, lbox, lobj = self.ft([0]).to(device), self.ft([0]).to(device), self.ft([0]).to(device)
-        tcls, tbox, indices, anchors, targets_mask, targets_sum_mask = self.build_targets(p, targets, self.model)
+        tcls, tbox, indices, anchors, targets_mask, targets_sum_mask = self.build_targets(p, targets, self.model)  # targets
 
         # Losses
         for i, pi in enumerate(p):  # layer index, layer predictions
@@ -148,8 +146,7 @@ class ComputeLoss:
 
             n = b.shape[0]  # number of targets
             if sum_mask.item() > 0:
-                # ps = pi[b, a, gj, gi]  # prediction subset corresponding to targets
-                ps = DeterminiticIndex.apply(pi, (b, a, gj, gi)).permute(1, 0).contiguous()\
+                ps = DeterministicIndex.apply(pi, (b, a, gj, gi)).permute(1, 0).contiguous()
                 # GIoU
                 pxy = ps.index_select(0, torch.tensor([0, 1], device=targets.device))
                 pwh = ps.index_select(0, torch.tensor([2, 3], device=targets.device))
@@ -160,6 +157,7 @@ class ComputeLoss:
 
                 # Regression
                 iou = bbox_iou(pbox, tbox[i], x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
+                # iou = torch.npu_ciou(pbox, tbox[i], trans=True, is_cross=False).squeeze()
                 iou = iou * (allmask) + (1. - allmask)
                 lbox += (1.0 - iou).sum() / (sum_mask)  # iou loss
 
@@ -177,18 +175,15 @@ class ComputeLoss:
                     tmp = tmp * (allmask) - (1. - allmask) * 50.
                     t = torch.full_like(tmp, self.cn).to(device)  # targets
                     range_nb = torch.arange(n, device=device).long()
-                    # t[range(n), tcls[i]] = self.cp
                     t[tcls[i], range_nb] = self.cp
 
                     t = t * (allmask)
-                    # lcls += self.BCEcls(ps[:, 5:], t)  # BCE
                     lcls += (self.BCEcls(tmp, t) / (sum_mask * t.shape[0]).float())  # BCE
 
                 # Append targets to text file
                 # with open('targets.txt', 'a') as file:
                 #     [file.write('%11.5g ' * 4 % tuple(x) + '\n') for x in torch.cat((txy[i], twh[i]), 1)]
 
-            # obji = self.BCEobj(pi[..., 4], tobj)
             obji = self.BCEobj(pi[:, :, 4, :, :], tobj)
             lobj += obji * self.balance[i]  # obj loss
             if self.autobalance:
@@ -206,7 +201,7 @@ class ComputeLoss:
     def build_targets(self, p, targets, model):
         # Build targets for compute_loss(), input targets(image,class,x,y,w,h)
         det = model.module.model[-1] if type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel) \
-            else model.model[-1]
+            else model.model[-1]  # Detect() module
         na, nt = det.na, targets.shape[1]  # number of anchors, targets
 
         batch_size = p[0].shape[0]
@@ -214,7 +209,7 @@ class ComputeLoss:
         while nt > nt_max:
             nt_max *= 2
             print("************* nt max=", nt_max)
-        max_target = torch.zeros(6, nt_max, device=targets.device)
+        max_target = torch.zeros(6, nt_max, device=targets.device)  # (6, 1024)
         max_target[0, :nt] = targets[0, :]
         max_target[1, :nt] = targets[1, :]
         max_target[2, :nt] = targets[2, :]
@@ -230,10 +225,9 @@ class ComputeLoss:
             torch.tensor([[-1.], [0.]], device=targets.device),
             torch.tensor([[0.], [-1.]], device=targets.device)
         ]
-        at = torch.arange(na).view(na, 1).repeat(1, nt_max).to(targets.device)  # same as .repeat_interleave(nt)
+        at = torch.arange(na).view(na, 1).repeat(1, nt_max).to(targets.device)  # anchor tensor, same as .repeat_interleave(nt)
         a = at.view(-1)
         a = torch.cat((a, a, a, a, a), 0)
-        # targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
 
         g = 0.5  # bias
 
@@ -249,14 +243,10 @@ class ComputeLoss:
 
             if nt:
                 # Matches
-                # r = t[:, :, 4:6] / anchors[:, None]  # wh ratio
                 r = t[None, 4:6, :] / anchors[..., None]  # wh ratio
-                fmask = torch.max(r, 1. / r).max(1)[0] < model.hyp['anchor_t']
+                fmask = torch.max(r, 1. / r).max(1)[0] < model.hyp['anchor_t']  # compare
                 fmask = fmask.view(1, -1)
-                # j = torch.max(r, 1 / r).max(2)[0] < self.hyp['anchor_t']  # compare
-                # j = wh_iou(anchors, t[:, 4:6]) > model.hyp['iou_t']  # iou(3,n)=wh_iou(anchors(3,2), gwh(n,2))
-                # t = t[j]  # filter
-                t = t.repeat(1, 1, na).view(6, -1)
+                t = t.repeat(1, 1, na).view(6, -1)  # filter
 
                 # overlaps
                 gxy = t.index_select(0, torch.tensor([2, 3], device=targets.device))  # (3072, 2)
@@ -265,7 +255,7 @@ class ComputeLoss:
                 jk = (gxy % 1. < g) & (gxy > 1.)
                 lm = (gxy % 1. > (1 - g)) & (gxy < (gain[[2, 3]][:, None] - 1.))
                 jk, lm = jk & fmask, lm & fmask
-                allmask = torch.cat((fmask, jk, lm), 0).view(-1, -1).float()
+                allmask = torch.cat((fmask, jk, lm), 0).view(1, -1).float()
                 t = torch.cat((t, t, t, t, t), 1)
                 offsets = torch.cat((z, z + off_list[0], z + off_list[1], z + off_list[2], z + off_list[3]), 1) * g
 
@@ -281,11 +271,11 @@ class ComputeLoss:
             gij = gxy - offsets
             gij2 = gij.long()
             gi = gij2.index_select(0, torch.tensor([0], device=targets.device)).view(-1)  # (2, 3072 * 5)
-            gj = gij2.index_select(0, torch.tensor([1], device=targets.device)).view(-1)  # (2, 3071 * 5)
+            gj = gij2.index_select(0, torch.tensor([1], device=targets.device)).view(-1)  # (2, 3072 * 5)
 
             # Append
-            indices.append((b, a, gj, gi))
-            tbox.append(torch.cat((gxy - gij2.float(), gwh)), 0)  # box
+            indices.append((b, a, gj, gi))  # image, anchor, grid indices
+            tbox.append(torch.cat((gxy - gij2.float(), gwh), 0))  # box
             anch.append(anchors[a])  # anchors
             tcls.append(c)  # class
             targets_mask.append(allmask)

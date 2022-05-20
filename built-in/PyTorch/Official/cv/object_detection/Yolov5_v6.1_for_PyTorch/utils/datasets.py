@@ -783,7 +783,7 @@ class LoadImagesAndLabels(Dataset):
         img, label, path, shapes = zip(*batch)  # transposed
         for i, lb in enumerate(label):
             # lb[:, 0] = i  # add target image index for build_targets()
-            lb[0,:] = i  # add target image index for build_targets()
+            lb[0, :] = i  # add target image index for build_targets()
         # return torch.stack(img, 0), torch.cat(label, 0), path, shapes
         return torch.stack(img, 0), torch.cat(label, 1), path, shapes
 

@@ -47,11 +47,6 @@ cv2.setNumThreads(0)  # prevent OpenCV from multithreading (incompatible with Py
 os.environ['NUMEXPR_MAX_THREADS'] = str(NUM_THREADS)  # NumExpr max threads
 
 
-def set_logging_(rank=-1):
-    logging.basicConfig(
-        format="%(message)s",
-        level=logging.INFO if rank in [-1, 0] else logging.WARN
-    )
 
 def is_kaggle():
     # Is environment a Kaggle Notebook?
@@ -76,6 +71,12 @@ def is_writeable(dir, test=False):
             return False
     else:  # method 2
         return os.access(dir, os.R_OK)  # possible issues on Windows
+
+def set_logging_(rank=-1):
+    logging.basicConfig(
+        format="%(message)s",
+        level=logging.INFO if rank in [-1, 0] else logging.WARN
+    )
 
 
 def set_logging(name=None, verbose=VERBOSE):
@@ -700,17 +701,17 @@ def nms(bboxes, scores, threshold=0.5):
         yy1 = y1[order[1:]].clamp(min=y1[i])
         xx2 = x2[order[1:]].clamp(max=x2[i])
         yy2 = y2[order[1:]].clamp(max=y2[i])
-        inter = (xx2 - xx1).clamp(min=0) * (yy2 -yy1).clamp(min=0)
+        inter = (xx2 - xx1).clamp(min=0) * (yy2 - yy1).clamp(min=0)
 
         iou = inter / (areas[i] + areas[order[1:]] - inter)
         idx = (iou <= threshold).nonzero().squeeze()
         if idx.numel() == 0:
             break
-        order = order[idx  + 1]
+        order = order[idx + 1]
     return torch.LongTensor(keep)
 
 def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False,
-                        labels=(), max_det=300):
+                        labels=(), max_det=300, batch_size=1):
     """Runs Non-Maximum Suppression (NMS) on inference results
 
     Returns:
@@ -729,7 +730,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     # Settings
     min_wh, max_wh = 2, 7680  # (pixels) minimum and maximum box width and height
     max_nms = 30000  # maximum number of boxes into torchvision.ops.nms()
-    time_limit = 10.0  # seconds to quit after
+    time_limit = 10.0 * batch_size # seconds to quit after
     redundant = True  # require redundant detections
     multi_label &= nc > 1  # multiple labels per box (adds 0.5ms/img)
     merge = False  # use merge-NMS

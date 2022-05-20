@@ -304,7 +304,6 @@ class EarlyStopping:
                         f'i.e. `python train.py --patience 300` or use `--patience 0` to disable EarlyStopping.')
         return stop
 
-# todo 20220513
 class ModelEMA:
     """ Updated Exponential Moving Average (EMA) from https://github.com/rwightman/pytorch-image-models
     Keeps a moving average of everything in the model state_dict (parameters and buffers)
@@ -344,7 +343,7 @@ class ModelEMA:
                         if isinstance(v, nn.BatchNorm2d):
                             pg0.append(v.weight)  # no decay
                         elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
-                            pg1.append(v.weight)
+                            pg1.append(v.weight)  # apply decay
 
                     ema_all_params = pg0 + pg1 + pg2
                     self.ema_params_fused = combine_npu(ema_all_params)
