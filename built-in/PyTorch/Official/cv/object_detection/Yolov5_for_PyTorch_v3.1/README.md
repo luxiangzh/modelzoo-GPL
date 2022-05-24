@@ -1,5 +1,5 @@
 # 1.版本说明
-yolov5版本Tags=v5.0, python版本为3.7.5
+yolov5版本Tags=v3.1, python版本为3.7.5
 
 # 2.准备数据集
 
@@ -77,8 +77,9 @@ bash test/train_yolov5s_full_8p.sh
 # 9.NPU evalution指令  
 
 ```
-python3 test.py --data /data/coco.yaml --coco_path /data/coco/ --img-size 640 --weight 'yolov5_0.pt' --batch-size 128 --device npu --local_rank 0
+python3 test.py --data /data/coco.yaml --coco_path the-path-to-your-coco --img-size 640 --weight 'yolov5_0.pt' --batch-size 64 --device npu --local_rank 0
 ```
+将coco路径通过--coco_path接口传入
 添加指令--set_dynamic_mode 可以开启模糊编译加速推理速度
 
 
