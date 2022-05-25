@@ -531,8 +531,9 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             pxy = pxy.sigmoid() * 2. - 0.5
             pwh = (pwh.sigmoid() * 2) ** 2 * (anchors[i].T)
             pbox = torch.cat((pxy, pwh), 0)  # predicted box
-            # giou = bbox_iou(pbox, tbox[i], x1y1x2y2=False, CIoU=True) #iou
-            giou = torch.npu_ciou(pbox, tbox[i], trans=True, is_cross=False).squeeze()
+            
+            giou = bbox_iou(pbox, tbox[i], x1y1x2y2=False, CIoU=True) #iou
+            # giou = torch.npu_ciou(pbox, tbox[i], trans=True, is_cross=False).squeeze()
             giou = giou * (allmask) + (1. - allmask)
             lbox += (1.0 - giou).sum() / (sum_mask) # giou loss
             # Obj
