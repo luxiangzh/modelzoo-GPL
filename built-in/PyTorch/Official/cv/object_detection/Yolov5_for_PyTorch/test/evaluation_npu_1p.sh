@@ -17,21 +17,30 @@ else
 	export PYTHONPATH=/usr/local/Ascend/ascend-toolkit/latest/fwkacllib/python/site-packages/:/usr/local/Ascend/ascend-toolkit/latest/fwkacllib/python/site-packages/auto_tune.egg/auto_tune:/usr/local/Ascend/ascend-toolkit/latest/fwkacllib/python/site-packages/schedule_search.egg:$PYTHONPATH
 fi
 
-source env_new.sh
-export HCCL_WHITELIST_DISABLE=1
+###############指定训练脚本执行路径###############
+# cd到与test文件夹同层级目录下执行脚本，提高兼容性；test_path_dir为包含test文件夹的路径
+cur_path=`pwd`
+cur_path_last_dirname=${cur_path##*/}
+if [ x"${cur_path_last_dirname}" == x"test" ];then
+    test_path_dir=${cur_path}
+    cd ..
+    cur_path=`pwd`
+else
+    test_path_dir=${cur_path}/test
+fi
+
+#非平台场景时source 环境变量
+check_etp_flag=`env | grep etp_running_flag`
+etp_flag=`echo ${check_etp_flag#*=}`
+if [ x"${etp_flag}" != x"true" ];then
+    source  ${test_path_dir}/env_npu.sh
+fi
+
+
 export TASK_QUEUE_ENABLE=1
 export PTCOPY_ENABLE=1
-export ASCEND_GLOBAL_LOG_LEVEL=3
+export ASCEND_GLOBAL_LOG_LEVEL=3 
 export DYNAMIC_OP="ADD#MUL"
-# addr is the ip of training server
-if [ $(uname -m) = "aarch64" ]
-then
-	for i in $(seq 0 7)
-	do 
-	let p_start=0+24*i
-	let p_end=23+24*i
-	taskset -c $p_start-$p_end $CMD python3.7 train_mp.py --data coco.yaml --cfg yolov5s.yaml --addr 127.0.0.1 --weights '' --batch-size 512 --local_rank $i --device npu --device-num 8 &
-	done
-else
-    python3.7 train.py --data coco.yaml --cfg yolov5s.yaml --addr 127.0.0.1 --weights '' --batch-size 512 --local_rank 0 --device npu --device-num 8
-fi
+
+cd ${cur_path}
+python3.7 test.py --data data/coco.yaml --coco_instance_path  ../coco/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu 0
