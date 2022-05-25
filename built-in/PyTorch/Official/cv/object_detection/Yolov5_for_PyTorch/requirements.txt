@@ -2,7 +2,7 @@
 Cython
 opencv-python
 matplotlib
-pillow
+pillow==9.1.0
 tensorboard
 PyYAML>=5.3
 scipy
