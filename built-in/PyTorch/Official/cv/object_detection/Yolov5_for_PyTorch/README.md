@@ -30,22 +30,15 @@ python3 coco2yolo.py
 
 （3）运行上述脚本后，将在coco_data**根目录**生成train2017.txt和val2017.txt
 
-# 3.配置数据集路径
 
-修改data/coco.yaml文件中的train字段和val字段，分别指向上一节生成的train2017.txt和val2017.txt，如：  
-
-```
-train: /data/coco_data/train2017.txt  
-val: /data/coco_data/val2017.txt  
-```
-
-# 4.GPU,CPU依赖
+# 3.GPU,CPU依赖
 按照requirements-GPU.txt安装python依赖包  
 
-# 5.NPU依赖
+# 4.NPU依赖
 按照requirements.txt安装python依赖包，还需安装(NPU-driver.run, NPU-firmware.run, NPU-toolkit.run, torch-ascend.whl, apex.whl)
+pillow建议安装较新版本，与之对应的torchvision版本如果无法直接安装，可以使用源码安装对应版本，参考链接：https：//github.com/pytorch/vision
 
-# 6.编译安装Opencv-python
+# 5.编译安装Opencv-python
 
 为了获得最好的图像处理性能，***请编译安装opencv-python而非直接安装***。编译安装步骤如下：
 
@@ -60,58 +53,44 @@ make -j$nproc
 make install
 ```
 
-# 7.NPU 单机单卡训练指令  
+# 6.NPU 单机单卡训练指令  
 yolov5s:
 
 ```
-bash train_npu_1p_v5s.sh  
+bash test/train_yolov5s_full_1p.sh  --data_path=数据集路径  
 ```
 
 
 yolov5x:
 
 ```
-bash train_npu_1p.sh 
+bash test/train_yolov5x_full_1p.sh  --data_path=数据集路径  
 ```
 
 
-# 8.NPU 单机八卡训练指令  
+# 7.NPU 单机八卡训练指令  
 yolov5s:
 
 ```
-bash train_npu_8p_mp_v5s.sh 
+bash test/train_yolov5s_full_8p.sh  --data_path=数据集路径
 ```
 
 
 yolov5x:
 
 ```
-bash train_npu_8p_mp.sh  
+bash test/train_yolov5x_full_8p.sh  --data_path=数据集路径  
 ```
 
 
-
-# 9.NPU evalution指令  
-（1）将evaluation_npu_1p.sh 中的参数--coco_instance_path修改为数据集中的实际路径，如将该脚本修改为
-
-```
-python3.7 test.py --data /data/coco.yaml --coco_instance_path /data/coco/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu 0
-```
-
-（2）启动评估
-
-```
-bash evaluation_npu_1p.sh
-```
-
-# 10.GPU 单机单卡训练指令  
+# 8.GPU 单机单卡训练指令  
 python train.py --data coco.yaml --cfg yolov5x.yaml --weights '' --batch-size 32 --device 0  
 
-# 11.GPU 单机八卡训练指令  
+# 9.GPU 单机八卡训练指令  
 python -m torch.distributed.launch --nproc_per_node 8 train.py --data coco.yaml --cfg yolov5x.yaml --weights '' --batch-size 256  
 
-# 12.CPU指令  
+# 10.CPU指令  
 python train.py --data coco.yaml --cfg yolov5x.yaml --weights '' --batch-size 32 --device cpu  
 
-# 13.导出onnx指令
+# 11.导出onnx指令
 python export_onnx.py --weights ./xxx.pt --img-size 640 --batch-size 1
