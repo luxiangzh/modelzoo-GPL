@@ -26,10 +26,11 @@ from pathlib import Path
 from threading import Thread
 
 import numpy as np
-import torch
 from tqdm import tqdm
 from apex import amp
-import torch_npu
+import torch
+if torch.__version__ >= '1.8.1':
+    import torch_npu
 
 
 FILE = Path(__file__).resolve()
