@@ -1,4 +1,6 @@
-import torch_npu
+import torch
+if torch.__version__ >= '1.8.1':
+    import torch_npu
 import argparse
 import glob
 import json
@@ -7,7 +9,6 @@ import shutil
 from pathlib import Path
 
 import numpy as np
-import torch
 import yaml
 from tqdm import tqdm
 
