@@ -1,4 +1,6 @@
-import torch_npu
+import torch
+if torch.__version__ >= '1.8.1':
+    import torch_npu
 import argparse
 import logging
 import os

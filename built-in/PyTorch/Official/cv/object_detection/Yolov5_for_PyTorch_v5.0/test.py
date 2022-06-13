@@ -1,15 +1,18 @@
+import torch
+if torch.__version__ >= '1.8.1':
+    import torch_npu
+
 import argparse
 import json
 import os
 from pathlib import Path
 from threading import Thread
-import torch_npu
+
 
 import apex
 from apex import amp
 
 import numpy as np
-import torch
 import yaml
 from tqdm import tqdm
 
