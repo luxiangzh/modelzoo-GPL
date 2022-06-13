@@ -25,6 +25,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
+if torch.__version__ >= '1.8.1':
+    import torch_npu
 import torch.distributed as dist
 import torch.nn as nn
 import yaml
@@ -60,7 +62,6 @@ from utils.metrics import fitness
 from utils.plots import plot_evolve, plot_labels
 from utils.torch_utils import EarlyStopping, ModelEMA, de_parallel, select_device, torch_distributed_zero_first
 
-import torch_npu
 
 WORLD_SIZE = 1
 
