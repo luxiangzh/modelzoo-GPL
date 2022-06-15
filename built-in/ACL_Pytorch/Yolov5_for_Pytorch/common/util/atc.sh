@@ -13,7 +13,7 @@ elif [ ${mode} == infer ];then
     input_fp16_nodes="images;img_info"
 fi
 
-if [ ${soc} == Ascend310 ];then
+if [[ ${soc} == Ascend310 ]];then
     atc --model=${onnx} \
         --framework=5 \
         --output=${om}_bs${bs} \
@@ -25,7 +25,7 @@ if [ ${soc} == Ascend310 ];then
         --output_type=FP16
 fi
 
-if [ ${soc} == Ascend710 ];then
+if [[ ${soc} == Ascend310P? ]];then
     atc --model=${onnx} \
         --framework=5 \
         --output=${om}_bs${bs} \

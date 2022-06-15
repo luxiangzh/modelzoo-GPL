@@ -129,14 +129,12 @@ def read_class_names(ground_truth_json):
     categories = content.get('categories')
     
     names = {}
-    # generate names file
-    with open(args.names_path, 'w') as f:
-        for id, category in enumerate(categories):
-            category_name = category.get('name')
-            if len(category_name.split()) == 2:
-                temp = category_name.split()
-                category_name = temp[0] + '_' + temp[1]
-            names[id] = name.strip('\n')
+    for id, category in enumerate(categories):
+        category_name = category.get('name')
+        if len(category_name.split()) == 2:
+            temp = category_name.split()
+            category_name = temp[0] + '_' + temp[1]
+        names[id] = category_name.strip('\n')
     return names
 
 
@@ -208,14 +206,14 @@ def eval(ground_truth_json, detection_results_json):
 
 
 def main(args):
-    if args.visable:
+    if args.visible:
         coco_names = read_class_names(args.ground_truth_json)
+        if not os.path.exists(f'{args.output_dir}/img'):
+            os.mkdir(f'{args.output_dir}/img')
     coco91class = coco80_to_coco91_class()
     model = Net(device_id=args.device_id, model_path=args.model)
 
     det_result_dict = []
-    if not os.path.exists('output'):
-        os.mkdir('output')
     img_path_list = glob.glob(args.img_path + '/*.jpg')
     img_path_list.sort()
     dataloader = BatchDataLoader(img_path_list, args.batch_size)
@@ -248,31 +246,32 @@ def main(args):
                                         'bbox': [round(x, 3) for x in b],
                                         'score': round(p[4], 5)})
 
-            if args.visable:
+            if args.visible:
                 img_dw = draw_bbox(boxout, img0_list[idx], (0, 255, 0), 2, coco_names)
-                cv2.imwrite(os.path.join('output', basename), img_dw)
+                cv2.imwrite(os.path.join(f'{args.output_dir}/img', basename), img_dw)
 
     print('model infer average time:{:.3f} ms / {} image'.format(total_time * 1000 / it, args.batch_size))
 
-    print('\nsaveing %s...' % args.detection_results_json)
-    with open(args.detection_results_json, 'w') as f:
+    print('saveing predictions.json to output/')
+    with open(f'{args.output_dir}/predictions.json', 'w') as f:
         json.dump(det_result_dict, f)
     
-    eval(args.ground_truth_json, args.detection_results_json)
+    if args.eval:
+        eval(args.ground_truth_json, f'{args.output_dir}/predictions.json')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='YoloV5 offline model inference.')
-    parser.add_argument('--detection_results_json', type=str, default="./predictions.json",
-                        help='detection result file path')
     parser.add_argument('--ground_truth_json', type=str, default="./instances_val2017.json",
                          help='annotation file path')
     parser.add_argument('--img-path', type=str, default="./val2017", help='input images dir')
     parser.add_argument('--model', type=str, default="yolov5s.om", help='om model path')
     parser.add_argument('--batch-size', type=int, default=1, help='om batch size')
     parser.add_argument('--device-id', type=int, default=0, help='device id')
-    parser.add_argument('-v', '--visable', action='store_true',
-                        help='draw detect result at image and save to dir \'output\'')
+    parser.add_argument('--output-dir', type=str, default='output', help='output path')
+    parser.add_argument('--eval', action='store_true', help='compute mAP')
+    parser.add_argument('--visible', action='store_true',
+                        help='draw detect result at image and save to output/img')
     flags = parser.parse_args()
 
     main(flags)

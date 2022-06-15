@@ -12,7 +12,7 @@
 ###  --iou          NMS IOU threshold, default: 0.5
 ###  --output_dir   output dir, default: output
 ### === Environment Options ===
-###  --soc          soc version [Ascend310/Ascend710], default: Ascend710
+###  --soc          soc version [Ascend310/Ascend310P?], default: Ascend310
 ### === Help Options ===
 ###  -h             print this message
 
@@ -50,7 +50,7 @@ if [[ -z $mode ]]; then mode=infer; fi
 if [[ -z $conf ]]; then conf=0.4; fi
 if [[ -z $iou ]]; then iou=0.5; fi
 if [[ -z $output_dir ]]; then output_dir=output; fi
-if [[ -z $soc ]]; then soc=Ascend710; fi
+if [[ -z $soc ]]; then echo "error: missing 1 required argument: 'soc'"; exit 1 ; fi
 
 if [[ ${type} == fp16 ]] ; then
     args_info="=== pth2om args === \n version: $version \n model: $model \n bs: $bs \n type: $type \n 
@@ -68,7 +68,14 @@ fi
 
 ## pt导出om模型
 echo "Starting 修改pytorch源码"
-git apply v${version}/v${version}.patch
+git apply v${version}/v${version}.patch ||
+git apply -R v${version}/v${version}.patch &&
+git apply v${version}/v${version}.patch && echo "patch has already apply"
+
+if [ $? -ne 0 ]; then
+    echo "patch apply Failed"
+    exit 1
+fi
 
 echo "Starting 导出onnx模型并简化"
 if [[ ${version} == 6* ]] ; then
@@ -106,7 +113,8 @@ if [ ${type} == int8 ] ; then
 
     model_tmp=${model}_amct
     if [[ -f ${output_dir}/result_* ]];then
-        rm -rf  ${output_dir}/result_*
+        rm -rf  ${output_dir}/result_result_fake_quant_model.onnx
+        rm -rf  ${output_dir}/result_quant.json
     fi
 fi
 
