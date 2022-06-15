@@ -11,7 +11,6 @@
 ###  --dataset       dataset dir, default: val2017
 ### === Environment Options ===
 ###  --install_path  CANN install path, default: /usr/local/Ascend/ascend-toolkit
-###  --arch          platform [x86_64/aarch64], default: x86_64
 ### === Help Options ===
 ###  -h              print this message
 
@@ -21,7 +20,7 @@ help() {
 
 
 ## 参数设置
-GETOPT_ARGS=`getopt -o 'h' -al version:,model:,bs:,type:,mode:,output_dir:,dataset:,install_path:,arch: -- "$@"`
+GETOPT_ARGS=`getopt -o 'h' -al version:,model:,bs:,type:,mode:,output_dir:,dataset:,install_path: -- "$@"`
 eval set -- "$GETOPT_ARGS"
 while [ -n "$1" ]
 do
@@ -35,7 +34,6 @@ do
         --output_dir) output_dir=$2; shift 2;;
         --dataset) dataset=$2; shift 2;;
         --install_path) install_path=$2; shift 2;;
-        --arch) arch=$2; shift 2;;
         --) break ;;
     esac
 done
@@ -48,11 +46,11 @@ if [[ -z $mode ]]; then mode=infer; fi
 if [[ -z $output_dir ]]; then output_dir=output; fi
 if [[ -z $dataset ]]; then dataset=val2017; fi
 if [[ -z $install_path ]]; then install_path=/usr/local/Ascend/ascend-toolkit; fi
-if [[ -z $arch ]]; then arch=x86_64; fi
+arch=`uname -m`
 
 args_info="=== eval args === \n version: $version \n model: $model \n bs: $bs \n type: $type \n 
            mode: $mode \n output_dir: $output_dir \n dataset: $dataset \n 
-           install_path: $install_path \n arch: $arch"
+           install_path: $install_path"
 echo -e $args_info
 
 if [ ${type} == int8 ] ; then
@@ -61,7 +59,7 @@ fi
 
 ## 推理模型
 echo "Starting om模型推理精度，日志写入val.log" | tee ${output_dir}/val.log
-python3 common/om_infer.py --img-path=${dataset} --model=${output_dir}/${model}_nms_bs${bs}.om --batch-size=${bs} | tee -a ${output_dir}/val.log
+python3 common/om_infer.py --img-path=${dataset} --model=${output_dir}/${model}_nms_bs${bs}.om --batch-size=${bs} --eval | tee -a ${output_dir}/val.log
 acc_value=`cat ${output_dir}/val.log | grep Precision | sed '2,$d' | awk -F '] = ' '{print $2}'`
 echo "acc: " ${acc_value} > ${output_dir}/results.txt
 
