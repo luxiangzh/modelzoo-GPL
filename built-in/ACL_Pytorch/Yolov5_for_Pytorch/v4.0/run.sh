@@ -1,16 +1,13 @@
 ##### 参数设置
-version=${1:-"4.0"}
-model=${2:-"yolov5s"}
-bs=${3:-"4"}
-type=${4:-"fp16"}
-mode=${5:-"infer"}
-output_dir=${6:-"output"}
-soc=${7:-"Ascend710"}
+soc=${1}
+if [[ -z $soc ]]; then echo "error: missing 1 required argument: 'soc'"; exit 1 ; fi
+version=${2:-"4.0"}
+model=${3:-"yolov5s"}
+bs=${4:-"4"}
+type=${5:-"fp16"}
+mode=${6:-"infer"}
+output_dir=${7:-"output"}
 install_path=${8:-"/usr/local/Ascend/ascend-toolkit"}
-arch=${7:-"x86_64"}
-
-## 设置环境变量
-source ${install_path}/set_env.sh
 
 ## pt导出om模型
 bash common/pth2om.sh --version $version \
@@ -33,6 +30,4 @@ bash common/eval.sh --version $version \
                     --type $type \
                     --mode $mode \
                     --output_dir $output_dir \
-                    --install_path $install_path \
-                    --arch $arch
-
+                    --install_path $install_path
