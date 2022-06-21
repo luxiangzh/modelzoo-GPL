@@ -61,7 +61,7 @@ fi
 echo "Starting om模型推理精度，日志写入val.log" | tee ${output_dir}/val.log
 python3 common/om_infer.py --img-path=${dataset} --model=${output_dir}/${model}_nms_bs${bs}.om --batch-size=${bs} --eval | tee -a ${output_dir}/val.log
 acc_value=`cat ${output_dir}/val.log | grep Precision | sed '2,$d' | awk -F '] = ' '{print $2}'`
-echo "acc: " ${acc_value} > ${output_dir}/results.txt
+echo "acc:" ${acc_value} > ${output_dir}/results.txt
 
 if [[ ${mode} == infer && -f ./benchmark.${arch} ]] ; then
     echo "Starting om模型纯推理性能(有后处理)，日志写入val.log" | tee -a ${output_dir}/val.log
@@ -72,11 +72,15 @@ fi
 
 ## 性能评估
 if [[ ${mode} == val ]] ; then
+    echo "Starting om模型纯推理性能(有后处理)，日志写入val.log" | tee -a ${output_dir}/val.log
+    ./benchmark.${arch} -device_id=0 -round=10 -batch_size=${bs} -om_path=${output_dir}/${model}_nms_bs${bs}.om | tee -a ${output_dir}/val.log
+    perf_nms_value=`cat ${output_dir}/val.log | grep ave_throughputRate | sed '2,$d' | awk -F ': ' '{print $2}' | tr -cd "[0-9|.]"`
+    echo "perf_nms:" ${perf_nms_value} >> ${output_dir}/results.txt
+
     echo "Starting om模型纯推理性能(无后处理)，日志写入val.log" | tee -a ${output_dir}/val.log
-    chmod 777 ./benchmark.${arch}
     ./benchmark.${arch} -device_id=0 -round=10 -batch_size=${bs} -om_path=${output_dir}/${model}_bs${bs}.om | tee -a ${output_dir}/val.log
-    perf_value=`cat ${output_dir}/val.log | grep ave_throughputRate | awk -F ': ' '{print $2}' | tr -cd "[0-9|.]"`
-    echo "perf: " ${perf_value} >> ${output_dir}/results.txt
+    perf_value=`cat ${output_dir}/val.log | grep ave_throughputRate | sed '1d' | awk -F ': ' '{print $2}' | tr -cd "[0-9|.]"`
+    echo "perf:" ${perf_value} >> ${output_dir}/results.txt
 
     echo "Starting om模型性能profiling，日志写入profile.log"
     ${install_path}/latest/toolkit/tools/profiler/bin/msprof --output=${output_dir}/profiling \

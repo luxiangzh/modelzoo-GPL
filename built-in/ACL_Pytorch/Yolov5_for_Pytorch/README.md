@@ -26,7 +26,6 @@ Yolov5_for_Pytorch
 ### 1.1 下载pytorch源码，切换到对应分支
 ```shell
 git clone https://github.com/ultralytics/yolov5.git
-git checkout v2.0/v3.1/v4.0/v5.0/v6.0/v6.1
 ```
 
 ### 1.2 准备以下文件，放到pytorch源码根目录
@@ -53,9 +52,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 ### 2.2 pt导出om模型
 运行`pth2om.sh`导出om模型，默认保存在`output`路径下，可通过`bash common/pth2om.sh -h`查看完整参数设置。
 ```shell
-bash common/pth2om.sh --version 6.1 --model yolov5s --bs 4 --soc Ascend310P3
+bash common/pth2om.sh --version 6.1 --model yolov5s --bs 4 --soc Ascend${chip_name}  # Ascend310P3
 ```
-其中，soc为必选参数，通过`npu-smi info`命令查看。
+其中，soc为必选参数，${chip_name}可通过`npu-smi info`命令查看。
 ![Image](img/npu-smi.png)
 
 ### 2.3 om模型推理
