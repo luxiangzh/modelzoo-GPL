@@ -68,14 +68,8 @@ fi
 
 ## pt导出om模型
 echo "Starting 修改pytorch源码"
-git apply v${version}/v${version}.patch ||
-git apply -R v${version}/v${version}.patch &&
-git apply v${version}/v${version}.patch && echo "patch has already apply"
-
-if [ $? -ne 0 ]; then
-    echo "patch apply Failed"
-    exit 1
-fi
+git checkout . && git checkout v${version}
+git apply v${version}/v${version}.patch
 
 echo "Starting 导出onnx模型并简化"
 if [[ ${version} == 6* ]] ; then

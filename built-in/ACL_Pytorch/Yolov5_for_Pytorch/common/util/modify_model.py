@@ -11,9 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import sys
 import onnx
 import argparse
 from onnx import helper
+
+ROOT = './'
+if ROOT not in sys.path:
+    sys.path.append(ROOT)  # add ROOT to PATH
 from models.experimental import attempt_load
 
 def ceil_x(value, align_len):
