@@ -88,7 +88,7 @@ wait
 #结果打印，不需要修改
 echo "------------------ Final result ------------------"
 #输出性能FPS，需要模型审视修改
-FPS=`grep -a 'FPS'  $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|awk '{print $3}'|awk -F "]" '{print $3}'|awk -F ":" '{print $2}'|tail -1`
+FPS=`grep -a 'FPS'  $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|awk -F "FPS:" '{print $2}'|awk -F "]" '{print $1}'|tail -1`
 #打印，不需要修改
 echo "Final Performance images/sec : $FPS"
 
