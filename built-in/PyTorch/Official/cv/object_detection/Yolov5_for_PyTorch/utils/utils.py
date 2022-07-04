@@ -1,3 +1,8 @@
+# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+"""
+Logging utils
+"""
+
 import glob
 import math
 import os
