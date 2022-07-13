@@ -1,3 +1,12 @@
+# Copyright (c) 2021
+# All rights reserved.
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# This source code is licensed under the license found in the LICENSE file in
+# the root directory of this source tree. An additional grant of patent rights
+# can be found in the PATENTS file in the same directory.
+
+
 import glob
 import math
 import os
@@ -58,11 +67,11 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
                                     pad=pad)
 
     batch_size = min(batch_size, len(dataset))
-    nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, 8])  # number of workers
+    nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, 12])  # number of workers
     train_sampler = torch.utils.data.distributed.DistributedSampler(dataset) if local_rank != -1 else None
     dataloader = torch.utils.data.DataLoader(dataset,
                                     batch_size=batch_size,
-                                    num_workers=12,
+                                    num_workers=nw,
                                     sampler=train_sampler,
                                     pin_memory=True,
                                     drop_last=True,
