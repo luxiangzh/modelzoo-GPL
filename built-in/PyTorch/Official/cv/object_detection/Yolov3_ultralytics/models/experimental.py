@@ -87,7 +87,7 @@ class Ensemble(nn.ModuleList):
         return y, None  # inference, train output
 
 
-def attempt_load(weights, map_location=None, inplace=True, fuse=True):
+def attempt_load(weights, map_location=None, inplace=True, fuse=False):
     from models.yolo import Detect, Model
 
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
@@ -97,7 +97,7 @@ def attempt_load(weights, map_location=None, inplace=True, fuse=True):
         if fuse:
             model.append(ckpt['ema' if ckpt.get('ema') else 'model'].float().fuse().eval())  # FP32 model
         else:
-            model.append(ckpt['ema' if ckpt.get('ema') else 'model'].float().eval())  # without layer fuse
+            model.append(ckpt['ema' if ckpt.get('ema') else 'model'].float().eval().to(map_location))  # without layer fuse
 
     # Compatibility updates
     for m in model.modules():
