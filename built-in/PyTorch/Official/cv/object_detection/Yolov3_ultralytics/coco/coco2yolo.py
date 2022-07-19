@@ -1,3 +1,4 @@
+# YOLOv3 🚀 by Ultralytics, GPL-3.0 license
 from pycocotools.coco import COCO
 import shutil
 import os
