@@ -1,4 +1,3 @@
-# YOLOv3 🚀 by Ultralytics, GPL-3.0 license
 import argparse
 
 from wandb_utils import WandbLogger

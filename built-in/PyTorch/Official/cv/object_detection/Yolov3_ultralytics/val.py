@@ -15,6 +15,7 @@ from threading import Thread
 
 import numpy as np
 import torch
+import torch_npu
 from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
@@ -108,6 +109,10 @@ def run(data,
         callbacks=Callbacks(),
         compute_loss=None,
         ):
+    option = {}
+    option["NPU_FUZZY_COMPILE_BLACKLIST"] = "Identity"
+    torch.npu.set_option(option)
+    torch.npu.set_compile_mode(jit_compile=False)
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -142,7 +147,7 @@ def run(data,
     model.eval()
     is_coco = isinstance(data.get('val'), str) and data['val'].endswith('coco/val2017.txt')  # COCO dataset
     nc = 1 if single_cls else int(data['nc'])  # number of classes
-    iouv = torch.linspace(0.5, 0.95, 10).to(device)  # iou vector for mAP@0.5:0.95
+    iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
     niou = iouv.numel()
 
     # Dataloader
@@ -180,7 +185,9 @@ def run(data,
 
         # Loss
         if compute_loss:
-            loss += compute_loss([x.float() for x in train_out], targets)[1]  # box, obj, cls
+            loss += compute_loss([x.float().permute(0, 1, 4, 2, 3) for x in train_out], targets)[1]  # box, obj, cls
+
+        targets = targets.t()
 
         # NMS
         targets[:, 2:] *= torch.Tensor([width, height, width, height]).to(device)  # to pixels
@@ -190,6 +197,7 @@ def run(data,
         dt[2] += time_sync() - t3
 
         # Metrics
+        targets = targets.cpu()
         for si, pred in enumerate(out):
             labels = targets[targets[:, 0] == si, 1:]
             nl = len(labels)
@@ -228,11 +236,11 @@ def run(data,
             callbacks.run('on_val_image_end', pred, predn, path, names, im[si])
 
         # Plot images
-        if plots and batch_i < 3:
-            f = save_dir / f'val_batch{batch_i}_labels.jpg'  # labels
-            Thread(target=plot_images, args=(im, targets, paths, f, names), daemon=True).start()
-            f = save_dir / f'val_batch{batch_i}_pred.jpg'  # predictions
-            Thread(target=plot_images, args=(im, output_to_target(out), paths, f, names), daemon=True).start()
+        # if plots and batch_i < 3:
+        #     f = save_dir / f'val_batch{batch_i}_labels.jpg'  # labels
+        #     Thread(target=plot_images, args=(im, targets, paths, f, names), daemon=True).start()
+        #     f = save_dir / f'val_batch{batch_i}_pred.jpg'  # predictions
+        #     Thread(target=plot_images, args=(im, output_to_target(out), paths, f, names), daemon=True).start()
 
     # Compute metrics
     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
@@ -298,6 +306,7 @@ def run(data,
     maps = np.zeros(nc) + map
     for i, c in enumerate(ap_class):
         maps[c] = ap[i]
+    torch.npu.set_compile_mode(jit_compile=True)
     return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
 
 
