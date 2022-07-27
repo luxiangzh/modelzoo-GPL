@@ -22,16 +22,40 @@ make install
 
 # 4.VOC数据集训练方法
 
-yolov3-320*320-单卡
+yolov3-320*320
 
 ```
-bash train_yolov3_320x320_1p.sh
+    bash train_full_1p.sh  --model_name=yolov3 --batch_size=64 --img_size=320         #单卡精度训练
+    bash train_full_8p.sh  --model_name=yolov3 --batch_size=512 --img_size=320        #八卡精度训练
 ```
 
-yolov3-320*320-8卡
+yolov3-608*608
 
 ```
-bash train_yolov3_320x320_8p.sh
+    bash train_full_1p.sh  --model_name=yolov3 --batch_size=32 --img_size=608         #单卡精度训练
+    bash train_full_8p.sh  --model_name=yolov3 --batch_size=256 --img_size=608        #八卡精度训练
 ```
+
+yolov3-640*640
+
+```
+    bash train_full_1p.sh  --model_name=yolov3 --batch_size=32 --img_size=640         #单卡精度训练
+    bash train_full_8p.sh  --model_name=yolov3 --batch_size=256 --img_size=640        #八卡精度训练
+```
+
+yolov3_spp-640*640
+
+```
+    bash train_full_1p.sh  --model_name=yolov3-spp --batch_size=32 --img_size=640     #单卡精度训练
+    bash train_full_8p.sh  --model_name=yolov3-spp --batch_size=256 --img_size=640    #八卡精度训练
+```
+
+yolov3_tiny-640*640
+
+```
+    bash train_full_1p.sh  --model_name=yolov3-tiny --batch_size=64 --img_size=640     #单卡精度训练
+    bash train_full_8p.sh  --model_name=yolov3-tiny --batch_size=512 --img_size=640    #八卡精度训练
+```
+
 
 **脚本会自动下载VOC2012和VOC2007数据集，请确保网络通畅。其他配置的训练可使用相同方式启动。**
