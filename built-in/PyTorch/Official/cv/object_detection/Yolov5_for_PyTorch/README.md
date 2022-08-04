@@ -94,3 +94,8 @@ python train.py --data coco.yaml --cfg yolov5x.yaml --weights '' --batch-size 32
 
 # 11.导出onnx指令
 python export_onnx.py --weights ./xxx.pt --img-size 640 --batch-size 1
+
+# 12.Inference指令
+python detect.py --source file.jpg --weights 'yolov5l.pt' --device npu --data coco.yaml（可选）
+
+注：若保存的模型文件中无`names`字段，须传入data参数

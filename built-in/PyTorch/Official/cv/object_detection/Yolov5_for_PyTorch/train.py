@@ -341,6 +341,8 @@ def train(hyp, tb_writer, opt, device):
 
         # save every epoch
         if rank in [-1, 0]:
+            if ema is not None:
+                ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'gr', 'names', 'stride'])
             final_epoch = epoch + 1 == epochs
             ckpt = {
                     'epoch': epoch,
