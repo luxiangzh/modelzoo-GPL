@@ -43,7 +43,14 @@ def detect(save_img=False):
         dataset = LoadImages(source, img_size=imgsz)
 
     # Get names and colors
-    names = model.module.names if hasattr(model, 'module') else model.names
+    model_without_ddp = model.module if hasattr(model, 'module') else model
+    if hasattr(model_without_ddp, 'names'):
+        names = model_without_ddp.names
+    else:
+        with open(opt.data) as f:
+            data_dict = yaml.load(f, Loader=yaml.FullLoader)  # model dict
+        nc, names = (1, ['item']) if opt.single_cls else (int(data_dict['nc']), data_dict['names'])  # number classes, names
+        assert len(names) == nc, '%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data)  # check
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(names))]
 
     # Run inference
@@ -150,6 +157,8 @@ if __name__ == '__main__':
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--update', action='store_true', help='update all models')
     parser.add_argument('--npu', default=None, type=int, help='NPU id to use.')
+    parser.add_argument('--data', type=str, default='data/coco128.yaml', help='data.yaml path')
+    parser.add_argument('--single-cls', action='store_true', help='train as single-class dataset')
     opt = parser.parse_args()
     print(opt)
 
