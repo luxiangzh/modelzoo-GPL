@@ -117,7 +117,7 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
     WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
     nw = min([os.cpu_count() // WORLD_SIZE, batch_size if batch_size > 1 else 0, workers])  # number of workers
     sampler = torch.utils.data.distributed.DistributedSampler(dataset) if rank != -1 else None
-    loader = torch.utils.data.DataLoader if image_weights else InfiniteDataLoader
+    loader = torch.utils.data.DataLoader
     # Use torch.utils.data.DataLoader() if dataset.properties will update during training else InfiniteDataLoader()
     dataloader = loader(dataset,
                         batch_size=batch_size,
