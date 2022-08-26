@@ -1,13 +1,5 @@
 # yolov5 for PyTorch
 
--   [概述](概述.md)
--   [准备训练环境](准备训练环境.md)
--   [开始训练](开始训练.md)
--   [训练结果展示](训练结果展示.md)
--   [版本说明](版本说明.md)
-
-
-
 # 概述
 
 ## 简述
@@ -24,8 +16,8 @@ YOLOv5是一种单阶段目标检测算法，该算法在YOLOv4的基础上添�
 - 适配昇腾 AI 处理器的实现：
 
   ```
-  url=https://gitee.com/ascend/ModelZoo-PyTorch.git
-  code_path=PyTorch/contrib/cv/classification
+  url=https://gitee.com/ascend/modelzoo-GPL.git
+  code_path=built-in/PyTorch/Official/cv/object_detection/
   ```
   
 - 通过Git获取代码方法如下：
@@ -47,7 +39,7 @@ YOLOv5是一种单阶段目标检测算法，该算法在YOLOv4的基础上添�
   | 配套       | 版本                                                         |
   | ---------- | ------------------------------------------------------------ |
   | 固件与驱动 | [22.0.2](https://www.hiascend.com/hardware/firmware-drivers?tag=commercial) |
-  | CANN       | [5.1.RC2](https://www.hiascend.com/software/cann/commercial?version=5.1.RC1) |
+  | CANN       | [5.1.RC2](https://www.hiascend.com/software/cann/commercial?version=5.1.RC2) |
   | PyTorch    | [1.8.1](https://gitee.com/ascend/pytorch/tree/master/) |
 
 - 环境准备指导。
