@@ -11,6 +11,7 @@
 
 from __future__ import division
 import sys
+import numpy as np
 
 import torch
 from shapely.geometry import Polygon
@@ -72,7 +73,7 @@ def get_polygons_areas_fix_xy(boxes, fix_xy=100.):
     y = torch.full(size=(n_boxes,), fill_value=fix_xy, device=device, dtype=torch.float)
     w, l, im, re = boxes.t()
     yaw = torch.atan2(im, re)
-    boxes_conners = get_corners_vectorize(x, y, w, l, yaw)
+    boxes_conners = get_corners_vectorize(x, y, w, l, yaw).cpu().numpy()
     boxes_polygons = [cvt_box_2_polygon(box_) for box_ in boxes_conners]
     boxes_areas = w * l
 
@@ -80,17 +81,17 @@ def get_polygons_areas_fix_xy(boxes, fix_xy=100.):
 
 
 def iou_rotated_boxes_targets_vs_anchors(anchors_polygons, anchors_areas, targets_polygons, targets_areas):
-    device = anchors_areas.device
     num_anchors = len(anchors_areas)
     num_targets_boxes = len(targets_areas)
-
-    ious = torch.zeros(size=(num_anchors, num_targets_boxes), device=device, dtype=torch.float)
-
-    for a_idx in range(num_anchors):
-        for tg_idx in range(num_targets_boxes):
-            intersection = anchors_polygons[a_idx].intersection(targets_polygons[tg_idx]).area
-            iou = intersection / (anchors_areas[a_idx] + targets_areas[tg_idx] - intersection + 1e-16)
-            ious[a_idx, tg_idx] = iou
+    anchors_areas_all = anchors_areas.repeat(num_targets_boxes, 1)
+    targets_areas_all = targets_areas.repeat(num_anchors, 1).permute(1, 0).contiguous()
+    intersections = np.zeros((num_targets_boxes, num_anchors))
+    
+    for tg_idx in range(num_targets_boxes):
+        for a_idx in range(num_anchors):
+            intersections[tg_idx, a_idx] = anchors_polygons[a_idx].intersection(targets_polygons[tg_idx]).area
+    intersections = torch.tensor(intersections, device=anchors_areas.device, dtype=torch.float)
+    ious = intersections / (anchors_areas_all + targets_areas_all - intersections + 1e-16)
 
     return ious
 
@@ -177,8 +178,8 @@ if __name__ == "__main__":
     img = np.zeros((img_size, img_size, 3))
     img = cv2.resize(img, (img_size, img_size))
 
-    box1 = torch.tensor([100, 100, 60, 10, 0.5], dtype=torch.float).cuda()
-    box2 = torch.tensor([100, 100, 40, 20, 0], dtype=torch.float).cuda()
+    box1 = torch.tensor([100, 100, 60, 10, 0.5], dtype=torch.float).npu()
+    box2 = torch.tensor([100, 100, 40, 20, 0], dtype=torch.float).npu()
 
     box1_conners = get_corners_torch(box1[0], box1[1], box1[2], box1[3], box1[4])
     box1_polygon = cvt_box_2_polygon(box1_conners)

@@ -43,26 +43,20 @@ def make_data_parallel(model, configs):
         # For multiprocessing distributed, DistributedDataParallel constructor
         # should always set the single device scope, otherwise,
         # DistributedDataParallel will use all available devices.
-        if configs.gpu_idx is not None:
-            torch.cuda.set_device(configs.gpu_idx)
-            model.cuda(configs.gpu_idx)
+        if configs.local_rank is not None:
             # When using a single GPU per process and per
             # DistributedDataParallel, we need to divide the batch size
             # ourselves based on the total number of GPUs we have
             configs.batch_size = int(configs.batch_size / configs.ngpus_per_node)
             configs.num_workers = int((configs.num_workers + configs.ngpus_per_node - 1) / configs.ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu_idx])
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.local_rank])
         else:
-            model.cuda()
             # DistributedDataParallel will divide and allocate batch_size to all
             # available GPUs if device_ids are not set
             model = torch.nn.parallel.DistributedDataParallel(model)
-    elif configs.gpu_idx is not None:
-        torch.cuda.set_device(configs.gpu_idx)
-        model = model.cuda(configs.gpu_idx)
     else:
         # DataParallel will divide and allocate batch_size to all available GPUs
-        model = torch.nn.DataParallel(model).cuda()
+        model = torch.nn.DataParallel(model)
 
     return model
 
@@ -81,10 +75,10 @@ if __name__ == '__main__':
 
     configs = edict(vars(parser.parse_args()))
 
-    configs.device = torch.device('cuda:1')
+    configs.device = torch.device('npu:1')
 
     model = create_model(configs).to(device=configs.device)
     sample_input = torch.randn((1, 3, 608, 608)).to(device=configs.device)
-    # summary(model.cuda(), (3, 608, 608))
+    # summary(model.npu(), (3, 608, 608))
     output = model(sample_input, targets=None)
     print(output.size())

@@ -12,6 +12,7 @@
 """
 
 import sys
+import math
 
 import torch
 import torch.nn as nn
@@ -55,18 +56,17 @@ class YoloLayer(nn.Module):
         g = self.grid_size
         self.stride = self.img_size / self.grid_size
         # Calculate offsets for each grid
-        self.grid_x = torch.arange(g, device=self.device, dtype=torch.float).repeat(g, 1).view([1, 1, g, g])
-        self.grid_y = torch.arange(g, device=self.device, dtype=torch.float).repeat(g, 1).t().view([1, 1, g, g])
-        self.scaled_anchors = torch.tensor(
-            [(a_w / self.stride, a_h / self.stride, im, re) for a_w, a_h, im, re in self.anchors], device=self.device,
-            dtype=torch.float)
-        self.anchor_w = self.scaled_anchors[:, 0:1].view((1, self.num_anchors, 1, 1))
-        self.anchor_h = self.scaled_anchors[:, 1:2].view((1, self.num_anchors, 1, 1))
+        self.grid_x = torch.arange(g, device=self.device, dtype=torch.float).repeat(g, 1).view([1, g, g, 1])
+        self.grid_y = torch.arange(g, device=self.device, dtype=torch.float).repeat(g, 1).t().view([1, g, g, 1])
+        self.scaled_anchors = torch.tensor(self.anchors, device=self.device, dtype=torch.float)
+        self.scaled_anchors[:, :2] /= self.stride
+        self.anchor_w = self.scaled_anchors[:, 0:1].view((1, 1, 1 , self.num_anchors))
+        self.anchor_h = self.scaled_anchors[:, 1:2].view((1, 1, 1 , self.num_anchors))
 
         # Pre compute polygons and areas of anchors
         self.scaled_anchors_polygons, self.scaled_anchors_areas = get_polygons_areas_fix_xy(self.scaled_anchors)
 
-    def build_targets(self, pred_boxes, pred_cls, target, anchors):
+    def build_targets(self, pred_boxes, pred_cls, target_ori, anchors):
         """ Built yolo targets to compute loss
         :param out_boxes: [num_samples or batch, num_anchors, grid_size, grid_size, 6]
         :param pred_cls: [num_samples or batch, num_anchors, grid_size, grid_size, num_classes]
@@ -74,72 +74,61 @@ class YoloLayer(nn.Module):
         :param anchors: [num_anchors, 4]
         :return:
         """
-        nB, nA, nG, _, nC = pred_cls.size()
-        n_target_boxes = target.size(0)
+        nB, nG, _, nA, nC = pred_cls.size()
+        nt_boxes = target_ori.size(0)
+        new_nt_boxes = math.ceil(nt_boxes / 32) * 32
 
         # Create output tensors on "device"
-        obj_mask = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.uint8)
-        noobj_mask = torch.full(size=(nB, nA, nG, nG), fill_value=1, device=self.device, dtype=torch.uint8)
-        class_mask = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.float)
-        iou_scores = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.float)
-        tx = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.float)
-        ty = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.float)
-        tw = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.float)
-        th = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.float)
-        tim = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.float)
-        tre = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.float)
-        tcls = torch.full(size=(nB, nA, nG, nG, nC), fill_value=0, device=self.device, dtype=torch.float)
-        tconf = obj_mask.float()
+        obj_mask = torch.full(size=(nB, nG, nG, nA), fill_value=1, device=self.device, dtype=torch.float)
+        noobj_mask = torch.full(size=(nB, nG, nG, nA), fill_value=1, device=self.device, dtype=torch.bool)
+        tes = torch.full(size=(6, new_nt_boxes), fill_value=0, device=self.device, dtype=torch.float)
+        res = torch.full(size=(6, nB, nG, nG, nA), fill_value=0, device=self.device, dtype=torch.float)
+        tcls = torch.full(size=(nB, nG, nG, nA, nC), fill_value=0, device=self.device, dtype=torch.float)
         giou_loss = torch.tensor([0.], device=self.device, dtype=torch.float)
 
-        if n_target_boxes > 0:  # Make sure that there is at least 1 box
-            b, target_labels = target[:, :2].long().t()
-            target_boxes = torch.cat((target[:, 2:6] * nG, target[:, 6:8]), dim=-1)  # scale up x, y, w, h
+        if nt_boxes > 0:  # Make sure that there is at least 1 box
+            target = torch.zeros([new_nt_boxes, 8])
+            target[:nt_boxes] = target_ori
+            target = target.npu().t()
 
-            gxy = target_boxes[:, :2]
-            gwh = target_boxes[:, 2:4]
-            gimre = target_boxes[:, 4:6]
+            b, target_labels = target[:2, :].long()
+            target_boxes = torch.cat((target[2:6, :] * nG, target[6:8, :]), dim=0)  # scale up x, y, w, h
 
-            targets_polygons, targets_areas = get_polygons_areas_fix_xy(target_boxes[:, 2:6])
+            gxy = target_boxes[:2, :]
+            gwh = target_boxes[2:4, :]
+            gimre = target_boxes[4:6, :]
+            gi, gj = gxy.long()
+            
             # Get anchors with best iou
+            targets_polygons, targets_areas = get_polygons_areas_fix_xy(target_boxes.t()[:, 2:6])
             ious = iou_rotated_boxes_targets_vs_anchors(self.scaled_anchors_polygons, self.scaled_anchors_areas,
                                                         targets_polygons, targets_areas)
-            best_ious, best_n = ious.max(0)
+            _, best_n = ious.max(1)
 
-            gx, gy = gxy.t()
-            gw, gh = gwh.t()
-            gim, gre = gimre.t()
-            gi, gj = gxy.long().t()
             # Set masks
-            obj_mask[b, best_n, gj, gi] = 1
-            noobj_mask[b, best_n, gj, gi] = 0
-
+            noobj_mask[b, gj, gi, best_n] = 0
+            noobj_mask[0, 0, 0, 0] = 1
+            obj_mask -= noobj_mask
+            
             # Set noobj mask to zero where iou exceeds ignore threshold
-            for i, anchor_ious in enumerate(ious.t()):
-                noobj_mask[b[i], anchor_ious > self.ignore_thresh, gj[i], gi[i]] = 0
+            noobj_mask[b, gj, gi, :] *= 1. * (ious < self.ignore_thresh)
+
 
             # Coordinates
-            tx[b, best_n, gj, gi] = gx - gx.floor()
-            ty[b, best_n, gj, gi] = gy - gy.floor()
+            tes[0:2] = gxy - gxy.floor()
             # Width and height
-            tw[b, best_n, gj, gi] = torch.log(gw / anchors[best_n][:, 0] + 1e-16)
-            th[b, best_n, gj, gi] = torch.log(gh / anchors[best_n][:, 1] + 1e-16)
+            tes[2:4] = torch.log(gwh / anchors[best_n].t()[:2] + 1e-16)
             # Im and real part
-            tim[b, best_n, gj, gi] = gim
-            tre[b, best_n, gj, gi] = gre
+            tes[4:6] = gimre
+            res[:, b, gj, gi, best_n] = tes
 
             # One-hot encoding of label
-            tcls[b, best_n, gj, gi, target_labels] = 1
-            class_mask[b, best_n, gj, gi] = (pred_cls[b, best_n, gj, gi].argmax(-1) == target_labels).float()
-            ious, giou_loss = iou_pred_vs_target_boxes(pred_boxes[b, best_n, gj, gi], target_boxes,
+            if self.use_giou_loss:
+                _, giou_loss = iou_pred_vs_target_boxes(pred_boxes[b, best_n, gj, gi], target_boxes,
                                                        GIoU=self.use_giou_loss)
-            iou_scores[b, best_n, gj, gi] = ious
-            if self.reduction == 'mean':
-                giou_loss /= n_target_boxes
-            tconf = obj_mask.float()
+            tcls[b, gj, gi, best_n, target_labels] = 1
 
-        return iou_scores, giou_loss, class_mask, obj_mask.type(torch.bool), noobj_mask.type(torch.bool), \
-               tx, ty, tw, th, tim, tre, tcls, tconf
+        return giou_loss, obj_mask.type(torch.bool), noobj_mask, res, tcls, obj_mask
 
     def forward(self, x, targets=None, img_size=608, use_giou_loss=False):
         """
@@ -154,8 +143,8 @@ class YoloLayer(nn.Module):
         num_samples, _, _, grid_size = x.size()
 
         prediction = x.view(num_samples, self.num_anchors, self.num_classes + 7, grid_size, grid_size)
-        prediction = prediction.permute(0, 1, 3, 4, 2).contiguous()
-        # prediction size: [num_samples, num_anchors, grid_size, grid_size, num_classes + 7]
+        prediction = prediction.permute(0, 3, 4, 1, 2).contiguous()
+        # prediction size: [num_samples, grid_size, grid_size, num_anchors, num_classes + 7]
 
         # Get outputs
         pred_x = torch.sigmoid(prediction[..., 0])
@@ -180,74 +169,59 @@ class YoloLayer(nn.Module):
         pred_boxes[..., 3] = torch.exp(pred_h).clamp(max=1E3) * self.anchor_h
         pred_boxes[..., 4] = pred_im
         pred_boxes[..., 5] = pred_re
-
+        
         output = torch.cat((
-            pred_boxes[..., :4].view(num_samples, -1, 4) * self.stride,
-            pred_boxes[..., 4:6].view(num_samples, -1, 2),
-            pred_conf.view(num_samples, -1, 1),
-            pred_cls.view(num_samples, -1, self.num_classes),
+            pred_boxes[..., :4] * self.stride,
+            pred_boxes[..., 4:6],
+            pred_conf.unsqueeze(-1),
+            pred_cls,
         ), dim=-1)
+        output = output.permute(0, 3, 1, 2, 4).reshape(num_samples, -1, 7 + self.num_classes)
         # output size: [num_samples, num boxes, 7 + num_classes]
-
         if targets is None:
             return output, 0
-        else:
-            self.reduction = 'mean'
-            iou_scores, giou_loss, class_mask, obj_mask, noobj_mask, tx, ty, tw, th, tim, tre, tcls, tconf = self.build_targets(
-                pred_boxes=pred_boxes, pred_cls=pred_cls, target=targets, anchors=self.scaled_anchors)
 
-            loss_x = F.mse_loss(pred_x[obj_mask], tx[obj_mask], reduction=self.reduction)
-            loss_y = F.mse_loss(pred_y[obj_mask], ty[obj_mask], reduction=self.reduction)
-            loss_w = F.mse_loss(pred_w[obj_mask], tw[obj_mask], reduction=self.reduction)
-            loss_h = F.mse_loss(pred_h[obj_mask], th[obj_mask], reduction=self.reduction)
-            loss_im = F.mse_loss(pred_im[obj_mask], tim[obj_mask], reduction=self.reduction)
-            loss_re = F.mse_loss(pred_re[obj_mask], tre[obj_mask], reduction=self.reduction)
-            loss_im_re = (1. - torch.sqrt(pred_im[obj_mask] ** 2 + pred_re[obj_mask] ** 2)) ** 2  # as tim^2 + tre^2 = 1
-            loss_im_re_red = loss_im_re.sum() if self.reduction == 'sum' else loss_im_re.mean()
-            loss_eular = loss_im + loss_re + loss_im_re_red
+        self.reduction = 'sum'
+        giou_loss, obj_mask, noobj_mask, res, tcls, tconf = self.build_targets(
+            pred_boxes=pred_boxes, pred_cls=pred_cls, target_ori=targets, anchors=self.scaled_anchors)
 
-            loss_conf_obj = F.binary_cross_entropy(pred_conf[obj_mask], tconf[obj_mask], reduction=self.reduction)
-            loss_conf_noobj = F.binary_cross_entropy(pred_conf[noobj_mask], tconf[noobj_mask], reduction=self.reduction)
-            loss_cls = F.binary_cross_entropy(pred_cls[obj_mask], tcls[obj_mask], reduction=self.reduction)
+        self.nt = torch.sum(obj_mask.reshape(-1))
+        self.nont = torch.sum(noobj_mask.reshape(-1))
+        self.nt_new = math.ceil(int(self.nt) / 32) * 32
 
-            if self.use_giou_loss:
-                loss_obj = loss_conf_obj + loss_conf_noobj
-                total_loss = giou_loss * self.lgiou_scale + loss_eular * self.leular_scale + loss_obj * self.lobj_scale + loss_cls * self.lcls_scale
-            else:
-                loss_obj = self.obj_scale * loss_conf_obj + self.noobj_scale * loss_conf_noobj
-                total_loss = loss_x + loss_y + loss_w + loss_h + loss_eular + loss_obj + loss_cls
+        masks = torch.zeros([12, self.nt_new])
+        preds = torch.zeros([6, num_samples, grid_size, grid_size, self.num_anchors])
+        preds[0] = pred_x
+        preds[1] = pred_y
+        preds[2:6] = prediction[..., 2:6].permute(4, 0, 1, 2, 3)
+        masks[:6, :self.nt] = preds[:, obj_mask]
+        masks[6:, :self.nt] = res[:, obj_mask]
+        masks = masks.npu().contiguous()
+        loss_sum = F.mse_loss(masks[:6], masks[6:], reduction=self.reduction)
 
-                # Metrics (store loss values using tensorboard)
-            cls_acc = 100 * class_mask[obj_mask].mean()
-            conf_obj = pred_conf[obj_mask].mean()
-            conf_noobj = pred_conf[noobj_mask].mean()
-            conf50 = (pred_conf > 0.5).float()
-            iou50 = (iou_scores > 0.5).float()
-            iou75 = (iou_scores > 0.75).float()
-            detected_mask = conf50 * class_mask * tconf
-            precision = torch.sum(iou50 * detected_mask) / (conf50.sum() + 1e-16)
-            recall50 = torch.sum(iou50 * detected_mask) / (obj_mask.sum() + 1e-16)
-            recall75 = torch.sum(iou75 * detected_mask) / (obj_mask.sum() + 1e-16)
+        masks_im_re1 = torch.zeros([self.nt_new])
+        masks_im_re2 = torch.zeros([self.nt_new])
+        masks_im_re3 = torch.zeros([self.nt_new])
+        masks_im_re1[:self.nt] = pred_im[obj_mask]
+        masks_im_re2[:self.nt] = pred_re[obj_mask]
+        masks_im_re3[:self.nt] = 1
+        loss_im_re = (1. - torch.sqrt(masks_im_re1 ** 2 + masks_im_re2 ** 2)) ** 2  # as tim^2 + tre^2 = 1
+        loss_im_re_red = torch.sum(loss_im_re * masks_im_re3).npu()
 
-            self.metrics = {
-                "loss": to_cpu(total_loss).item(),
-                "iou_score": to_cpu(iou_scores[obj_mask].mean()).item(),
-                'giou_loss': to_cpu(giou_loss).item(),
-                'loss_x': to_cpu(loss_x).item(),
-                'loss_y': to_cpu(loss_y).item(),
-                'loss_w': to_cpu(loss_w).item(),
-                'loss_h': to_cpu(loss_h).item(),
-                'loss_eular': to_cpu(loss_eular).item(),
-                'loss_im': to_cpu(loss_im).item(),
-                'loss_re': to_cpu(loss_re).item(),
-                "loss_obj": to_cpu(loss_obj).item(),
-                "loss_cls": to_cpu(loss_cls).item(),
-                "cls_acc": to_cpu(cls_acc).item(),
-                "recall50": to_cpu(recall50).item(),
-                "recall75": to_cpu(recall75).item(),
-                "precision": to_cpu(precision).item(),
-                "conf_obj": to_cpu(conf_obj).item(),
-                "conf_noobj": to_cpu(conf_noobj).item()
-            }
+        masks1 = torch.zeros([self.nt_new])
+        masks2 = torch.zeros([self.nt_new])
+        masks1[:self.nt] = pred_conf[obj_mask]
+        masks2[:self.nt] = tconf[obj_mask]
+        loss_conf_obj = F.binary_cross_entropy(masks1.npu(), masks2.npu(), reduction=self.reduction)
 
-            return output, total_loss
+        loss_conf_noobj = F.binary_cross_entropy(pred_conf * noobj_mask, tconf * noobj_mask, reduction=self.reduction) / self.nont
+
+        masks_cls1 = torch.zeros([self.nt_new, 3])
+        masks_cls2 = torch.zeros([self.nt_new, 3])
+        masks_cls1[:self.nt] = pred_cls[obj_mask]
+        masks_cls2[:self.nt] = tcls[obj_mask]
+        loss_cls = F.binary_cross_entropy(masks_cls1.npu(), masks_cls2.npu(), reduction=self.reduction) / 3
+
+        total_loss = (loss_sum + loss_im_re_red + loss_cls + self.obj_scale * loss_conf_obj) / self.nt + self.noobj_scale * loss_conf_noobj
+
+        return output, total_loss

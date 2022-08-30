@@ -207,7 +207,7 @@ def load_conv(buf, start, conv_model):
 
 
 def save_conv(fp, conv_model):
-    if conv_model.bias.is_cuda:
+    if conv_model.bias.is_npu:
         convert2cpu(conv_model.bias.data).numpy().tofile(fp)
         convert2cpu(conv_model.weight.data).numpy().tofile(fp)
     else:
@@ -232,7 +232,7 @@ def load_conv_bn(buf, start, conv_model, bn_model):
 
 
 def save_conv_bn(fp, conv_model, bn_model):
-    if bn_model.bias.is_cuda:
+    if bn_model.bias.is_npu:
         convert2cpu(bn_model.bias.data).numpy().tofile(fp)
         convert2cpu(bn_model.weight.data).numpy().tofile(fp)
         convert2cpu(bn_model.running_mean).numpy().tofile(fp)

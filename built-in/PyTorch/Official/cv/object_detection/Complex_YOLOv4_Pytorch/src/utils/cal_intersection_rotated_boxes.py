@@ -142,8 +142,8 @@ if __name__ == "__main__":
     img = np.zeros((img_size, img_size, 3))
     img = cv2.resize(img, (img_size, img_size))
 
-    box1 = torch.tensor([100, 100, 40, 10, np.pi / 2], dtype=torch.float).cuda()
-    box2 = torch.tensor([100, 100, 40, 20, 0], dtype=torch.float).cuda()
+    box1 = torch.tensor([100, 100, 40, 10, np.pi / 2], dtype=torch.float).npu()
+    box2 = torch.tensor([100, 100, 40, 20, 0], dtype=torch.float).npu()
 
     box1_conners = get_corners_torch(box1[0], box1[1], box1[2], box1[3], box1[4])
     box1_polygon = cvt_box_2_polygon(box1_conners)

@@ -164,7 +164,7 @@ class Find_Anchors():
 
 
 if __name__ == '__main__':
-    dataset_dir = '../../dataset/kitti'
+    dataset_dir = '../dataset/kitti'
     num_anchors = 9
     img_size = 608
     use_yaw_label = True

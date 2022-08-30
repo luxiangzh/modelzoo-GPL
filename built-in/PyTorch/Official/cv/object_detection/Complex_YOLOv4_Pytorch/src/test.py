@@ -16,6 +16,8 @@ import time
 from easydict import EasyDict as edict
 import cv2
 import torch
+if torch.__version__ >= '1.8.1':
+    import torch_npu
 import numpy as np
 
 sys.path.append('../')
@@ -43,9 +45,9 @@ def parse_test_configs():
     parser.add_argument('--use_giou_loss', action='store_true',
                         help='If true, use GIoU loss during training. If false, use MSE loss for training')
 
-    parser.add_argument('--no_cuda', action='store_true',
-                        help='If true, cuda is not used.')
-    parser.add_argument('--gpu_idx', default=None, type=int,
+    parser.add_argument('--no_npu', action='store_true',
+                        help='If true, npu is not used.')
+    parser.add_argument('--local_rank', default=None, type=int,
                         help='GPU index to use.')
 
     parser.add_argument('--img_size', type=int, default=608,
@@ -94,13 +96,10 @@ if __name__ == '__main__':
     model = create_model(configs)
     model.print_network()
     print('\n\n' + '-*=' * 30 + '\n\n')
-    
-    device_string = 'cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx)
-    
     assert os.path.isfile(configs.pretrained_path), "No file at {}".format(configs.pretrained_path)
-    model.load_state_dict(torch.load(configs.pretrained_path, map_location=device_string))
+    model.load_state_dict(torch.load(configs.pretrained_path))
 
-    configs.device = torch.device(device_string)
+    configs.device = torch.device('cpu' if configs.no_npu else 'npu:{}'.format(configs.local_rank))
     model = model.to(device=configs.device)
 
     out_cap = None

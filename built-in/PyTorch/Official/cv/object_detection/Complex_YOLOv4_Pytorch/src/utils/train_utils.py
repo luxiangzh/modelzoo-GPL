@@ -13,6 +13,7 @@ import os
 import math
 
 import torch
+import apex
 from torch.optim.lr_scheduler import LambdaLR
 import torch.distributed as dist
 import matplotlib.pyplot as plt
@@ -37,9 +38,9 @@ def create_optimizer(configs, model):
             pg0 += [v]  # all else
 
     if configs.optimizer_type == 'sgd':
-        optimizer = torch.optim.SGD(pg0, lr=configs.lr, momentum=configs.momentum, nesterov=True)
+        optimizer = apex.optimizers.NpuFusedSGD(pg0, lr=configs.lr, momentum=configs.momentum, nesterov=True)
     elif configs.optimizer_type == 'adam':
-        optimizer = torch.optim.Adam(pg0, lr=configs.lr)
+        optimizer = apex.optimizers.NpuFusedAdam(pg0, lr=configs.lr)
     else:
         assert False, "Unknown optimizer type"
 
