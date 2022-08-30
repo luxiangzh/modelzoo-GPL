@@ -61,10 +61,10 @@ python3 test.py --local_rank 0 --pretrained_path ../checkpoints/complex_yolov4/c
 
 | NAME     | Acc@1 |  FPS | Epochs | AMP_Type |
 | -------  | ----- | ---: | ------ | -------: |
-| 1p-竞品V |     - |    8 |      1 |      -   |
-| 1p-NPU   |     - |    8 |      1 |     O1   |
-| 8p-竞品V |   84.8|   64 |    300 |      -   |
-| 8p-NPU   |   84.2|  70.4|    300 |     O1   |
+| 1p-竞品V |     - |    10 |      2 |      -   |
+| 1p-NPU   |     - |    12 |      2 |     O1   |
+| 8p-竞品V |   84.2|   64 |    300 |      -   |
+| 8p-NPU   |   84|  70.4|    300 |     O1   |
 
 ### 4. Folder structure
 
