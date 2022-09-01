@@ -1,3 +1,36 @@
+'''# -*- coding: utf-8 -*-
+# BSD 3-Clause License
+#
+# Copyright (c) 2017
+# All rights reserved.
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# ==========================================================================
+'''
 import argparse
 import os
 import time
@@ -8,6 +41,9 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import torch
+if torch.__version__ >= '1.8':
+    import torch_npu
+    
 import torch.utils.data.distributed
 from tqdm import tqdm
 from easydict import EasyDict as edict
@@ -20,7 +56,7 @@ from utils.misc import AverageMeter, ProgressMeter
 from utils.evaluation_utils import post_processing, get_batch_statistics_rotated_bbox, ap_per_class, load_classes, post_processing_v2
 
 
-def evaluate_mAP(val_loader, model, configs, logger):
+def evaluate_mAP(val_loader, model, configs, logger, device):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
 
@@ -39,7 +75,7 @@ def evaluate_mAP(val_loader, model, configs, logger):
             labels += targets[:, 1].tolist()
             # Rescale x, y, w, h of targets ((box_idx, class, x, y, w, l, im, re))
             targets[:, 2:6] *= configs.img_size
-            imgs = imgs.to(configs.device, non_blocking=True)
+            imgs = imgs.to(device, non_blocking=True)
 
             outputs = model(imgs)
             outputs = post_processing_v2(outputs, conf_thresh=configs.conf_thresh, nms_thresh=configs.nms_thresh)
@@ -47,7 +83,7 @@ def evaluate_mAP(val_loader, model, configs, logger):
             sample_metrics += get_batch_statistics_rotated_bbox(outputs, targets, iou_threshold=configs.iou_thresh)
 
             # measure elapsed time
-            # torch.cuda.synchronize()
+            # torch.npu.synchronize()
             batch_time.update(time.time() - start_time)
 
             # Log message
@@ -77,9 +113,9 @@ def parse_eval_configs():
     parser.add_argument('--use_giou_loss', action='store_true',
                         help='If true, use GIoU loss during training. If false, use MSE loss for training')
 
-    parser.add_argument('--no_cuda', action='store_true',
-                        help='If true, cuda is not used.')
-    parser.add_argument('--gpu_idx', default=None, type=int,
+    parser.add_argument('--no_npu', action='store_true',
+                        help='If true, npu is not used.')
+    parser.add_argument('--local_rank', default=0, type=int,
                         help='GPU index to use.')
 
     parser.add_argument('--img_size', type=int, default=608,
@@ -119,17 +155,16 @@ if __name__ == '__main__':
     # model.print_network()
     print('\n\n' + '-*=' * 30 + '\n\n')
     assert os.path.isfile(configs.pretrained_path), "No file at {}".format(configs.pretrained_path)
-    model.load_state_dict(torch.load(configs.pretrained_path))
-
-    configs.device = torch.device('cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx))
-    model = model.to(device=configs.device)
+    device = torch.device('npu:{}'.format(configs.local_rank))
+    model.load_state_dict(torch.load(configs.pretrained_path, map_location=device))
+    model = model.to(device)
 
     model.eval()
     print('Create the validation dataloader')
     val_dataloader = create_val_dataloader(configs)
 
     print("\nStart computing mAP...\n")
-    precision, recall, AP, f1, ap_class = evaluate_mAP(val_dataloader, model, configs, None)
+    precision, recall, AP, f1, ap_class = evaluate_mAP(val_dataloader, model, configs, None, device)
     print("\nDone computing mAP...\n")
     for idx, cls in enumerate(ap_class):
         print("\t>>>\t Class {} ({}): precision = {:.4f}, recall = {:.4f}, AP = {:.4f}, f1: {:.4f}".format(cls, \
