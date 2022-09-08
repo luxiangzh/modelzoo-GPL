@@ -1,18 +1,43 @@
-"""
-# -*- coding: utf-8 -*-
------------------------------------------------------------------------------------
-# Author: Nguyen Mau Dung
-# DoC: 2020.05.21
-# email: nguyenmaudung93.kstn@gmail.com
------------------------------------------------------------------------------------
-# Description: utils functions that use for training process
-"""
+'''# -*- coding: utf-8 -*-
+# BSD 3-Clause License
+#
+# Copyright (c) 2017
+# All rights reserved.
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# ==========================================================================
+'''
 
 import copy
 import os
 import math
 
 import torch
+import apex
 from torch.optim.lr_scheduler import LambdaLR
 import torch.distributed as dist
 import matplotlib.pyplot as plt
@@ -37,9 +62,9 @@ def create_optimizer(configs, model):
             pg0 += [v]  # all else
 
     if configs.optimizer_type == 'sgd':
-        optimizer = torch.optim.SGD(pg0, lr=configs.lr, momentum=configs.momentum, nesterov=True)
+        optimizer = apex.optimizers.NpuFusedSGD(pg0, lr=configs.lr, momentum=configs.momentum, nesterov=True)
     elif configs.optimizer_type == 'adam':
-        optimizer = torch.optim.Adam(pg0, lr=configs.lr)
+        optimizer = apex.optimizers.NpuFusedAdam(pg0, lr=configs.lr)
     else:
         assert False, "Unknown optimizer type"
 

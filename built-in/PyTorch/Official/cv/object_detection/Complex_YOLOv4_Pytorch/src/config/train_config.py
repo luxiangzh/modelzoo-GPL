@@ -1,12 +1,36 @@
-"""
-# -*- coding: utf-8 -*-
------------------------------------------------------------------------------------
-# Author: Nguyen Mau Dung
-# DoC: 2020.07.01
-# email: nguyenmaudung93.kstn@gmail.com
------------------------------------------------------------------------------------
-# Description: The configurations of the project will be defined here
-"""
+'''# -*- coding: utf-8 -*-
+# BSD 3-Clause License
+#
+# Copyright (c) 2017
+# All rights reserved.
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# ==========================================================================
+'''
 
 import os
 import argparse
@@ -35,7 +59,10 @@ def parse_train_configs():
                         help='the path of the pretrained checkpoint')
     parser.add_argument('--use_giou_loss', action='store_true',
                         help='If true, use GIoU loss during training. If false, use MSE loss for training')
-
+    parser.add_argument('--prof', action='store_true',
+                        help='If true, go profiling')
+    parser.add_argument('--perf', action='store_true',
+                        help='If true, on performance mode')
     ####################################################################
     ##############     Dataloader and Running configs            #######
     ####################################################################
@@ -105,18 +132,16 @@ def parse_train_configs():
     ####################################################################
     ##############     Distributed Data Parallel            ############
     ####################################################################
-    parser.add_argument('--world-size', default=-1, type=int, metavar='N',
+    parser.add_argument('--world-size', default=1, type=int, metavar='N',
                         help='number of nodes for distributed training')
-    parser.add_argument('--rank', default=-1, type=int, metavar='N',
+    parser.add_argument('--local_rank', default=0, type=int, metavar='N',
                         help='node rank for distributed training')
     parser.add_argument('--dist-url', default='tcp://127.0.0.1:29500', type=str,
                         help='url used to set up distributed training')
     parser.add_argument('--dist-backend', default='nccl', type=str,
                         help='distributed backend')
-    parser.add_argument('--gpu_idx', default=None, type=int,
-                        help='GPU index to use.')
-    parser.add_argument('--no_cuda', action='store_true',
-                        help='If true, cuda is not used.')
+    parser.add_argument('--no_npu', action='store_true',
+                        help='If true, npu is not used.')
     parser.add_argument('--multiprocessing-distributed', action='store_true',
                         help='Use multi-processing distributed training to launch '
                              'N processes per node, which has N GPUs. This is the '
@@ -141,8 +166,8 @@ def parse_train_configs():
     ####################################################################
     ############## Hardware configurations #############################
     ####################################################################
-    configs.device = torch.device('cpu' if configs.no_cuda else 'cuda')
-    configs.ngpus_per_node = torch.cuda.device_count()
+    configs.device = torch.device('cpu' if configs.no_npu else 'npu')
+    configs.ngpus_per_node = torch.npu.device_count()
 
     configs.pin_memory = True
 
@@ -152,10 +177,5 @@ def parse_train_configs():
     configs.dataset_dir = os.path.join(configs.working_dir, 'dataset', 'kitti')
     configs.checkpoints_dir = os.path.join(configs.working_dir, 'checkpoints', configs.saved_fn)
     configs.logs_dir = os.path.join(configs.working_dir, 'logs', configs.saved_fn)
-
-    if not os.path.isdir(configs.checkpoints_dir):
-        os.makedirs(configs.checkpoints_dir)
-    if not os.path.isdir(configs.logs_dir):
-        os.makedirs(configs.logs_dir)
 
     return configs
