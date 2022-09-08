@@ -15,7 +15,8 @@ from threading import Thread
 
 import numpy as np
 import torch
-import torch_npu
+if torch.__version__ > '1.8':
+    import torch_npu
 from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
