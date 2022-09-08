@@ -14,7 +14,7 @@ fi
 RANK_SIZE=1
 batch_size=64
 img_size=320
-model_name=yollov3
+model_name=yolov3
 # 数据集路径,保持为空,不需要修改
 data_path=""
 #训练epochs
