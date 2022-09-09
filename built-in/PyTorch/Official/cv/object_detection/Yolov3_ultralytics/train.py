@@ -21,7 +21,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch_npu
+if torch.__version__ > '1.8':
+    import torch_npu
 import torch.distributed as dist
 import torch.nn as nn
 import yaml
@@ -248,7 +249,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             model.half().float()  # pre-reduce anchor precision
 
         callbacks.run('on_pretrain_routine_end')
-
+    else:
+        torch.distributed.barrier()
     # DDP mode
     if npu and RANK != -1:
         model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK)
