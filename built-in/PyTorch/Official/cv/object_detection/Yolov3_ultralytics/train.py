@@ -249,10 +249,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             model.half().float()  # pre-reduce anchor precision
 
         callbacks.run('on_pretrain_routine_end')
-    else:
-        torch.distributed.barrier()
+
     # DDP mode
     if npu and RANK != -1:
+        torch.distributed.barrier()
         model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK)
 
     # Model parameters
