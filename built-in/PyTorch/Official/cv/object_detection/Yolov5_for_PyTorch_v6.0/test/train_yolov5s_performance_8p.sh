@@ -40,4 +40,5 @@ do
 		                --batch-size $batch_size \
 		                --epochs 2 \
 		                --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
+    fi                        
 done
