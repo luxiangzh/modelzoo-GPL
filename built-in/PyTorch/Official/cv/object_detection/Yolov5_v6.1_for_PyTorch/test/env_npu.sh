@@ -1,29 +1,35 @@
 #!/bin/bash
-export install_path=/usr/local/Ascend
+CANN_INSTALL_PATH_CONF='/etc/Ascend/ascend_cann_install.info'
 
-if [ -d ${install_path}/nnae/latest ];then
-	export LD_LIBRARY_PATH=/usr/local/:/usr/local/python3.7.5/lib/:/usr/local/openblas/lib:/usr/local/lib/:/usr/lib64/:/usr/lib/:${install_path}/nnae/latest/fwkacllib/lib64/:${install_path}/driver/lib64/common/:${install_path}/driver/lib64/driver/:${install_path}/add-ons/:/usr/lib/aarch64_64-linux-gnu:$LD_LIBRARY_PATH
-    export PATH=$PATH:${install_path}/nnae/latest/fwkacllib/ccec_compiler/bin/:${install_path}/nnae/latest/toolkit/tools/ide_daemon/bin/
-    export ASCEND_OPP_PATH=${install_path}/nnae/latest/opp/
-	export ASCEND_AICPU_PATH=${install_path}/nnae/latest
-    export OPTION_EXEC_EXTERN_PLUGIN_PATH=${install_path}/nnae/latest/fwkacllib/lib64/plugin/opskernel/libfe.so:${install_path}/nnae/latest/fwkacllib/lib64/plugin/opskernel/libaicpu_engine.so:${install_path}/nnae/latest/fwkacllib/lib64/plugin/opskernel/libge_local_engine.so
-    export PYTHONPATH=${install_path}/nnae/latest/fwkacllib/python/site-packages/:${install_path}/nnae/latest/fwkacllib/python/site-packages/auto_tune.egg/auto_tune:${install_path}/nnae/latest/fwkacllib/python/site-packages/schedule_search.egg:$PYTHONPATH
+if [ -f $CANN_INSTALL_PATH_CONF ]; then
+    CANN_INSTALL_PATH=$(cat $CANN_INSTALL_PATH_CONF | grep Install_Path | cut -d "=" -f 2)
 else
-	export LD_LIBRARY_PATH=/usr/local/:/usr/local/lib/:/usr/lib64/:/usr/lib/:/usr/local/python3.7.5/lib/:/usr/local/openblas/lib:${install_path}/ascend-toolkit/latest/fwkacllib/lib64/:${install_path}/driver/lib64/common/:${install_path}/driver/lib64/driver/:${install_path}/add-ons/:/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH
-	export PATH=$PATH:${install_path}/ascend-toolkit/latest/fwkacllib/ccec_compiler/bin/:${install_path}/ascend-toolkit/latest/toolkit/tools/ide_daemon/bin/
-	export ASCEND_OPP_PATH=${install_path}/ascend-toolkit/latest/opp/
-	export ASCEND_AICPU_PATH=${install_path}/ascend-toolkit/latest
-	export OPTION_EXEC_EXTERN_PLUGIN_PATH=${install_path}/ascend-toolkit/latest/fwkacllib/lib64/plugin/opskernel/libfe.so:${install_path}/ascend-toolkit/latest/fwkacllib/lib64/plugin/opskernel/libaicpu_engine.so:${install_path}/ascend-toolkit/latest/fwkacllib/lib64/plugin/opskernel/libge_local_engine.so
-	export PYTHONPATH=${install_path}/ascend-toolkit/latest/fwkacllib/python/site-packages/:${install_path}/ascend-toolkit/latest/fwkacllib/python/site-packages/auto_tune.egg/auto_tune:${install_path}/ascend-toolkit/latest/fwkacllib/python/site-packages/schedule_search.egg:$PYTHONPATH
+    CANN_INSTALL_PATH="/usr/local/Ascend"
 fi
+
+if [ -d ${CANN_INSTALL_PATH}/ascend-toolkit/latest ]; then
+    source ${CANN_INSTALL_PATH}/ascend-toolkit/set_env.sh
+else
+    source ${CANN_INSTALL_PATH}/nnae/set_env.sh
+fi
+
+#设置device侧日志登记为error
+msnpureport -g error -d 0
+msnpureport -g error -d 1
+msnpureport -g error -d 2
+msnpureport -g error -d 3
+msnpureport -g error -d 4
+msnpureport -g error -d 5
+msnpureport -g error -d 6
+msnpureport -g error -d 7
+#关闭Device侧Event日志
+msnpureport -e disable
 
 export TASK_QUEUE_ENABLE=1
 export PTCOPY_ENABLE=1
 export ASCEND_GLOBAL_LOG_LEVEL=3
 export DYNAMIC_OP="ADD#MUL"
 
-${install_path}/driver/tools/msnpureport -g error -d 0
-${install_path}/driver/tools/msnpureport -g error -d 4
 
 path_lib=$(python3.7 -c """
 import sys
