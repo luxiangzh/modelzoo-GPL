@@ -306,7 +306,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         optimizer.zero_grad()
         
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
-            
             if i == 50:
                 torch.npu.synchronize()
                 start_time = time.time()
@@ -362,18 +361,12 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 mem = '%.3gG' % (torch.npu.memory_reserved() / 1E9 if torch.npu.is_available() else 0)  # (GB)
                 s = ('%10s' * 2 + '%10.4g' * 6) % (
                     '%g/%g' % (epoch, epochs - 1), mem, *mloss, targets.shape[0], imgs.shape[-1])
-                pbar.set_description(s)
-
-            if opt.perf and i == 100:
-                torch.npu.synchronize()
-                end_time = time.time()                
-                break
+                pbar.set_description(s)              
 
             # end batch ------------------------------------------------------------------------------------------------
         # end epoch ----------------------------------------------------------------------------------------------------
-        if opt.perf:
-            cost_time = (end_time - start_time) / 50
-            print('Epoch {} step time: {}'.format(epoch, cost_time))
+        torch.npu.synchronize()
+        print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - 50)))
         scheduler.step()
 
         # DDP process 0 or single-GPU
