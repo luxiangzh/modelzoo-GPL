@@ -288,6 +288,9 @@ def train(hyp, opt, device, tb_writer=None):
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
+            if i == 50 and rank in [-1, 0]:
+                torch.npu.synchronize()
+                start_time = time.time()
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255.0  # uint8 to float32, 0-255 to 0.0-1.0
 
@@ -347,6 +350,9 @@ def train(hyp, opt, device, tb_writer=None):
 
         # Scheduler
         # lr = [x['lr'] for x in optimizer.param_groups]  # for tensorboard
+        if rank in [-1, 0]:
+            torch.npu.synchronize()
+            print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - 50)))
         scheduler.step()
 
         # DDP process 0 or single-GPU

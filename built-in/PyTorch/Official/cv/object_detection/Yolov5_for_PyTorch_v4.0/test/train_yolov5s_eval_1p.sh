@@ -34,7 +34,7 @@ source ${cur_path}/test/env_npu.sh
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-python3 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5_0.pt' --batch-size ${batch_size} --device 0 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
+python3 test.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5_0.pt' --batch-size ${batch_size} --device 0 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
 
 wait
 
@@ -44,7 +44,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'END {print}'| awk -F " " '{print $13}'`
+acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'NR=1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
 echo "ActualAcc : $acc"

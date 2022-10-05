@@ -93,13 +93,13 @@ ln -s /path/to/coco2017 ./coco
    - 单机单卡性能采集
 
      ```shell script
-     bash test/train_performance_1p.sh    
+     bash test/train_yolov5s_performance_1p.sh    
      ```
 
    - 单机8卡训练
 
      ```shell script
-     bash test/train_full_8p.sh    
+     bash test/train_yolov5s_full_8p.sh    
      ```
 
 

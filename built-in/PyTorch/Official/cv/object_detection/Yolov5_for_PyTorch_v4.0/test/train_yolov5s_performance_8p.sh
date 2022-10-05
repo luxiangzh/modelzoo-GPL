@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v5.0"
+Network="yolov5s_v4.0"
 
 cur_path=`pwd`
 model_name=yolov5s
@@ -44,10 +44,10 @@ then
 	export RANK=$i
 	let p_start=0+24*i
 	let p_end=23+24*i
-	taskset -c $p_start-$p_end $CMD python3.7 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --local_rank $i --device npu > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
+	taskset -c $p_start-$p_end $CMD python3.7 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --local_rank $i --device 8 --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log 2>&1 &
 	done
 else
-    python3.7 -m torch.distributed.launch --nproc_per_node=8 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device npu > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
+    python3.7 -m torch.distributed.launch --nproc_per_node=8 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device 8 --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log 2>&1 &
 fi
 
 wait
@@ -57,21 +57,13 @@ end_time=$(date +%s)
 echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
-#训练后进行eval显示精度
-python3.7 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5_0.pt' --batch-size 32 --device npu --local_rank 0 >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
-
-wait
-
 #最后一个迭代FPS值
-step_time=`grep -a 'step time:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log|awk 'END {print}'| awk -F " " '{print $5}'`
-FPS=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'/'${step_time}'}'`
+step_time=`grep -a 'step time:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log|awk 'END {print}'| awk -F " " '{print $5}'`
 
-#取acc值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log|grep 'Average Precision'|awk 'NR=1'| awk -F " " '{print $13}'`
+FPS=`awk 'BEGIN{printf "%.2f\n", 1.0*'${batch_size}'/'${step_time}'}'`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
-echo "ActualACC : $acc"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总
