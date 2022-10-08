@@ -38,7 +38,7 @@ fi
 source test/env_npu.sh
 cd src
 
-taskset -c 0-180 python3 train.py --local_rank $device_id --batch_size $batch_size --num_workers 4 --num_epochs 2 > ${cur_path}/test/output/$device_id/train_perf_1p.log 2>&1
+taskset -c 0-32 python3 train.py --local_rank $device_id --batch_size $batch_size --num_workers 4 --num_epochs 2 > ${cur_path}/test/output/$device_id/train_perf_1p.log 2>&1
 
 #训练结束时间，不需要修改
 end_time=$(date +%s)
