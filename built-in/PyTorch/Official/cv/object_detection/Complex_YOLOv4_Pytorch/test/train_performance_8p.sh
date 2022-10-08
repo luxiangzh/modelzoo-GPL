@@ -40,7 +40,9 @@ python3 -m torch.distributed.launch --nproc_per_node=${RANK_SIZE} train.py \
      --dist-backend 'hccl' \
      --multiprocessing-distributed \
      --batch_size ${batch_size} \
-     --num_epochs 5 > ${cur_path}/test/output/$device_id/train_perf_8p.log 2>&1
+     --print_freq 40 \
+     --num_workers 16 \
+     --num_epochs 10 > ${cur_path}/test/output/$device_id/train_perf_8p.log 2>&1
 
 #训练结束时间，不需要修改
 end_time=$(date +%s)
