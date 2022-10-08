@@ -48,11 +48,11 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-step_time=`grep -a 'Epoch:'  ${cur_path}/test/output/$device_id/train_perf_8p.log|awk 'END {print}'| awk -F " " '{print $8}'| cut -d ')' -f1`
+step_time=`grep -a 'Epoch:.*Time' ${cur_path}/test/output/$device_id/train_perf_8p.log  |awk 'END {print}'| awk -F "Time" '{print $2}' | awk -F "Data" '{print $1}' | awk -F " " '{print $3}'| cut -d ')' -f1`
 FPS=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'/'${step_time}'}'`
 
 #最后一个迭代loss值
-loss=`grep -a 'Epoch:'  ${cur_path}/test/output/$device_id/train_perf_8p.log|awk 'END {print}'| awk -F " " '{print $15}'` | cut -d '(' -f2 | cut -d ')' -f1
+loss=`grep -a 'Epoch:.*Loss'  ${cur_path}/test/output/$device_id/train_perf_8p.log|awk 'END {print}'| awk -F "Loss" '{print $2}' | awk -F " " '{print $2}' | cut -d '(' -f2 | cut -d ')' -f1`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
@@ -66,7 +66,7 @@ DeviceType=`uname -m`
 CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'perf'
 
 #提取Loss到train_${CaseName}_loss.txt中，需要模型审视修改
-grep -a 'loss:'  ${cur_path}/test/output/$device_id/train_perf_8p.log | awk -F "Loss" '{print $NF}' | awk -F " " '{print $16}' | cut -d '(' -f2 | cut -d ')' -f1 >> $cur_path/test/output/$device_id/train_${CaseName}_loss.txt
+grep -a 'Epoch:.*Loss'  ${cur_path}/test/output/$device_id/train_perf_8p.log | awk -F "Loss" '{print $2}' | awk -F " " '{print $2}' | cut -d '(' -f2 | cut -d ')' -f1 >> $cur_path/test/output/$device_id/train_${CaseName}_loss.txt
 
 #关键信息打印到${CaseName}.log中，不需要修改
 echo "Network = ${Network}" > $cur_path/test/output/$device_id/${CaseName}.log
