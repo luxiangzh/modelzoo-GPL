@@ -27,11 +27,6 @@ from tqdm import tqdm
 import json
 from abc import *
 from pathlib import Path
-<<<<<<< HEAD
-import apex
-from apex import amp
-=======
->>>>>>> parent of bde3c40 (Revert "my first")
 
 
 class AbstractTrainer(metaclass=ABCMeta):
@@ -87,11 +82,6 @@ class AbstractTrainer(metaclass=ABCMeta):
 
     def train(self):
         accum_iter = 0
-<<<<<<< HEAD
-        self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level='O2', loss_scale=32.0,
-                                                    combine_grad=True)
-=======
->>>>>>> parent of bde3c40 (Revert "my first")
         for epoch in range(self.num_epochs):
             accum_iter = self.train_one_epoch(epoch, accum_iter)
         self.logger_service.complete({
@@ -100,12 +90,6 @@ class AbstractTrainer(metaclass=ABCMeta):
         self.writer.close()
 
     def train_one_epoch(self, epoch, accum_iter):
-<<<<<<< HEAD
-    
-        self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level='O2', loss_scale=32.0,
-                                                    combine_grad=True)
-=======
->>>>>>> parent of bde3c40 (Revert "my first")
         self.model.train()
         if self.args.enable_lr_schedule:
             self.lr_scheduler.step()
@@ -206,17 +190,9 @@ class AbstractTrainer(metaclass=ABCMeta):
     def _create_optimizer(self):
         args = self.args
         if args.optimizer.lower() == 'adam':
-<<<<<<< HEAD
-            #return optim.Adam(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-            return apex.optimizers.NpuFusedAdam(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-        elif args.optimizer.lower() == 'sgd':
-            #return optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum)
-            return apex.optimizers.NpuFusedSGD(self.model.parameters(), lr=args.lr, momentum=args.momentum)
-=======
             return optim.Adam(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         elif args.optimizer.lower() == 'sgd':
             return optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum)
->>>>>>> parent of bde3c40 (Revert "my first")
         else:
             raise ValueError
 

@@ -42,7 +42,13 @@ Train BERT4Rec on ML-1m and run test set inference after training
    ```bash
    printf '1\ny\n' | python main.py --template train_bert
    ```
+#Results
+      
+      NDCG@1  NDCG@5  NDCG@10   HR@1   HR@5   HR@10
+        
+GPU   0.345   0.507    0.542    0.345  0.650  0.760
 
+NPU   0.346   0.509    0.546    0.346  0.651  0.764
 
 
   
