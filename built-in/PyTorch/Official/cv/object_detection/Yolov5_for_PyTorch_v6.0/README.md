@@ -86,5 +86,5 @@ bash test/train_yolov5s_full_8p.sh
 
 评估
 ```
-python val.py --data ./data/coco.yaml --img-size 640 --weight 'xxx.pt' --batch_size 32 --device 0
+bash test/train_yolov5s_eval.sh
 ```

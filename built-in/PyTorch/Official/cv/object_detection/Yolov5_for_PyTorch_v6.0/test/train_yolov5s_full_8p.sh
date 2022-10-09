@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v4.0"
+Network="yolov5s_v6.0"
 
 cur_path=`pwd`
 model_name=yolov5s
@@ -77,7 +77,7 @@ wait
 FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_8p_0.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
 
 #取acc值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log|grep 'Average Precision'|awk 'END {print}'| awk -F " " '{print $13}'`
+acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
