@@ -44,7 +44,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'NR=1'| awk -F " " '{print $13}'`
+acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
 echo "ActualAcc : $acc"
