@@ -20,7 +20,7 @@ yolov5版本Tags=v5.0, python版本为3.7.5
 
 ## 2.2 生成yolov5专用标注文件
 
-（1）将代码仓中coco/coco2yolo.py和coco/coco_class.txt拷贝到coco_data**根目录**
+（1）将代码仓中cocofile/coco2yolo.py和cocofile/coco_class.txt拷贝到coco的实际路径/data/to/coco
 
 （2）运行coco2yolo.py
 
@@ -28,15 +28,16 @@ yolov5版本Tags=v5.0, python版本为3.7.5
 python3 coco2yolo.py
 ```
 
-（3）运行上述脚本后，将在coco_data**根目录**生成train2017.txt和val2017.txt
+（3）运行上述脚本后，将在/data/to/coco生成train2017.txt和val2017.txt
 
 # 3.配置数据集路径
 
 修改data/coco.yaml文件中的train字段和val字段，分别指向上一节生成的train2017.txt和val2017.txt，如：  
 
+建立软连接：
+
 ```
-train: /data/coco_data/train2017.txt  
-val: /data/coco_data/val2017.txt  
+ln -s /data/to/coco coco
 ```
 
 # 4.GPU,CPU依赖
@@ -77,19 +78,8 @@ bash test/train_yolov5s_full_8p.sh
 # 9.NPU evalution指令  
 
 ```
-python3 test.py --data /data/coco.yaml --coco_path /data/coco/ --img-size 640 --weight 'yolov5_0.pt' --batch-size 128 --device npu --local_rank 0
+python3 test.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5_0.pt' --batch-size 32 --device npu --local_rank 0
 ```
-添加指令--set_dynamic_mode 可以开启模糊编译加速推理速度
-
-
-# 10.GPU 单机单卡训练指令  
-python train.py --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 32
-
-# 11.GPU 单机八卡训练指令  
-python -m torch.distributed.launch --nproc_per_node 8 train.py --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 256  
-
-# 12.CPU指令  
-python train.py --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 32 --device cpu  
 
 # 13.导出onnx指令
 python export_onnx.py --weights ./xxx.pt --img-size 640 --batch-size 1
