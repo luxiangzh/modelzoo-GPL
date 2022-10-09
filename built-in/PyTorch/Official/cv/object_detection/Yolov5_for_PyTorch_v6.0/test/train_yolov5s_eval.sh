@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v4.0"
+Network="yolov5s_v6.0"
 
 cur_path=`pwd`
 model_name=yolov5s
@@ -44,7 +44,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'END {print}'| awk -F " " '{print $13}'`
+acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
 echo "ActualAcc : $acc"
