@@ -31,7 +31,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-if torch.__version__ >= '1.8.1':
+if torch.__version__ >= '1.8':
     import torch_npu
 import torch.distributed as dist
 import torch.nn as nn
@@ -92,7 +92,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     # Directories
     w = save_dir / 'weights'  # weights dir
     (w.parent if evolve else w).mkdir(parents=True, exist_ok=True)  # make dir
-    last, best = w / 'last.pt', w / 'best.pt'
 
     # Hyperparameters
     if isinstance(hyp, str):
@@ -183,10 +182,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     if opt.optimizer == 'Adam':
         optimizer = Adam(g0, lr=hyp['lr0'], betas=(hyp['momentum'], 0.999))  # adjust beta1 to momentum
     elif opt.optimizer == 'AdamW':
-        # optimizer = AdamW(g0, lr=hyp['lr0'], betas=(hyp['momentum'], 0.999))  # adjust beta1 to momentum
         optimizer = apex.optimizers.NpuFusedAdamW(g0, lr=hyp['lr0'], betas=(hyp['momentum'], 0.999))
     else:
-        # optimizer = SGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
         optimizer = apex.optimizers.NpuFusedSGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
 
     optimizer.add_param_group({'params': g1, 'weight_decay': hyp['weight_decay']})  # add g1 with weight_decay
@@ -260,9 +257,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
         if not resume:
             labels = np.concatenate(dataset.labels, 0)
-            # c = torch.tensor(labels[:, 0])  # classes
-            # cf = torch.bincount(c.long(), minlength=nc) + 1.  # frequency
-            # model._initialize_biases(cf.to(device))
             if plots:
                 plot_labels(labels, names, save_dir)
 
@@ -291,12 +285,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     # Start training
     t0 = time.time()
     nw = max(round(hyp['warmup_epochs'] * nb), 1000)  # number of warmup iterations, max(3 epochs, 1k iterations)
-    # nw = min(nw, (epochs - start_epoch) / 2 * nb)  # limit warmup to < 1/2 of training
     last_opt_step = -1
     maps = np.zeros(nc)  # mAP per class
     results = (0, 0, 0, 0, 0, 0, 0)  # P, R, mAP@.5, mAP@.5-.95, val_loss(box, obj, cls)
     scheduler.last_epoch = start_epoch - 1  # do not move
-    # scaler = amp.GradScaler(enabled=cuda)
     stopper = EarlyStopping(patience=opt.patience)
     compute_loss = ComputeLoss(model)  # init loss class
     LOGGER.info(f'Image sizes {imgsz} train, {imgsz} val\n'
@@ -312,20 +304,14 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             iw = labels_to_image_weights(dataset.labels, nc=nc, class_weights=cw)  # image weights
             dataset.indices = random.choices(range(dataset.n), weights=iw, k=dataset.n)  # rand weighted idx
 
-        # Update mosaic border (optional)
-        # b = int(random.uniform(0.25 * imgsz, 0.75 * imgsz + gs) // gs * gs)
-        # dataset.mosaic_border = [b - imgsz, -b]  # height, width borders
-
         mloss = torch.zeros(3, device=device)  # mean losses
         if RANK != -1:
             train_loader.sampler.set_epoch(epoch)
-        pbar = enumerate(train_loader)
-        LOGGER.info(('\n' + '%10s' * 8) % ('Epoch', 'gpu_mem', 'box', 'obj', 'cls', 'labels', 'img_size', 'FPS'))
-        if RANK in [-1, 0]:
-            pbar = tqdm(pbar, total=nb, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')  # progress bar
+        LOGGER.info(('\n' + '%10s' * 9) % ('Epoch', 'step', 'gpu_mem', 'box', 'obj', 'cls', 'labels', 'img_size', 'FPS'))
         optimizer.zero_grad()
         start_time = time.time()
-        for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
+        fps = 0
+        for i, (imgs, targets, paths, _) in enumerate(train_loader):  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255  # uint8 to float32, 0-255 to 0.0-1.0
 
@@ -370,7 +356,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 optimizer.zero_grad()
                 # if ema:
                 #     ema.update(model)
-                if ema is not None:
+                if ema:
                     x = torch.tensor([1.]).to(device)
                     if device.type == 'npu':
                         params_fp32_fused = optimizer.get_model_combined_params()
@@ -390,21 +376,20 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             if RANK in [-1, 0]:
                 mloss = (mloss * i + loss_items) / (i + 1)  # update mean losses
                 mem = f'{torch.npu.memory_reserved() / 1E9 if torch.npu.is_available() else 0:.3g}G'  # (GB)
-                pbar.set_description(('%10s' * 2 + '%10.4g' * 5 + '%10.1f') % (
-                    f'{epoch}/{epochs - 1}', mem, *mloss, targets.shape[1], imgs.shape[-1], batch_size / sum_time))
-                # callbacks.run('on_train_batch_end', ni, model, imgs, targets, paths, plots, opt.sync_bn)
-                if callbacks.stop_training:
-                    return
+                fps = batch_size / sum_time
+                LOGGER.info(('%10s' * 3 + '%10.4g' * 5 + '%10.1f') %
+                            (f'{epoch}/{epochs - 1}', f'{i}/{nb}', mem, *mloss, targets.shape[1], imgs.shape[-1], fps))
             # end batch ------------------------------------------------------------------------------------------------
 
         # Scheduler
-        # lr = [x['lr'] for x in optimizer.param_groups]  # for loggers
+        if RANK in [-1, 0]:
+            torch.npu.synchronize()
+            LOGGER.info("\n")
+            LOGGER.info("Epoch %s FPS: %.2f" % (epoch, fps))
         scheduler.step()
 
         if RANK in [-1, 0]:
             # mAP
-            # callbacks.run('on_train_epoch_end', epoch=epoch)
-            # ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'names', 'stride', 'class_weights'])
             final_epoch = (epoch + 1 == epochs) or stopper.possible_stop
 
             # Save model
@@ -414,12 +399,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                         'optimizer': optimizer.state_dict()}
 
                 # Save last, best and delete
-                torch.save(ckpt, last)
-
-            # Stop DDP TODO: known issues shttps://github.com/ultralytics/yolov5/pull/4576
-            # stop = stopper(epoch=epoch, fitness=fi)
-            # if RANK == 0:
-            #    dist.broadcast_object_list([stop], 0)  # broadcast 'stop' to all ranks
+                torch.save(ckpt, 'yolov5s.pt')
 
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training -----------------------------------------------------------------------------------------------------
@@ -499,11 +479,6 @@ def main(opt, callbacks=Callbacks()):
     opt.global_rank = opt.local_rank
     set_logging_(opt.global_rank)
 
-    # Checks
-    # if RANK in [-1, 0]:
-    #     print_args(FILE.stem, opt)
-    #     check_git_status()
-    #     check_requirements(exclude=['thop'])
 
     # Resume
     if opt.resume and not check_wandb_resume(opt) and not opt.evolve:  # resume an interrupted run
@@ -544,11 +519,9 @@ def main(opt, callbacks=Callbacks()):
     # Train
     if not opt.evolve:
         train(opt.hyp, opt, device, callbacks)
-        # if WORLD_SIZE > 1 and RANK == 0:
-        #     LOGGER.info('Destroying process group... ')
-        #     dist.destroy_process_group()
-        dist.destroy_process_group()
-        LOGGER.info('Destroying process group... ')
+        if WORLD_SIZE > 1 and RANK == 0:
+            LOGGER.info('Destroying process group... ')
+            dist.destroy_process_group()
 
     # Evolve hyperparameters (optional)
     else:
@@ -627,7 +600,6 @@ def main(opt, callbacks=Callbacks()):
 
             # Train mutation
             results = train(hyp.copy(), opt, device, callbacks)
-            callbacks = Callbacks()
             # Write mutation results
             print_mutation(results, hyp.copy(), save_dir, opt.bucket)
 
@@ -644,7 +616,6 @@ def run(**kwargs):
     for k, v in kwargs.items():
         setattr(opt, k, v)
     main(opt)
-    return opt
 
 
 if __name__ == "__main__":
