@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v4.0"
+Network="yolov5s_v3.1"
 
 cur_path=`pwd`
 model_name=yolov5s
-batch_size=64
+batch_size=32
 
 for para in $*
 do
@@ -34,7 +34,7 @@ source ${cur_path}/test/env_npu.sh
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-python3 -u train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device 0 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
+python3.7 test.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5_0.pt' --batch-size ${batch_size} --device npu --local_rank 0 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
 
 wait
 
@@ -43,21 +43,11 @@ end_time=$(date +%s)
 echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
-#训练后进行eval显示精度
-python3 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5_0.pt' --batch-size 32 --device 0 >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
-
-wait
-
 #最后一个迭代FPS值
-step_time=`grep -a 'step time:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log|awk 'END {print}'| awk -F " " '{print $5}'`
-FPS=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'/'${step_time}'}'`
-
-#取acc值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log|grep 'Average Precision'|awk 'END {print}'| awk -F " " '{print $13}'`
+acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'NR=1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
-echo "ActualFPS : $FPS"
-echo "ActualACC : $acc"
+echo "ActualAcc : $acc"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总
@@ -65,10 +55,6 @@ echo "E2E Training Duration sec : $e2e_time"
 BatchSize=${batch_size}
 DeviceType=`uname -m`
 CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}
-
-##获取性能数据，不需要修改
-#单迭代训练时长
-TrainingTime=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'*1000/'${FPS}'}'`
 
 #关键信息打印到${CaseName}.log中，不需要修改
 echo "Network = ${Network}" > $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
