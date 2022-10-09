@@ -27,7 +27,7 @@ from threading import Thread
 
 import numpy as np
 import torch
-if torch.__version__ >= '1.8.1':
+if torch.__version__ >= '1.8':
     import torch_npu
 from tqdm import tqdm
 from apex import amp
@@ -390,5 +390,9 @@ def main(opt):
 
 
 if __name__ == "__main__":
+    torch.npu.set_compile_mode(jit_compile=False)
+    option = dict()
+    option["NPU_FUZZY_COMPILE_BLACKLIST"] = "Identity"
+    torch.npu.set_option(option)
     opt = parse_opt()
     main(opt)
