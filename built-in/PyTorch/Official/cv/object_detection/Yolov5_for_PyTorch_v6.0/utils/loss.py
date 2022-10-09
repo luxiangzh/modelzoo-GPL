@@ -110,6 +110,8 @@ class ComputeLoss:
         device = next(model.parameters()).device  # get model device
         h = model.hyp  # hyperparameters
 
+        self.index1, self.range_nb = None, None
+
         # Define criteria
         BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['cls_pw']]), reduction='sum').to(device)
         BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['obj_pw']]), reduction='mean').to(device)
@@ -129,6 +131,14 @@ class ComputeLoss:
         for k in 'na', 'nc', 'nl', 'anchors':
             setattr(self, k, getattr(det, k))
 
+    def get_index1(self, device):
+        if self.index1 is None:
+            self.index1 = torch.tensor([0, 1, 2, 3, 4, 5], device=device)
+
+    def get_range_nb(self, n, device):
+        if self.range_nb is None:
+            self.range_nb = torch.arange(n, device=device).long()
+
     def __call__(self, p, targets):  # predictions, targets, model
         device = targets.device
         lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
@@ -147,8 +157,8 @@ class ComputeLoss:
                 ps = DeterministicIndex.apply(pi, (b, a, gj, gi)).permute(1, 0).contiguous()  # prediction subset corresponding to targets
 
                 # Regression
-                pxy = ps.index_select(0, torch.tensor([0, 1], device=targets.device))
-                pwh = ps.index_select(0, torch.tensor([2, 3], device=targets.device))
+                pxy = ps.index_select(0, self.index1[:2])
+                pwh = ps.index_select(0, self.index1[2:4])
 
                 pxy = pxy.sigmoid() * 2. - 0.5
                 pwh = (pwh.sigmoid() * 2) ** 2 * anchors[i].T
@@ -170,8 +180,9 @@ class ComputeLoss:
                     tmp = ps[5:, :]
                     tmp = tmp * all_mask - (1. - all_mask) * 50.
                     t = torch.full_like(tmp, self.cn, device=device) # targets
-                    range_nb = torch.arange(n, device=device).long()
-                    t[tcls[i], range_nb] = self.cp
+                    #range_nb = torch.arange(n, device=device).long()
+                    self.get_range_nb(n, device)
+                    t[tcls[i], self.range_nb] = self.cp
                     t *= all_mask
                     lcls += (self.BCEcls(tmp, t) / (sum_mask * t.shape[0]).float())
 
@@ -196,6 +207,7 @@ class ComputeLoss:
 
     def build_targets(self, p, targets):
         # Build targets for compute_loss(), input targets(image,class,x,y,w,h)
+        self.get_index1(targets.device)
         na, nt = self.na, targets.shape[1]  # number of anchors, targets
 
         batch_size = p[0].shape[0]
@@ -243,7 +255,7 @@ class ComputeLoss:
                 t = t.repeat(1, 1, na).view(6, -1)  # filter
 
                 # Offsets
-                gxy = t.index_select(0, torch.tensor([2, 3], device=targets.device))
+                gxy = t.index_select(0, self.index1[2:4])
                 z = torch.zeros_like(gxy)
 
                 jk = (gxy % 1. < g) & (gxy > 1.)
@@ -256,14 +268,14 @@ class ComputeLoss:
                 t = t * all_mask
 
             # Define
-            b = t.index_select(0, torch.tensor([0], device=targets.device)).long().view(-1)   #(3072 * 5)
-            c = t.index_select(0, torch.tensor([1], device=targets.device)).long().view(-1)   #(3072 * 5)
-            gxy = t.index_select(0, torch.tensor([2, 3], device=targets.device)) #(2, 3072 * 5)
-            gwh = t.index_select(0, torch.tensor([4, 5], device=targets.device)) #(2, 3072 * 5)
+            b = t.index_select(0, self.index1[0]).long().view(-1)   #(3072 * 5)
+            c = t.index_select(0, self.index1[1]).long().view(-1)   #(3072 * 5)
+            gxy = t.index_select(0, self.index1[2:4], device=targets.device)) #(2, 3072 * 5)
+            gwh = t.index_select(0, self.index1[4:6], device=targets.device)) #(2, 3072 * 5)
             gij = gxy - offsets
             gij2 = gij.long()
-            gi = gij2.index_select(0, torch.tensor([0], device=targets.device)).view(-1) #(2, 3072 * 5)
-            gj = gij2.index_select(0, torch.tensor([1], device=targets.device)).view(-1) #(2, 3072 * 5)
+            gi = gij2.index_select(0, self.index1[0]).view(-1) #(2, 3072 * 5)
+            gj = gij2.index_select(0, self.index1[1]).view(-1) #(2, 3072 * 5)
 
             # Append
             indices.append((b, a, gj, gi))  # image, anchor, grid indices
