@@ -37,10 +37,13 @@ python3 coco2yolo.py
 path: /data/coco_data 
 ```
 
-# 4.NPU依赖
-按照requirements.txt安装python依赖包，还需安装(NPU-toolkit.run, torch-ascend.whl, apex.whl)
+# 4.GPU,CPU依赖
+按照requirements.txt安装python依赖包
 
-# 5.编译安装Opencv-python
+# 5.NPU依赖
+安装npu所需依赖（driver.run, firmware.run, toolkit.run, ascend.whl, apex.whl）
+
+# 6.编译安装Opencv-python
 
 为了获得最好的图像处理性能，***请编译安装opencv-python而非直接安装***。编译安装步骤如下：
 
@@ -55,22 +58,32 @@ make -j$nproc
 make install
 ```
 
-## 6.Train Model
-### 单卡
-1. 运行 train_1p.sh
-```
-bash test/train_full_1p.sh --data_path=real_path
-```
-若需要指定训练使用的卡号, 可修改train_1p.sh文件 "--device 0"配置项,其中卡号为0-7
-
-### 8卡
-1. 运行 train_8p.sh
-```
-bash test/train_full_8p.s --data_path=real_path
-```
-
-## 验证
+# 7.NPU单机单卡性能测试
 
 ```
-bash ./test/eval.sh
+bash test/train_yolov5s_performance_1p.sh 
+```
+
+# 8.NPU单机八卡性能测试
+
+```
+bash ./test/train_yolov5s_performance_8p.sh
+```
+
+# 9.NPU单机单卡训练指令
+
+```
+bash test/train_yolov5s_full_1p.sh 
+```
+
+# 10.NPU单机八卡训练指令
+
+```
+bash test/train_yolov5s_full_8p.sh 
+```
+
+# 11.模型评估
+
+```
+bash test/train_yolov5s_eval_1p.sh 
 ```
