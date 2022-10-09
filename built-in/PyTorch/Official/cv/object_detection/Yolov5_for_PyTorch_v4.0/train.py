@@ -306,7 +306,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         optimizer.zero_grad()
         
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
-            if i == 50:
+            if i == 50 and rank in [-1, 0]:
                 torch.npu.synchronize()
                 start_time = time.time()
             ni = i + nb * epoch  # number integrated batches (since train start)
@@ -365,8 +365,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
             # end batch ------------------------------------------------------------------------------------------------
         # end epoch ----------------------------------------------------------------------------------------------------
-        torch.npu.synchronize()
-        print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - 50)))
+        if rank in [-1, 0]:
+            torch.npu.synchronize()
+            print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - 50)))
         scheduler.step()
 
         # DDP process 0 or single-GPU
