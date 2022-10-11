@@ -90,9 +90,9 @@ def fix_random_seed_as(random_seed):
     args.num_gpu = len(args.device_idx.split(","))'''
 
 def set_up_npu(args):
-    device='npu:5'
-    torch.npu.set_device(device)
-
+    device_id=int(os.environ['ASCEND_DEVICE_ID'])
+    CALCULATE_DEVICE = "npu:{}".format(device_id)
+    torch.npu.set_device(CALCULATE_DEVICE)
 
 def load_pretrained_weights(model, path):
     chk_dict = torch.load(os.path.abspath(path))
