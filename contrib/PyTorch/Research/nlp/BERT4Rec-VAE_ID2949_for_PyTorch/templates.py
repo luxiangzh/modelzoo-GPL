@@ -19,7 +19,7 @@ def set_template(args):
     elif args.template.startswith('train_bert'):
         args.mode = 'train'
 
-        args.dataset_code = 'ml-' + input('Input 1 for ml-1m, 20 for ml-20m: ') + 'm'
+        args.dataset_code = 'ml-' + '1' + 'm'
         args.min_rating = 0 if args.dataset_code == 'ml-1m' else 4
         args.min_uc = 5
         args.min_sc = 0
@@ -40,14 +40,12 @@ def set_template(args):
 
         args.trainer_code = 'bert'
         args.device = 'npu'
-        #args.num_gpu = 1
         args.device_idx = '0'
         args.optimizer = 'Adam'
         args.lr = 0.001
         args.enable_lr_schedule = True
         args.decay_step = 25
         args.gamma = 1.0
-        #args.num_epochs = 100 if args.dataset_code == 'ml-1m' else 200
         args.num_epochs=100
         args.metric_ks = [1, 5, 10, 20, 50, 100]
         args.best_metric = 'NDCG@10'
@@ -65,7 +63,7 @@ def set_template(args):
     elif args.template.startswith('train_dae'):
         args.mode = 'train'
 
-        args.dataset_code = 'ml-' + input('Input 1 for ml-1m, 20 for ml-20m: ') + 'm'
+        args.dataset_code = 'ml-' + '1' + 'm'
         args.min_rating = 0 if args.dataset_code == 'ml-1m' else 4
         args.min_uc = 5
         args.min_sc = 0
@@ -101,7 +99,7 @@ def set_template(args):
     elif args.template.startswith('train_vae_search_beta'):
         args.mode = 'train'
 
-        args.dataset_code = 'ml-' + input('Input 1 for ml-1m, 20 for ml-20m: ') + 'm'
+        args.dataset_code = 'ml-' + '1' + 'm'
         args.min_rating = 0 if args.dataset_code == 'ml-1m' else 4
         args.min_uc = 5
         args.min_sc = 0
@@ -140,7 +138,7 @@ def set_template(args):
         args.mode = 'train'
         beta=0.285
 
-        args.dataset_code = 'ml-' + input('Input 1 for ml-1m, 20 for ml-20m: ') + 'm'
+        args.dataset_code = 'ml-' + '1' + 'm'
         args.min_rating = 0 if args.dataset_code == 'ml-1m' else 4
         args.min_uc = 5
         args.min_sc = 0
