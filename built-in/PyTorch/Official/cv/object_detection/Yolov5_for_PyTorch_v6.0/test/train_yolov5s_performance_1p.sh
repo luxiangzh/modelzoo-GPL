@@ -22,7 +22,7 @@ echo "device id is ${ASCEND_DEVICE_ID}"
 if [ -d ${cur_path}/test/output/${ASCEND_DEVICE_ID} ];
 	then
 	   rm -rf ${cur_path}/test/output/${ASCEND_DEVICE_ID}
-		mkdir -p ${cur_path}/test/output/${ASCEND_DEVICE_IDi}
+		mkdir -p ${cur_path}/test/output/${ASCEND_DEVICE_ID}
 	else
 	   mkdir -p ${cur_path}/test/output/${ASCEND_DEVICE_ID}
 	fi

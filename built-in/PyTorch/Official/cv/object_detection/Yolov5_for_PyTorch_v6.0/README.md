@@ -32,18 +32,13 @@ python3 coco2yolo.py
 
 # 3.配置数据集路径
 
-修改data/coco.yaml中path字段，指向coco数据集，如：
+建立数据集软链接：
 
 ```
-path: ./datasets/coco
+mkdir datasets
+ln -s /data/coco/ ./datasets/coco
 ```
 
-修改data/coco.yaml文件中的train字段和val字段，分别指向上一节生成的train2017.txt和val2017.txt，如：  
-
-```
-train: /data/coco_data/train2017.txt  
-val: /data/coco_data/val2017.txt  
-```
 
 # 4.GPU,CPU依赖
 按照requirements.txt安装python依赖包  
