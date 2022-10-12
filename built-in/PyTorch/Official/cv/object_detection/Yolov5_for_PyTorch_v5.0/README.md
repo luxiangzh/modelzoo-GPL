@@ -32,8 +32,6 @@ python3 coco2yolo.py
 
 # 3.配置数据集路径
 
-修改data/coco.yaml文件中的train字段和val字段，分别指向上一节生成的train2017.txt和val2017.txt，如：  
-
 建立软连接：
 
 ```
