@@ -20,7 +20,7 @@ yolov5版本Tags=v6.1, python版本为3.7.5
 
 ## 2.2 生成yolov5专用标注文件
 
-（1）将代码仓中coco/coco2yolo.py和coco/coco_class.txt拷贝到coco_data**根目录**
+（1）将代码仓中cocofile/coco2yolo.py和cocofile/coco_class.txt拷贝到coco_data**根目录**
 
 （2）运行coco2yolo.py
 
@@ -32,9 +32,10 @@ python3 coco2yolo.py
 
 # 3.配置数据集路径
 
-修改data/coco.yaml文件中的path字段，指向coco的文件路径，如：
+建立软连接：
+
 ```
-path: /data/coco_data 
+ln -s /data/to/coco coco
 ```
 
 # 4.GPU,CPU依赖
