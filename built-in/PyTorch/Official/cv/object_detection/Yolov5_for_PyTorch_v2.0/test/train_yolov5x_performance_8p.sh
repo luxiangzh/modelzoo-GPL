@@ -16,7 +16,7 @@ fi
 #集合通信参数,不需要修改
 export RANK_SIZE=8
 model_name=yolov5x
-batch_size=256
+batch_size=240
 
 # 数据集路径,保持为空,不需要修改
 data_path=""
