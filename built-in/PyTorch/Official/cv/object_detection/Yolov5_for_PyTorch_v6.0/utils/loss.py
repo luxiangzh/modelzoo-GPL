@@ -87,21 +87,19 @@ class QFocalLoss(nn.Module):
         else:  # 'none'
             return loss
 
-
 class DeterministicIndex(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, indices_list):
         ctx.x = x
         ctx.indices_list = indices_list
-        return x[indices_list[0], indices_list[1], :, indices_list[2], indices_list[3]]
+        return x[indices_list[0], indices_list[1], :, indices_list[2]]
 
     @staticmethod
     def backward(ctx, grad_output):
         tmp = torch.zeros_like(ctx.x)
-        ind0, ind1, ind2, ind3 = ctx.indices_list
-        tmp[ind0, ind1, :, ind2, ind3] = grad_output
+        ind0, ind1, ind2 = ctx.indices_list
+        tmp[ind0, ind1, :, ind2] = grad_output
         return tmp, None
-
 
 class ComputeLoss:
     # Compute losses
@@ -111,8 +109,8 @@ class ComputeLoss:
         h = model.hyp  # hyperparameters
 
         # Define criteria
-        BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['cls_pw']]), reduction='sum').to(device)
-        BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['obj_pw']]), reduction='mean').to(device)
+        BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['cls_pw']]), reduction='none').to(device)
+        BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['obj_pw']]), reduction='none').to(device)
 
         # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf eqn 3
         self.cp, self.cn = smooth_BCE(eps=h.get('label_smoothing', 0.0))  # positive, negative BCE targets
@@ -126,61 +124,83 @@ class ComputeLoss:
         self.balance = {3: [4.0, 1.0, 0.4]}.get(det.nl, [4.0, 1.0, 0.25, 0.06, .02])  # P3-P7
         self.ssi = list(det.stride).index(16) if autobalance else 0  # stride 16 index
         self.BCEcls, self.BCEobj, self.gr, self.hyp, self.autobalance = BCEcls, BCEobj, 1.0, h, autobalance
+        self.index1, self.range_nb = None, None
         for k in 'na', 'nc', 'nl', 'anchors':
             setattr(self, k, getattr(det, k))
+    
+    def get_index(self, device):
+        if self.index1 is None:
+            self.index1 = torch.tensor([0, 1, 2, 3, 4, 5], device=device)
 
+    def get_range_nb(self, n, device):
+        if self.range_nb is None:
+            self.range_nb = torch.arange(n, device=device).long()
+    
     def __call__(self, p, targets):  # predictions, targets, model
         device = targets.device
         lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
         tcls, tbox, indices, anchors, targets_mask, targets_sum_mask = self.build_targets(p, targets)  # targets
 
-        # Losses
-        for i, pi in enumerate(p):  # layer index, layer predictions
-            b, a, gj, gi = indices[i]  # image, anchor, gridy, gridx
-            tobj = torch.zeros_like(pi[:, :, 0, :, :], device=device)  # target obj
+        b_cat, a_cat, g_cat = [], [], []
+        p_cat = torch.cat([pi.flatten(3) for pi in p], 3)
+        offset = 0
+        for i, pi in enumerate(p):
+            _, _, _, h, w = pi.shape
+            b, a, gj, gi = indices[i]
+            b_cat.append(b)
+            a_cat.append(a)
+            g_cat.append(gj * w + gi + offset)
+            offset += h * w
+        b_cat = torch.cat(b_cat)
+        a_cat = torch.cat(a_cat)
+        g_cat = torch.cat(g_cat)
+        tcls_cat = torch.cat(tcls)
+        tbox_cat = torch.cat(tbox, 1)
+        anchors_cat = torch.cat(anchors, 0)
+        all_mask_cat = torch.cat(targets_mask, 1)
+        tobj = torch.zeros_like(p_cat[:, :, 0, :])  # target obj
+        sum_mask_cat = torch.stack(targets_sum_mask)
+        sum_mask = torch.sum(sum_mask_cat)
+        n = b_cat.shape[0]
+        bs = p_cat.shape[0]
+        self.get_range_nb(n, device)
+        if sum_mask.item() > 0:
+            ps = DeterministicIndex.apply(p_cat, (b_cat, a_cat, g_cat)).permute(1, 0).contiguous()
+            pxy = ps.index_select(0, self.index1[:2])
+            pwh = ps.index_select(0, self.index1[2:4])
+            pxy = pxy.sigmoid() * 2. - 0.5
+            pwh = (pwh.sigmoid() * 2) ** 2 * anchors_cat.T
+            pbox = torch.cat((pxy, pwh), 0)  # predicted box
+            iou = bbox_iou(pbox, tbox_cat, x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
+            iou = iou * all_mask_cat + (1. - all_mask_cat)
+            valid_mask = sum_mask_cat > 0
+            lbox += ((1.0 - iou).reshape(self.nl, -1).sum(1)[valid_mask] / sum_mask_cat[valid_mask]).sum()  # iou loss
 
-            all_mask = targets_mask[i]
-            sum_mask = targets_sum_mask[i]
+            # Objectness
+            iou = iou * all_mask_cat
+            score_iou = iou.detach().clamp(0).type(tobj.dtype)
+            if self.sort_obj_iou:
+                sort_id = torch.argsort(score_iou)
+                b_cat, a_cat, g_cat, score_iou = b_cat[sort_id], a_cat[sort_id], g_cat[sort_id], score_iou[sort_id]
+            tobj[b_cat, a_cat, g_cat] = (1.0 - self.gr) + self.gr * score_iou  # iou ratio
 
-            n = b.shape[0] # number of targets
-            if sum_mask.item() > 0: # number of unmasked targets
-                ps = DeterministicIndex.apply(pi, (b, a, gj, gi)).permute(1, 0).contiguous()  # prediction subset corresponding to targets
-
-                # Regression
-                pxy = ps.index_select(0, torch.tensor([0, 1], device=targets.device))
-                pwh = ps.index_select(0, torch.tensor([2, 3], device=targets.device))
-
-                pxy = pxy.sigmoid() * 2. - 0.5
-                pwh = (pwh.sigmoid() * 2) ** 2 * anchors[i].T
-                pbox = torch.cat((pxy, pwh), 0)  # predicted box
-                iou = bbox_iou(pbox, tbox[i], x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
-                iou = iou * all_mask + (1. - all_mask)
-                lbox += (1.0 - iou).sum() / sum_mask  # iou loss
-
-                # Objectness
-                iou = iou * all_mask
-                score_iou = iou.detach().clamp(0).type(tobj.dtype)
-                if self.sort_obj_iou:
-                    sort_id = torch.argsort(score_iou)
-                    b, a, gj, gi, score_iou = b[sort_id], a[sort_id], gj[sort_id], gi[sort_id], score_iou[sort_id]
-                tobj[b, a, gj, gi] = (1.0 - self.gr) + self.gr * score_iou  # iou ratio
-
-                # Classification
-                if self.nc > 1:  # cls loss (only if multiple classes)
-                    tmp = ps[5:, :]
-                    tmp = tmp * all_mask - (1. - all_mask) * 50.
-                    t = torch.full_like(tmp, self.cn, device=device) # targets
-                    range_nb = torch.arange(n, device=device).long()
-                    t[tcls[i], range_nb] = self.cp
-                    t *= all_mask
-                    lcls += (self.BCEcls(tmp, t) / (sum_mask * t.shape[0]).float())
-
-                # Append targets to text file
-                # with open('targets.txt', 'a') as file:
-                #     [file.write('%11.5g ' * 4 % tuple(x) + '\n') for x in torch.cat((txy[i], twh[i]), 1)]
-
-            obji = self.BCEobj(pi[:, :, 4, :, :], tobj)
+            # Classification
+            if self.nc > 1:  # cls loss (only if multiple classes)
+                tmp = ps[5:, :]
+                tmp = tmp * all_mask_cat - (1. - all_mask_cat) * 50.
+                t = torch.full_like(tmp, 0)  # targets
+                t[tcls_cat, self.range_nb] = 1 
+                t *= all_mask_cat
+                lcls += (self.BCEcls(tmp, t).reshape(t.shape[0], self.nl, -1).sum(-1).sum(0)[valid_mask]
+                        / (sum_mask_cat * t.shape[0])[valid_mask].float()).sum()
+        obj_all = self.BCEobj(p_cat[:, :, 4, :], tobj).sum(0).sum(0)
+        offset = 0
+        for i, pi in enumerate(p):
+            _, _, _, h, w = pi.shape
+            range_p = h * w
+            obji = obj_all[offset:offset+range_p].sum() / (range_p * self.nl * bs)
             lobj += obji * self.balance[i]  # obj loss
+            offset += range_p
             if self.autobalance:
                 self.balance[i] = self.balance[i] * 0.9999 + 0.0001 / obji.detach().item()
 
@@ -189,13 +209,13 @@ class ComputeLoss:
         lbox *= self.hyp['box']
         lobj *= self.hyp['obj']
         lcls *= self.hyp['cls']
-        bs = tobj.shape[0]  # batch size
 
         total_loss = lbox + lobj + lcls
         return total_loss * bs, torch.cat((lbox, lobj, lcls, total_loss)).detach()
 
     def build_targets(self, p, targets):
         # Build targets for compute_loss(), input targets(image,class,x,y,w,h)
+        self.get_index(targets.device)
         na, nt = self.na, targets.shape[1]  # number of anchors, targets
 
         batch_size = p[0].shape[0]
@@ -243,7 +263,7 @@ class ComputeLoss:
                 t = t.repeat(1, 1, na).view(6, -1)  # filter
 
                 # Offsets
-                gxy = t.index_select(0, torch.tensor([2, 3], device=targets.device))
+                gxy = t.index_select(0, self.index1[2:4])
                 z = torch.zeros_like(gxy)
 
                 jk = (gxy % 1. < g) & (gxy > 1.)
@@ -256,14 +276,14 @@ class ComputeLoss:
                 t = t * all_mask
 
             # Define
-            b = t.index_select(0, torch.tensor([0], device=targets.device)).long().view(-1)   #(3072 * 5)
-            c = t.index_select(0, torch.tensor([1], device=targets.device)).long().view(-1)   #(3072 * 5)
-            gxy = t.index_select(0, torch.tensor([2, 3], device=targets.device)) #(2, 3072 * 5)
-            gwh = t.index_select(0, torch.tensor([4, 5], device=targets.device)) #(2, 3072 * 5)
+            b = t.index_select(0, self.index1[0]).long().view(-1)   #(3072 * 5)
+            c = t.index_select(0, self.index1[1]).long().view(-1)   #(3072 * 5)
+            gxy = t.index_select(0, self.index1[2:4]) #(2, 3072 * 5)
+            gwh = t.index_select(0, self.index1[4:6]) #(2, 3072 * 5)
             gij = gxy - offsets
             gij2 = gij.long()
-            gi = gij2.index_select(0, torch.tensor([0], device=targets.device)).view(-1) #(2, 3072 * 5)
-            gj = gij2.index_select(0, torch.tensor([1], device=targets.device)).view(-1) #(2, 3072 * 5)
+            gi = gij2.index_select(0, self.index1[0]).view(-1) #(2, 3072 * 5)
+            gj = gij2.index_select(0, self.index1[1]).view(-1) #(2, 3072 * 5)
 
             # Append
             indices.append((b, a, gj, gi))  # image, anchor, grid indices
