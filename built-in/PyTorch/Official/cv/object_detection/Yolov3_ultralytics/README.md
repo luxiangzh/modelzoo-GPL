@@ -28,8 +28,20 @@ make install
 
 ## 4.2 COCO2017数据集
 
-**在下述命令后加入'--datasets=coco --data_path=coco数据集路径'**
-例如： bash test/train_full_1p.sh  --model_name=yolov3 --batch_size=64 --img_size=320 --datasets=coco --data_path=/The/Real/Path/To/Coco #coco数据集路径
+### 生成coco专用标注文件
+
+（1）将代码仓中cocofile/coco2yolo.py和cocofile/coco_class.txt拷贝到coco的实际路径/data/to/coco
+
+（2）运行coco2yolo.py
+
+```
+python3 coco2yolo.py
+```
+
+（3）运行上述脚本后，将在/data/to/coco生成train2017.txt和val2017.txt
+
+**在下述命令后加入'--datasets=coco --data_path=/data/to/coco'**
+例如： bash test/train_full_1p.sh  --model_name=yolov3 --batch_size=64 --img_size=320 --datasets=coco --data_path=/data/to/cocoo #coco数据集路径
 
 yolov3-320*320
 
