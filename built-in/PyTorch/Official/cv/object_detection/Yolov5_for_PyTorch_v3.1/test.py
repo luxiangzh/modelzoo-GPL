@@ -78,7 +78,8 @@ def test(data,
 
     else:  # called directly
         set_logging()
-        device = select_device(opt.device, opt.local_rank, batch_size=opt.batch_size)
+        torch.npu.set_device("npu:%d" % opt.device) 
+        device = torch.device("npu:%d" % opt.device)
         save_txt = opt.save_txt  # save *.txt labels
 
         # Remove previous
@@ -296,7 +297,6 @@ if __name__ == '__main__':
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
     parser.add_argument('--save-dir', type=str, default='runs/test', help='directory to save results')
-    parser.add_argument('--local_rank', type=int, default=0, help='the device to run program')
     opt = parser.parse_args()
     opt.save_json |= opt.data.endswith('coco.yaml')
     opt.data = check_file(opt.data)  # check file

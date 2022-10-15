@@ -87,7 +87,8 @@ def test(data,
 
     else:  # called directly
         set_logging()
-        device = select_device(opt.device, opt.local_rank, batch_size=batch_size)
+        torch.npu.set_device("npu:%d" % opt.deivce) 
+        device = torch.device("npu:%d" % opt.deivce)
 
         # Directories
         save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
@@ -334,7 +335,6 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='runs/test', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
-    parser.add_argument('--local_rank', type=int, default=0, help='the device to run program')
     opt = parser.parse_args()
     opt.save_json |= opt.data.endswith('coco.yaml')
     opt.data = check_file(opt.data)  # check file

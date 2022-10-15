@@ -70,6 +70,8 @@ from utils.torch_utils import EarlyStopping, ModelEMA, de_parallel, select_devic
 
 
 WORLD_SIZE = 1
+LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
+RANK = int(os.getenv('RANK', -1))
 
 def train(hyp,  # path/to/hyp.yaml or hyp dictionary
           opt,
@@ -470,9 +472,6 @@ def main(opt, callbacks=Callbacks()):
         opt.world_size = opt.device_num
     else:
         print("1p training")
-
-    RANK = opt.local_rank
-    LOCAL_RANK = RANK
 
     # set DDP variables
     opt.world_size = opt.device_num

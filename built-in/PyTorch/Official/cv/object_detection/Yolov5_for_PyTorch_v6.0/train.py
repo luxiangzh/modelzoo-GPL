@@ -24,7 +24,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-if torch.__version__ >= '1.8.1':
+if torch.__version__ >= '1.8':
     import torch_npu
 import torch.distributed as dist
 import torch.nn as nn
@@ -377,7 +377,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
                     'optimizer': None if final_epoch else optimizer.state_dict()
             }
-            torch.save(ckpt, 'yolov5_' + str(RANK) + '.pt')
+            torch.save(ckpt, 'yolov5s.pt')
             print('ckpt saved...')
 
             # Stop DDP TODO: known issues shttps://github.com/ultralytics/yolov5/pull/4576

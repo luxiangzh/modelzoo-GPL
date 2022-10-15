@@ -40,6 +40,8 @@ then
 	do
     let p_start=0+24*i
     let p_end=23+24*i
+    export RANK=$i
+    export LOCAL_RANK=$i
     taskset -c $p_start-$p_end $CMD python3.7 -u train.py \
       --data coco.yaml \
       --cfg yolov5s.yaml \

@@ -86,7 +86,7 @@ except ImportError:
 def train(hyp, opt, device, tb_writer=None, wandb=None):
     logger.info(f'Hyperparameters {hyp}')
     save_dir, epochs, batch_size, total_batch_size, weights, rank = \
-        Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.local_rank
+        Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
 
     # Directories
     wdir = save_dir / 'weights'
@@ -383,7 +383,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                     'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
                     'optimizer': optimizer.state_dict()
                 }
-                last = 'yolov5_' + str(rank) + '.pt'
+                last = 'yolov5s.pt'
                 torch.save(ckpt, last)
                 print('ckpt saved...')
                 del ckpt
@@ -412,12 +412,12 @@ if __name__ == '__main__':
     parser.add_argument('--bucket', type=str, default='', help='gsutil bucket')
     parser.add_argument('--cache-images', action='store_true', help='cache images for faster training')
     parser.add_argument('--image-weights', action='store_true', help='use weighted image selection for training')
-    parser.add_argument('--device', default=0, type=int, help='npu device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--device', default='', help='npu device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--multi-scale', action='store_true', help='vary img-size +/- 50%%')
     parser.add_argument('--single-cls', action='store_true', help='train multi-class data as single-class')
     parser.add_argument('--adam', action='store_true', help='use torch.optim.Adam() optimizer')
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
-    parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
+    parser.add_argument('--local_rank', type=int, default=0, help='DDP parameter, do not modify')
     parser.add_argument('--log-imgs', type=int, default=16, help='number of images for W&B logging, max 100')
     parser.add_argument('--log-artifacts', action='store_true', help='log artifacts, i.e. final trained model')
     parser.add_argument('--workers', type=int, default=8, help='maximum number of dataloader workers')
@@ -453,12 +453,9 @@ if __name__ == '__main__':
 
     # DDP mode
     opt.total_batch_size = opt.batch_size
-    npu_id = opt.local_rank
-    if opt.local_rank == -1:
-        npu_id = 0
-    torch.npu.set_device("npu:%d" % npu_id) 
-    device = torch.device("npu:%d" % npu_id)
-    if opt.device != 0:
+    torch.npu.set_device("npu:%d" % opt.local_rank) 
+    device = torch.device("npu:%d" % opt.local_rank)
+    if opt.device != '0':
         assert torch.npu.device_count() > opt.local_rank
         dist.init_process_group(backend='hccl', init_method='env://', rank=opt.local_rank)  # distributed backend
         assert opt.batch_size % opt.world_size == 0, '--batch-size must be multiple of npu device count'
