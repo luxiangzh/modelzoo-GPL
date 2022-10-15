@@ -16,7 +16,16 @@ fi
 #集合通信参数,不需要修改
 export RANK_SIZE=1
 model_name=yolov5x
-batch_size=30
+# 判断芯片类型batch_size取不同值
+chip_name=$(npu-smi info -t board -i 1 -c 0 | grep "Chip Name")
+chip_type=$(echo ${chip_name: -1})
+if [[ x"${chip_type}" == x"B" ]];then
+    echo "chip type is B"
+    batch_size=30
+else
+    batch_size=32
+fi
+
 
 # 数据集路径,保持为空,不需要修改
 data_path=""
