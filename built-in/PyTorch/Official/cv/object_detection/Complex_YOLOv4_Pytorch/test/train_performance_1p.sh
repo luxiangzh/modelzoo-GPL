@@ -29,8 +29,19 @@ fi
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-#创建DeviceID输出目录，不需要修改
+# 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
 device_id=0
+if [ $ASCEND_DEVICE_ID ];then
+	export device_id=${ASCEND_DEVICE_ID}
+    echo "device id is ${ASCEND_DEVICE_ID}"
+elif [ ${device_id} ];then
+    echo "device id is ${device_id}"
+else
+    "[Error] device id must be config"
+    exit 1
+fi
+
+#创建DeviceID输出目录，不需要修改
 if [ ! -d ${cur_path}/test/output/${device_id} ];then
     mkdir -p ${cur_path}/test/output/$device_id/
 fi

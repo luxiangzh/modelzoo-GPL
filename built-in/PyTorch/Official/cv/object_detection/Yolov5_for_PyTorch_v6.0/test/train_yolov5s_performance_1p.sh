@@ -16,9 +16,19 @@ do
    fi
 done
 
+# 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
+local_rank=0
+if [ $ASCEND_DEVICE_ID ];then
+    echo "device id is ${ASCEND_DEVICE_ID}"
+elif [ ${local_rank} ];then
+    export ASCEND_DEVICE_ID=${local_rank}
+    echo "device id is ${ASCEND_DEVICE_ID}"
+else
+    "[Error] device id must be config"
+    exit 1
+fi
+
 #创建DeviceID输出目录，不需要修改
-ASCEND_DEVICE_ID=0
-echo "device id is ${ASCEND_DEVICE_ID}"
 if [ -d ${cur_path}/test/output/${ASCEND_DEVICE_ID} ];
 	then
 	   rm -rf ${cur_path}/test/output/${ASCEND_DEVICE_ID}
@@ -37,7 +47,7 @@ python3.7 -u train.py --data ./data/coco.yaml \
                       --cfg yolov5s.yaml \
                      --weights '' \
                      --batch-size $batch_size \
-                     --device 0 \
+                     --device $ASCEND_DEVICE_ID \
                      --epochs 2 > $cur_path/test/output/${ASCEND_DEVICE_ID}/train_perf_1p.log 2>&1 &
 
 wait

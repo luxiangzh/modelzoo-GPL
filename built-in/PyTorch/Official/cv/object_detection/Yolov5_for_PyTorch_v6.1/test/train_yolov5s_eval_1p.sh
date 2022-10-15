@@ -17,8 +17,16 @@ do
 done
 
 # 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
-ASCEND_DEVICE_ID=0
-echo "device id is ${ASCEND_DEVICE_ID}"
+local_rank=0
+if [ $ASCEND_DEVICE_ID ];then
+    echo "device id is ${ASCEND_DEVICE_ID}"
+elif [ ${local_rank} ];then
+    export ASCEND_DEVICE_ID=${local_rank}
+    echo "device id is ${ASCEND_DEVICE_ID}"
+else
+    "[Error] device id must be config"
+    exit 1
+fi
 
 #创建DeviceID输出目录，不需要修改
 if [ -d ${cur_path}/test/output/${ASCEND_DEVICE_ID} ];then
@@ -42,7 +50,7 @@ python3 val.py \
     --half \
     --device npu \
     --batch-size 32 \
-    --local_rank 0 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
+    --local_rank $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
 
 wait
 
