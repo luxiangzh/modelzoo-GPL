@@ -17,8 +17,16 @@ do
 done
 
 # 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
-ASCEND_DEVICE_ID=0
-echo "device id is ${ASCEND_DEVICE_ID}"
+local_rank=0
+if [ $ASCEND_DEVICE_ID ];then
+    echo "device id is ${ASCEND_DEVICE_ID}"
+elif [ ${local_rank} ];then
+    export ASCEND_DEVICE_ID=${local_rank}
+    echo "device id is ${ASCEND_DEVICE_ID}"
+else
+    "[Error] device id must be config"
+    exit 1
+fi
 
 #创建DeviceID输出目录，不需要修改
 if [ -d ${cur_path}/test/output/${ASCEND_DEVICE_ID} ];then
@@ -34,7 +42,7 @@ source ${cur_path}/test/env_npu.sh
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-python3.7 -u train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device npu > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
+python3.7 -u train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device 0 --local_rank $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
 
 wait
 
@@ -44,7 +52,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3.7 test.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5_0.pt' --batch-size 32 --device npu --local_rank 0 >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
+python3.7 test.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5s.pt' --batch-size 32 --device $ASCEND_DEVICE_ID >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
 
 wait
 

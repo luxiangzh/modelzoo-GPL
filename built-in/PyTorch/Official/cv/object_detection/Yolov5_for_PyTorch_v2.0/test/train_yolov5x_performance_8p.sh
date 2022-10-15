@@ -44,7 +44,7 @@ fi
 sed -i 's#train: .*#train: '${data_path}'/train2017.txt#' ${cur_path}/data/coco.yaml
 sed -i 's#val: .*#val: '${data_path}'/val2017.txt#' ${cur_path}/data/coco.yaml
 sed -i 's#test: .*#test: '${data_path}'/test2017.txt#' ${cur_path}/data/coco.yaml
-sed -i 's#python3.7 test.py --data data/coco.yaml --coco_instance_path.*#python3.7 test.py --data data/coco.yaml --coco_instance_path  .'${data_path}'/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu 0 #' ${test_path_dir}/evaluation_npu_1p.sh
+sed -i 's#python3.7 test.py --data data/coco.yaml --coco_instance_path.*#python3.7 test.py --data data/coco.yaml --coco_instance_path  .'${data_path}'/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu 0 #' ${test_path_dir}/train_eval_1p.sh
 
 
 model_path="${cur_path}/models/${model_name}.yaml"

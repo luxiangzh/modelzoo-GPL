@@ -45,7 +45,7 @@ fi
 sed -i 's#train: .*#train: '${data_path}'/train2017.txt#' ${cur_path}/data/coco.yaml
 sed -i 's#val: .*#val: '${data_path}'/val2017.txt#' ${cur_path}/data/coco.yaml
 sed -i 's#test: .*#test: '${data_path}'/test2017.txt#' ${cur_path}/data/coco.yaml
-sed -i 's#python3.7 test.py --data data/coco.yaml --coco_instance_path.*#python3.7 test.py --data data/coco.yaml --coco_instance_path  .'${data_path}'/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu 0 #' ${test_path_dir}/evaluation_npu_1p.sh
+sed -i 's#python3.7 test.py --data data/coco.yaml --coco_instance_path.*#python3.7 test.py --data data/coco.yaml --coco_instance_path  .'${data_path}'/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu 0 #' ${test_path_dir}/train_eval_1p.sh
 
 
 model_path="${cur_path}/models/${model_name}.yaml"
@@ -57,7 +57,18 @@ if [ x"${etp_flag}" != x"true" ];then
     source  ${test_path_dir}/env_npu.sh
 fi
 
-ASCEND_DEVICE_ID=0
+# 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
+local_rank=0
+if [ $ASCEND_DEVICE_ID ];then
+    echo "device id is ${ASCEND_DEVICE_ID}"
+elif [ ${local_rank} ];then
+    export ASCEND_DEVICE_ID=${local_rank}
+    echo "device id is ${ASCEND_DEVICE_ID}"
+else
+    "[Error] device id must be config"
+    exit 1
+fi
+
 #################创建日志输出目录，不需要修改#################
 if [ -d ${test_path_dir}/output/${ASCEND_DEVICE_ID} ];then
     rm -rf ${test_path_dir}/output/${ASCEND_DEVICE_ID}
@@ -75,7 +86,7 @@ taskset -c 0-23 python3.7 train.py \
 		--weights '' \
 		--batch-size $batch_size \
 		--device npu \
-		--npu 0 \
+		--npu $ASCEND_DEVICE_ID \
 		--epochs 2 > $test_path_dir/output/$ASCEND_DEVICE_ID/train_$ASCEND_DEVICE_ID.log 2>&1 &
 wait
 #训练结束时间，不需要修改

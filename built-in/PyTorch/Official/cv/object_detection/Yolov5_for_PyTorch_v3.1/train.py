@@ -359,7 +359,7 @@ def train(hyp, opt, device, tb_writer=None):
                     'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
                     'optimizer': optimizer.state_dict()
                 }
-                last = 'yolov5_' + str(rank) + '.pt'
+                last = 'yolov5s.pt'
                 torch.save(ckpt, last)
                 print('ckpt saved...')
                 del ckpt
@@ -444,8 +444,9 @@ if __name__ == '__main__':
         log_dir = increment_dir(Path(opt.logdir) / 'exp', opt.name)  # runs/exp1
 
     # DDP mode
-    device = select_device(opt.device, opt.local_rank, batch_size=opt.batch_size)
-    if opt.local_rank != -1:
+    torch.npu.set_device("npu:%d" % opt.local_rank) 
+    device = torch.device("npu:%d" % opt.local_rank)
+    if opt.device != '0':
         assert torch.npu.device_count() > opt.local_rank
         dist.init_process_group(backend='hccl', world_size=opt.world_size, rank=opt.local_rank)  # distributed backend
         assert opt.batch_size % opt.world_size == 0, '--batch-size must be multiple of npu device count'

@@ -34,7 +34,7 @@
 import argparse
 
 import torch
-if torch.__version__ >= "1.8.1":
+if torch.__version__ >= "1.8":
     import torch_npu
 import torch.distributed as dist
 import torch.nn.functional as F
@@ -476,24 +476,14 @@ def main_worker(npu, ngpus_per_node, opt):
             hyp.update(yaml.load(f, Loader=yaml.FullLoader))  # update hyps
     opt.img_size.extend([opt.img_size[-1]] * (2 - len(opt.img_size)))  # extend to 2 sizes (train, test)
     global mixed_precision
-    device = torch_utils.select_device(opt.device, opt.npu, apex=mixed_precision, batch_size=opt.batch_size)
+    
     opt.total_batch_size = opt.batch_size
+    torch.npu.set_device("npu:%d" % opt.npu) 
+    device = torch.device("npu:%d" % opt.npu)
+
     if device.type == 'cpu':
         mixed_precision = False
-    elif opt.local_rank != -1 and device.type == 'cuda':
-        # DDP mode
-        assert torch.cuda.device_count() > opt.local_rank
-        torch.cuda.set_device(opt.local_rank)
-        device = torch.device("cuda", opt.local_rank)
-        dist.init_process_group(backend='nccl', init_method='env://')  # distributed backend
-
-        opt.world_size = dist.get_world_size()
-        assert opt.batch_size % opt.world_size == 0, "Batch size is not a multiple of the number of devices given!"
-        opt.batch_size = opt.total_batch_size // opt.world_size
-    elif opt.local_rank != -1 and device.type == 'npu':
-        dist.init_process_group(backend='hccl', world_size=opt.world_size, rank=opt.local_rank)
-        assert opt.batch_size % opt.world_size == 0, "Batch size is not a multiple of the number of devices given!"
-        opt.batch_size = opt.total_batch_size // opt.world_size
+        
     print(opt)
 
     # Train
