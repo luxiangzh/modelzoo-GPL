@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#!/bin/bash
-
 ###############指定训练脚本执行路径###############
 # cd到与test文件夹同层级目录下执行脚本，提高兼容性；test_path_dir为包含test文件夹的路径
 cur_path=`pwd`
@@ -16,7 +14,16 @@ fi
 #集合通信参数,不需要修改
 export RANK_SIZE=8
 model_name=yolov5x
-batch_size=240
+# 判断芯片类型batch_size取不同值
+chip_name=$(npu-smi info -t board -i 1 -c 0 | grep "Chip Name")
+chip_type=$(echo ${chip_name: -1})
+if [[ x"${chip_type}" == x"B" ]];then
+    echo "chip type is B"
+    batch_size=240
+else
+    batch_size=256
+fi
+
 
 # 数据集路径,保持为空,不需要修改
 data_path=""
