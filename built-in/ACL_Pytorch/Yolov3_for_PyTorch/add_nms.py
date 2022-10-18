@@ -102,7 +102,7 @@ def main(args):
     onnx_model.graph.output.append(box_out)
     onnx_model.graph.output.append(box_out_num)
 
-    onnx.save(onnx_model, os.path.join(args.output_dir, args.onnx_path.replace('.onnx', "_nms.onnx")))
+    onnx.save(onnx_model, args.onnx_path.replace('.onnx', "_nms.onnx"))
 
 
 if __name__ == '__main__':
@@ -110,8 +110,8 @@ if __name__ == '__main__':
     parser.add_argument('--pt-path', type=str, default='./yolov3.pt', help='pt_model path')
     parser.add_argument('--onnx-path', type=str, default='./yolov3.onnx', help='onnx_model path')
     parser.add_argument('--output-dir', type=str, default='output', help='output path')
-    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
     parser.add_argument('--batch-size', type=int, default=1, help='batch size')
+    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
     parser.add_argument('--conf-thres', type=float, default=0.4, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS')
     parser.add_argument('--class-num', type=int, default=80, help='class num')
