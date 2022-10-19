@@ -25,7 +25,6 @@ from pycocotools.cocoeval import COCOeval
 import aclruntime
 
 np.set_printoptions(suppress=True)
-neth, netw = 640, 640
 
 
 class BatchDataLoader:
@@ -42,8 +41,8 @@ class BatchDataLoader:
         basename = os.path.basename(img_path)
         img0 = cv2.imread(img_path)
         imgh, imgw = img0.shape[:2]
-        img = letterbox(img0, new_shape=(neth, netw))[0]  # padding resize
-        imginfo = np.array([neth, netw, imgh, imgw], dtype=np.float32)
+        img = letterbox(img0, new_shape=args.img_size)[0]  # padding resize
+        imginfo = np.array([args.img_size[0], args.img_size[1], imgh, imgw], dtype=np.float32)
         return img0, img, imginfo, basename
 
     def __getitem__(self, item):
@@ -79,7 +78,7 @@ def coco80_to_coco91_class():
     return x
 
 
-def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=False, scaleFill=False, scaleup=True):
+def letterbox(img, new_shape=[640, 640], color=(114, 114, 114), auto=False, scaleFill=False, scaleup=True):
     # Resize image to a 32-pixel-multiple rectangle https://github.com/ultralytics/yolov3/issues/232
     shape = img.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
@@ -299,6 +298,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default="yolov3.om", help='om model path')
     parser.add_argument('--output-dir', type=str, default='output', help='output path')
     parser.add_argument('--batch-size', type=int, default=1, help='om batch size')
+    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
     parser.add_argument('--device-id', type=int, default=0, help='device id')
     parser.add_argument('--eval', action='store_true', help='compute mAP')
     parser.add_argument('--visible', action='store_true',

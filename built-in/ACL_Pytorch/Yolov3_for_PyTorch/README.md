@@ -17,7 +17,8 @@ YOLOv3是一种端到端的one-stage目标检测模型。相比YOLOv2，YOLOv3�
 这个新网络比Darknet-19更加强大，也比ResNet-101或者ResNet-152更加高效。
 同时，对于一张输入图片，YOLOv3可以在3个不同尺度预测物体框，每个尺度预测三种大小的边界框，通过多尺度联合预测的方式有效提升了小目标的检测精度。
 
-- 版本说明：
+- 版本说明：  
+  本代码仓基于yolov3最新tag v9.6.0推理，其他tag可以参考该流程。
   ```
   url=https://github.com/ultralytics/yolov3/tree/v9.6.0
   tag=v9.6.0
@@ -107,12 +108,16 @@ YOLOv3是一种端到端的one-stage目标检测模型。相比YOLOv2，YOLOv3�
    ```
 
 2. 导出`ONNX`模型  
-   运行`export.py`导出`ONNX`模型，`--dynamic`支持导出动态`batch`的`ONNX`，`--simplify`简化导出的`ONNX`。  
+   运行`export.py`导出`ONNX`模型，`--dynamic`支持导出动态`batch`的`ONNX`，`--simplify`简化导出的`ONNX`。
    ```
    git apply v9_6_0.patch     # 导出ONNX模型需要修改开源代码仓代码
    python3 export.py --weights=yolov3.pt --imgsz=640 --batch=1 --include=onnx --opset=11 --dynamic --simplify
    ```
-   运行`add_nms.py`为导出的`ONNX`添加后处理算子`NMS`，参数`--conf-thres`和`--iou-thres`分别设置后处理的置信度阈值和`iou`阈值，`--class`设置实际推理数据集的类别数，导出的模型默认保存在`output`文件夹下。
+   - 若基于其他tag推理，此处有2点不同需注意：  
+     1）`patch`不同。`patch`的目的是对源码做一些修改，已提供`v9.6.0`的`patch`，其他tag可参考`v9_6_0.patch`，切换到对应`tag`直接修改源码即可。  
+     2）`export.py`的路径和参数可能不同。之前的版本`export.py`在`models`文件夹下，且不包含`--dynamic --simplify`等参数，去掉这些参数即可，不影响导出。
+   
+   运行`add_nms.py`为导出的`ONNX`添加后处理算子`NMS`，参数`--conf-thres`和`--iou-thres`分别设置后处理的置信度阈值和`iou`阈值，`--class`设置实际推理数据集的类别数。
    ```
    python3 add_nms.py --pt=yolov3.pt --onnx=yolov3.onnx --output=output --batch=1 --conf=0.4 --iou=0.5 --class=80
    ```
@@ -145,9 +150,12 @@ YOLOv3是一种端到端的one-stage目标检测模型。相比YOLOv2，YOLOv3�
    3.3 执行ATC命令  
    运行`atc.sh`导出`OM`模型，默认保存在`output`文件夹下。
    ```
-   bash atc.sh --model yolov3_nms --bs 1 --output_dir output --soc Ascend310P3
+   # 导出不带nms后处理的模型，用于性能测试
+   bash atc.sh --model yolov3 --bs 1 --img_h 640 --img_w 640 --output_dir output --soc Ascend310P3
+   # 导出带nmx后处理的模型，用于精度测试
+   bash atc.sh --model yolov3_nms --bs 1 --img_h 640 --img_w 640 --output_dir output --soc Ascend310P3
    ```
-      - 参数说明：
+      - `atc`命令参数说明（参数见`atc.sh`）：
         -   `--model`：ONNX模型文件
         -   `--framework`：5代表ONNX模型
         -   `--output`：输出的OM模型
@@ -165,12 +173,13 @@ YOLOv3是一种端到端的one-stage目标检测模型。相比YOLOv2，YOLOv3�
 2. 执行推理  
    运行`om_val.py`推理OM模型，结果默认保存在`output/predictions.json`，可设置参数`--eval`计算`mAP`，`--visible`将检测结果显示到图片。
    ```
-   python3 om_val.py --model=yolov3_nms_bs1.om --output=output --batch=1 --eval
+   python3 om_val.py --model=yolov3_nms_bs1.om --output=output --batch=1 --img-size 640 640 --eval
    ```
 
 3. 性能验证  
    可使用`ais_infer`推理工具的纯推理模式验证不同`batch_size`的`OM`模型的性能，参考命令如下：
    ```
+   python3 ${ais_infer_path}/ais_infer.py --model=yolov3_bs1.om --loop=20 --batchsize=1
    python3 ${ais_infer_path}/ais_infer.py --model=yolov3_nms_bs1.om --loop=20 --batchsize=1
    ```
 
@@ -178,7 +187,7 @@ YOLOv3是一种端到端的one-stage目标检测模型。相比YOLOv2，YOLOv3�
 
 调用ACL接口推理计算，性能&精度参考下列数据。
 
-|   芯片型号   |  Batch Size   |    数据集      |     阈值           | 精度 (mAP) |         性能 (fps)         |
-|:-----------:|:-------------:|:------------:|:------------------:|:--------:|:------------------------:|
-| Ascend310P3 |   1 / 4 / 8   | coco2017 val |  conf=0.4 iou=0.5  |  0.399   | 128.05 / 164.56 / 165.78 |
-| Ascend310P3 |   1 / 4 / 8   | coco2017 val | conf=0.05 iou=0.65 |  0.453   | 128.23 / 165.18 / 167.24 |
+|     模型      |   芯片型号   |  Batch Size   |    数据集      |     阈值           | 精度 (mAP) |         性能 (fps)       |
+|:-----------:|:-----------:|:-------------:|:------------:|:------------------:|:--------:|:------------------------:|
+| yolov3_nms  | Ascend310P3 |   1 / 4 / 8   | coco2017 val |  conf=0.4 iou=0.5  |  0.399   | 128.05 / 164.56 / 165.78 |
+| yolov3_nms | Ascend310P3 |   1 / 4 / 8   | coco2017 val | conf=0.05 iou=0.65 |  0.453   | 128.23 / 165.18 / 167.24 |
