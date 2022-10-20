@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v6.0"
+Network="yolov5s_ID4102_for_PyTorch_v6.0"
 
 cur_path=`pwd`
 model_name=yolov5s
@@ -13,10 +13,30 @@ do
       	model_name=`echo ${para#*=}`
    elif [[ $para == --batch_size* ]];then
       	batch_size=`echo ${para#*=}`
+   elif [[ $para == --data_path* ]];then
+       data_path=`echo ${para#*=}`
    fi
 done
 
-source ${cur_path}/test/env_npu.sh
+###############指定训练脚本执行路径###############
+# cd到与test文件夹同层级目录下执行脚本，提高兼容性；test_path_dir为包含test文件夹的路径
+cur_path_last_dirname=${cur_path##*/}
+if [ x"${cur_path_last_dirname}" == x"test" ]; then
+     test_path_dir=${cur_path}
+     cd ..
+     cur_path=$(pwd)
+else
+     test_path_dir=${cur_path}/test
+fi
+
+# 非平台场景时source 环境变量
+check_etp_flag=$(env | grep etp_running_flag)
+etp_flag=$(echo ${check_etp_flag#*=})
+if [ x"${etp_flag}" != x"true" ]; then
+     source ${test_path_dir}/env_npu.sh
+else
+     sed -i "s|./coco|$data_path|g" ./data/coco.yaml
+fi
 
 #训练开始时间，不需要修改
 start_time=$(date +%s)
@@ -77,7 +97,7 @@ echo "E2E Training Duration sec : $e2e_time"
 #训练用例信息，不需要修改
 BatchSize=${batch_size}
 DeviceType=`uname -m`
-CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}
+CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'perf'
 
 ##获取性能数据，不需要修改
 #单迭代训练时长
@@ -92,3 +112,5 @@ echo "CaseName = ${CaseName}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseN
 echo "ActualFPS = ${FPS}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "TrainingTime = ${TrainingTime}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "E2ETrainingTime = ${e2e_time}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
+rm -rf $data_path/labels/*.cache
+
