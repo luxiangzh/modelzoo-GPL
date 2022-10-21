@@ -287,8 +287,9 @@ def train(hyp, opt, device, tb_writer=None):
         if rank in [-1, 0]:
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
+
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
-            if i == 50 and rank in [-1, 0]:
+            if i == opt.warmup_steps and rank in [-1, 0]:
                 torch.npu.synchronize()
                 start_time = time.time()
             ni = i + nb * epoch  # number integrated batches (since train start)
@@ -351,8 +352,11 @@ def train(hyp, opt, device, tb_writer=None):
         # Scheduler
         # lr = [x['lr'] for x in optimizer.param_groups]  # for tensorboard
         if rank in [-1, 0]:
-            torch.npu.synchronize()
-            print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - 50)))
+            if i <= opt.warmup_steps:
+                print('The number of iterations less than warmup steps, please reduce the warmup steps')
+            else:
+                torch.npu.synchronize()
+                print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - opt.warmup_steps)))
         scheduler.step()
 
         # DDP process 0 or single-GPU
@@ -427,6 +431,7 @@ if __name__ == '__main__':
     parser.add_argument('--upload_dataset', action='store_true', help='Upload dataset as W&B artifact table')
     parser.add_argument('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval for W&B')
     parser.add_argument('--save_period', type=int, default=-1, help='Log model after every "save_period" epoch')
+    parser.add_argument('--warmup_steps', type=int, default=10, help='skip steps to compute FPS')
     parser.add_argument('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used')
     opt = parser.parse_args()
 
@@ -461,8 +466,8 @@ if __name__ == '__main__':
 
     # DDP mode
     opt.total_batch_size = opt.batch_size
-    torch.npu.set_device("npu:%d" % opt.local_rank) 
-    device = torch.device("npu:%d" % opt.local_rank)
+    device = torch.device('npu:{}'.format(opt.local_rank))
+    torch.npu.set_device('npu:{}'.format(opt.local_rank))
     if opt.device != '0':
         assert torch.npu.device_count() > opt.local_rank
         dist.init_process_group(backend='hccl', world_size=opt.world_size, rank=opt.local_rank)  # distributed backend

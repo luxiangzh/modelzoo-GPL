@@ -304,9 +304,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         if rank in [-1, 0]:
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
-        
+
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
-            if i == 50 and rank in [-1, 0]:
+            if i == opt.warmup_steps and rank in [-1, 0]:
                 torch.npu.synchronize()
                 start_time = time.time()
             ni = i + nb * epoch  # number integrated batches (since train start)
@@ -366,8 +366,11 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             # end batch ------------------------------------------------------------------------------------------------
         # end epoch ----------------------------------------------------------------------------------------------------
         if rank in [-1, 0]:
-            torch.npu.synchronize()
-            print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - 50)))
+            if i <= opt.warmup_steps:
+                print('The number of iterations less than warmup steps, please reduce the warmup steps')
+            else:
+                torch.npu.synchronize()
+                print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - opt.warmup_steps)))
         scheduler.step()
 
         # DDP process 0 or single-GPU
@@ -421,6 +424,7 @@ if __name__ == '__main__':
     parser.add_argument('--log-imgs', type=int, default=16, help='number of images for W&B logging, max 100')
     parser.add_argument('--log-artifacts', action='store_true', help='log artifacts, i.e. final trained model')
     parser.add_argument('--workers', type=int, default=8, help='maximum number of dataloader workers')
+    parser.add_argument('--warmup_steps', type=int, default=10, help='skip steps to compute FPS')
     parser.add_argument('--project', default='runs/train', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
@@ -453,8 +457,8 @@ if __name__ == '__main__':
 
     # DDP mode
     opt.total_batch_size = opt.batch_size
-    torch.npu.set_device("npu:%d" % opt.local_rank) 
-    device = torch.device("npu:%d" % opt.local_rank)
+    torch.npu.set_device("npu:{}".format(opt.local_rank))
+    device = torch.device("npu:{}".format(opt.local_rank))
     if opt.device != '0':
         assert torch.npu.device_count() > opt.local_rank
         dist.init_process_group(backend='hccl', init_method='env://', rank=opt.local_rank)  # distributed backend

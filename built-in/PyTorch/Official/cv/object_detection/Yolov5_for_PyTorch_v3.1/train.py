@@ -282,8 +282,9 @@ def train(hyp, opt, device, tb_writer=None):
         if rank in [-1, 0]:
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
+
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
-            if i == 50 and rank in [-1, 0]:
+            if i == opt.warmup_steps and rank in [-1, 0]:
                 torch.npu.synchronize()
                 start_time = time.time()
             ni = i + nb * epoch  # number integrated batches (since train start)
@@ -343,8 +344,11 @@ def train(hyp, opt, device, tb_writer=None):
         # Scheduler
         # lr = [x['lr'] for x in optimizer.param_groups]  # for tensorboard
         if rank in [-1, 0]:
-            torch.npu.synchronize()
-            print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - 50)))
+            if i <= opt.warmup_steps:
+                print('The number of iterations less than warmup steps, please reduce the warmup steps')
+            else:
+                torch.npu.synchronize()
+                print('Epoch {} step time: {}'.format(epoch, (time.time() - start_time) / (i - opt.warmup_steps)))
         scheduler.step()
 
         # DDP process 0 or single-GPU
@@ -400,6 +404,7 @@ if __name__ == '__main__':
     parser.add_argument('--adam', action='store_true', help='use torch.optim.Adam() optimizer')
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
+    parser.add_argument('--warmup_steps', type=int, default=10, help='skip steps to compute FPS')
     parser.add_argument('--logdir', type=str, default='runs/', help='logging directory')
     parser.add_argument('--workers', type=int, default=12, help='maximum number of dataloader workers')
     parser.add_argument('--compile_cache', action='store_true', help='enable compile cache')
@@ -444,8 +449,8 @@ if __name__ == '__main__':
         log_dir = increment_dir(Path(opt.logdir) / 'exp', opt.name)  # runs/exp1
 
     # DDP mode
-    torch.npu.set_device("npu:%d" % opt.local_rank) 
-    device = torch.device("npu:%d" % opt.local_rank)
+    torch.npu.set_device("npu:{}".format(opt.local_rank)) 
+    device = torch.device("npu:{}".format(opt.local_rank)) 
     if opt.device != '0':
         assert torch.npu.device_count() > opt.local_rank
         dist.init_process_group(backend='hccl', world_size=opt.world_size, rank=opt.local_rank)  # distributed backend

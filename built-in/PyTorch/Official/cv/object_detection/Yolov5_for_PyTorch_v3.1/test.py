@@ -78,8 +78,8 @@ def test(data,
 
     else:  # called directly
         set_logging()
-        torch.npu.set_device("npu:%d" % opt.device) 
-        device = torch.device("npu:%d" % opt.device)
+        torch.npu.set_device("npu:{}".format(opt.device))
+        device = torch.device("npu:{}".format(opt.device))
         save_txt = opt.save_txt  # save *.txt labels
 
         # Remove previous
