@@ -87,8 +87,8 @@ def test(data,
 
     else:  # called directly
         set_logging()
-        torch.npu.set_device("npu:%d" % opt.deivce) 
-        device = torch.device("npu:%d" % opt.deivce)
+        device = torch.device('npu:{}'.format(opt.deivce))
+        torch.npu.set_device('npu:{}'.format(opt.deivce))
 
         # Directories
         save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
