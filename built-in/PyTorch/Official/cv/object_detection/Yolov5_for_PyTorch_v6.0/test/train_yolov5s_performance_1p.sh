@@ -61,7 +61,7 @@ etp_flag=$(echo ${check_etp_flag#*=})
 if [ x"${etp_flag}" != x"true" ]; then
      source ${test_path_dir}/env_npu.sh
 else
-     sed -i "s|./coco|$data_path|g" ./data/coco.yaml
+     sed -i "s|./datasets/coco|$data_path|g" ./data/coco.yaml
 fi
 
 python3.7 -u train.py --data ./data/coco.yaml \

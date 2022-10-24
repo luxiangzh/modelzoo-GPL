@@ -35,7 +35,7 @@ etp_flag=$(echo ${check_etp_flag#*=})
 if [ x"${etp_flag}" != x"true" ]; then
      source ${test_path_dir}/env_npu.sh
 else
-     sed -i "s|./coco|$data_path|g" ./data/coco.yaml
+     sed -i "s|./datasets/coco|$data_path|g" ./data/coco.yaml
 fi
 
 #训练开始时间，不需要修改
