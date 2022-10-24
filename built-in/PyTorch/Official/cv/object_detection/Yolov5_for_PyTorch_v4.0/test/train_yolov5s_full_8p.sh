@@ -58,7 +58,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5s.pt' --batch-size 32 --device 0 >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
+python3.7 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5s.pt' --batch-size 32 --device 0 >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
 
 wait
 
@@ -78,7 +78,7 @@ echo "E2E Training Duration sec : $e2e_time"
 #训练用例信息，不需要修改
 BatchSize=${batch_size}
 DeviceType=`uname -m`
-CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}
+CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'acc'
 
 ##获取性能数据，不需要修改
 #单迭代训练时长
