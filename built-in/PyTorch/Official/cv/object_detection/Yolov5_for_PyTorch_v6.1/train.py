@@ -511,8 +511,8 @@ def main(opt, callbacks=Callbacks()):
         # dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo")
         dist.init_process_group(backend="hccl", world_size=WORLD_SIZE, rank=RANK)
     else:
-        torch.npu.set_device("npu:%d".format(opt.device))
-        device = torch.device("npu:%d".format(opt.device))
+        torch.npu.set_device("npu:{}".format(opt.device))
+        device = torch.device("npu:{}".format(opt.device))
         print('Using NPU %s to train' % opt.device)
 
     # Train
