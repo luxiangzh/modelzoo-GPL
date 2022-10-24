@@ -221,7 +221,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     ema = ModelEMA(model) if rank in [-1, 0] else None
 
     # DDP mode
-    if opt.device != 0:
+    if rank != -1:
         model = DDP(model, device_ids=[opt.local_rank], output_device=opt.local_rank)
 
     # Trainloader
