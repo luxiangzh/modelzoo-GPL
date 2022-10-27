@@ -1,7 +1,7 @@
 #!/bin/bash
 
-###############Ö¸¶¨ÑµÁ·½Å±¾Ö´ÐÐÂ·¾¶###############
-# cdµ½ÓëtestÎÄ¼þ¼ÐÍ¬²ã¼¶Ä¿Â¼ÏÂÖ´ÐÐ½Å±¾£¬Ìá¸ß¼æÈÝÐÔ£»test_path_dirÎª°üº¬testÎÄ¼þ¼ÐµÄÂ·¾¶
+###############æŒ‡å®šè®­ç»ƒè„šæœ¬æ‰§è¡Œè·¯å¾„###############
+# cdåˆ°ä¸Žtestæ–‡ä»¶å¤¹åŒå±‚çº§ç›®å½•ä¸‹æ‰§è¡Œè„šæœ¬ï¼Œæé«˜å…¼å®¹æ€§ï¼›test_path_dirä¸ºåŒ…å«testæ–‡ä»¶å¤¹çš„è·¯å¾„
 cur_path=`pwd`
 cur_path_last_dirname=${cur_path##*/}
 if [ x"${cur_path_last_dirname}" == x"test" ];then
@@ -15,12 +15,12 @@ RANK_SIZE=1
 batch_size=256
 img_size=640
 model_name=yolov3
-# Êý¾Ý¼¯Â·¾¶,±£³ÖÎª¿Õ,²»ÐèÒªÐÞ¸Ä
+# æ•°æ®é›†è·¯å¾„,ä¿æŒä¸ºç©º,ä¸éœ€è¦ä¿®æ”¹
 data_path=""
 datasets="voc"
-#ÑµÁ·epochs
+#è®­ç»ƒepochs
 epochs=2
-#ÍøÂçÃû³Æ yolov3-640*640
+#ç½‘ç»œåç§° yolov3-640*640
 Network="Yolov3_ID4105_for_PyTorch"
 
 for para in $*
@@ -42,7 +42,7 @@ do
    fi
 done
 
-# Êý¾Ý¼¯½¨Á¢ÈíÁ´½Ó
+# æ•°æ®é›†å»ºç«‹è½¯é“¾æŽ¥
 if [ ${datasets} == "coco" ];then
   echo "data_path is: ${data_path}"
   if [ ! -d './data/coco' ]
@@ -51,7 +51,7 @@ if [ ${datasets} == "coco" ];then
   fi
 fi
 
-# ·ÇÆ½Ì¨³¡¾°Ê±source »·¾³±äÁ¿
+# éžå¹³å°åœºæ™¯æ—¶source çŽ¯å¢ƒå˜é‡
 check_etp_flag=`env | grep etp_running_flag`
 etp_flag=`echo ${check_etp_flag#*=}`
 if [ x"${etp_flag}" != x"true" ];then
@@ -63,10 +63,10 @@ else
   cp -r ${data_path} ${cur_path}
 fi
 
-# Ö¸¶¨ÑµÁ·ËùÊ¹ÓÃµÄnpu device¿¨id
+# æŒ‡å®šè®­ç»ƒæ‰€ä½¿ç”¨çš„npu deviceå¡id
 device_id=0
 
-# Ð£ÑéÊÇ·ñÖ¸¶¨ÁËdevice_id,·Ö¶¯Ì¬·ÖÅädevice_idÓëÊÖ¶¯Ö¸¶¨device_id,´Ë´¦²»ÐèÒªÐÞ¸Ä
+# æ ¡éªŒæ˜¯å¦æŒ‡å®šäº†device_id,åˆ†åŠ¨æ€åˆ†é…device_idä¸Žæ‰‹åŠ¨æŒ‡å®šdevice_id,æ­¤å¤„ä¸éœ€è¦ä¿®æ”¹
 if [ $ASCEND_DEVICE_ID ];then
     echo "device id is ${ASCEND_DEVICE_ID}"
 elif [ ${device_id} ];then
@@ -77,7 +77,7 @@ else
     exit 1
 fi
 
-#################´´½¨ÈÕÖ¾Êä³öÄ¿Â¼£¬²»ÐèÒªÐÞ¸Ä#################
+#################åˆ›å»ºæ—¥å¿—è¾“å‡ºç›®å½•ï¼Œä¸éœ€è¦ä¿®æ”¹#################
 if [ -d ${test_path_dir}/output/${ASCEND_DEVICE_ID} ];then
     rm -rf ${test_path_dir}/output/${ASCEND_DEVICE_ID}
     mkdir -p ${test_path_dir}/output/$ASCEND_DEVICE_ID
@@ -85,44 +85,44 @@ else
     mkdir -p ${test_path_dir}/output/$ASCEND_DEVICE_ID
 fi
 
-#ÑµÁ·¿ªÊ¼Ê±¼ä£¬²»ÐèÒªÐÞ¸Ä
+#è®­ç»ƒå¼€å§‹æ—¶é—´ï¼Œä¸éœ€è¦ä¿®æ”¹
 start_time=$(date +%s)
 
 nohup taskset -c 0-23 python3.7 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --epochs ${epochs} --weights '' --batch-size ${batch_size} --noval --img-size ${img_size} --local_rank ${device_id} >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
 wait
-#ÑµÁ·½áÊøÊ±¼ä£¬²»ÐèÒªÐÞ¸Ä
+#è®­ç»ƒç»“æŸæ—¶é—´ï¼Œä¸éœ€è¦ä¿®æ”¹
 end_time=$(date +%s)
 e2e_time=$(( $end_time - $start_time ))
 
-#½á¹û´òÓ¡£¬²»ÐèÒªÐÞ¸Ä
+#ç»“æžœæ‰“å°ï¼Œä¸éœ€è¦ä¿®æ”¹
 echo "------------------ Final result ------------------"
-#Êä³öÐÔÄÜFPS£¬ÐèÒªÄ£ÐÍÉóÊÓÐÞ¸Ä
+#è¾“å‡ºæ€§èƒ½FPSï¼Œéœ€è¦æ¨¡åž‹å®¡è§†ä¿®æ”¹
 fps=`grep -a 'it/s'  $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|awk -F " " '{print $NF}'|awk -F "i" '{print $1}'|tail -n 1`
 FPS=`echo "${batch_size} * ${fps}" |bc`
-#´òÓ¡£¬²»ÐèÒªÐÞ¸Ä
+#æ‰“å°ï¼Œä¸éœ€è¦ä¿®æ”¹
 echo "Final Performance images/sec : $FPS"
 
-#Êä³öÑµÁ·¾«¶È,ÐèÒªÄ£ÐÍÉóÊÓÐÞ¸Ä
+#è¾“å‡ºè®­ç»ƒç²¾åº¦,éœ€è¦æ¨¡åž‹å®¡è§†ä¿®æ”¹
 #train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
 
-#´òÓ¡£¬²»ÐèÒªÐÞ¸Ä
+#æ‰“å°ï¼Œä¸éœ€è¦ä¿®æ”¹
 #echo "Final Train Accuracy : ${train_accuracy}"
 echo "E2E Training Duration sec : $e2e_time"
 
-#ÐÔÄÜ¿´»¤½á¹û»ã×Ü
-#ÑµÁ·ÓÃÀýÐÅÏ¢£¬²»ÐèÒªÐÞ¸Ä
+#æ€§èƒ½çœ‹æŠ¤ç»“æžœæ±‡æ€»
+#è®­ç»ƒç”¨ä¾‹ä¿¡æ¯ï¼Œä¸éœ€è¦ä¿®æ”¹
 BatchSize=${batch_size}
 DeviceType=`uname -m`
 CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'acc'
 
-##»ñÈ¡ÐÔÄÜÊý¾Ý£¬²»ÐèÒªÐÞ¸Ä
-#ÍÌÍÂÁ¿
+##èŽ·å–æ€§èƒ½æ•°æ®ï¼Œä¸éœ€è¦ä¿®æ”¹
+#åžåé‡
 ActualFPS=${FPS}
-#µ¥µü´úÑµÁ·Ê±³¤
+#å•è¿­ä»£è®­ç»ƒæ—¶é•¿
 TrainingTime=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'*1000/'${FPS}'}'`
 
 
-#¹Ø¼üÐÅÏ¢´òÓ¡µ½${CaseName}.logÖÐ£¬²»ÐèÒªÐÞ¸Ä
+#å…³é”®ä¿¡æ¯æ‰“å°åˆ°${CaseName}.logä¸­ï¼Œä¸éœ€è¦ä¿®æ”¹
 echo "Network = ${Network}" > $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "RankSize = ${RANK_SIZE}" >> $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "BatchSize = ${BatchSize}" >> $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
