@@ -11,15 +11,13 @@ if [ x"${cur_path_last_dirname}" == x"test" ];then
 else
     test_path_dir=${cur_path}/test
 fi
-RANK_SIZE=1
-batch_size=64
+RANK_SIZE=8
+batch_size=512
 img_size=320
 model_name=yolov3
 # 数据集路径,保持为空,不需要修改
 data_path=""
 datasets="voc"
-#训练epochs
-epochs=20
 #网络名称
 Network="Yolov3_for_PyTorch"
 
@@ -37,17 +35,19 @@ do
       	img_size=`echo ${para#*=}`
    fi
 done
-
-# COCO数据集建立软链接
+# 数据集建立软链接
 if [ ${datasets} == "coco" ];then
   echo "data_path is: ${data_path}"
   if [ ! -d './data/coco' ]
   then
     ln -s ${data_path} ./data/coco
   fi
+else
+  echo "data_path is: ${data_path}"
+  ln -nsf ${data_path} ./VOC
 fi
 
-# 非平台场景时source 环境变量
+#非平台场景时source 环境变量
 check_etp_flag=`env | grep etp_running_flag`
 etp_flag=`echo ${check_etp_flag#*=}`
 if [ x"${etp_flag}" != x"true" ];then
@@ -79,7 +79,7 @@ fi
 #训练开始时间，不需要修改
 start_time=$(date +%s)
 
-nohup python3.7 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --epochs ${epochs} --weights '' --batch-size ${batch_size} --noval --img-size ${img_size} --local_rank $ASCEND_DEVICE_ID >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
+nohup python3.7 -m torch.distributed.launch --nproc_per_node 8 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --weights '' --batch-size ${batch_size} --img-size ${img_size} >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
 wait
 #训练结束时间，不需要修改
 end_time=$(date +%s)
@@ -95,7 +95,6 @@ echo "Final Performance images/sec : $FPS"
 
 #输出训练精度,需要模型审视修改
 train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
-
 #打印，不需要修改
 echo "Final Train Accuracy : ${train_accuracy}"
 echo "E2E Training Duration sec : $e2e_time"

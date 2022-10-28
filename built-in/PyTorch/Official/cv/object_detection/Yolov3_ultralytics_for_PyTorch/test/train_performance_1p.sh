@@ -11,7 +11,6 @@ if [ x"${cur_path_last_dirname}" == x"test" ];then
 else
     test_path_dir=${cur_path}/test
 fi
-
 RANK_SIZE=1
 batch_size=64
 img_size=320
@@ -19,6 +18,8 @@ model_name=yolov3
 # 数据集路径,保持为空,不需要修改
 data_path=""
 datasets="voc"
+#训练epochs
+epochs=2
 #网络名称
 Network="Yolov3_for_PyTorch"
 
@@ -31,22 +32,25 @@ do
    elif [[ $para == --data_path* ]];then
         data_path=`echo ${para#*=}`
    elif [[ $para == --datasets* ]];then
-      	datasets=`echo ${para#*=}`
+        datasets=`echo ${para#*=}`
    elif [[ $para == --img_size* ]];then
       	img_size=`echo ${para#*=}`
    fi
 done
 
-# COCO数据集建立软链接
+# 数据集建立软链接
 if [ ${datasets} == "coco" ];then
   echo "data_path is: ${data_path}"
   if [ ! -d './data/coco' ]
   then
     ln -s ${data_path} ./data/coco
   fi
+else
+  echo "data_path is: ${data_path}"
+  ln -nsf ${data_path} ./VOC
 fi
 
-#非平台场景时source 环境变量
+# 非平台场景时source 环境变量
 check_etp_flag=`env | grep etp_running_flag`
 etp_flag=`echo ${check_etp_flag#*=}`
 if [ x"${etp_flag}" != x"true" ];then
@@ -78,7 +82,7 @@ fi
 #训练开始时间，不需要修改
 start_time=$(date +%s)
 
-nohup python3.7 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --weights '' --batch-size ${batch_size} --noval --img-size ${img_size} --local_rank $ASCEND_DEVICE_ID >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
+nohup taskset -c 0-23 python3.7 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --epochs ${epochs} --weights '' --batch-size ${batch_size} --noval --img-size ${img_size} --local_rank ${device_id} >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
 wait
 #训练结束时间，不需要修改
 end_time=$(date +%s)
@@ -93,9 +97,10 @@ FPS=`echo "${batch_size} * ${fps}" |bc`
 echo "Final Performance images/sec : $FPS"
 
 #输出训练精度,需要模型审视修改
-train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
+#train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
+
 #打印，不需要修改
-echo "Final Train Accuracy : ${train_accuracy}"
+#echo "Final Train Accuracy : ${train_accuracy}"
 echo "E2E Training Duration sec : $e2e_time"
 
 #性能看护结果汇总
