@@ -455,7 +455,7 @@ def main():
         print('multi npu training failed to init...')
 
 def main_worker(opt):
-    if opt.npu_ddp:
+    if opt.npu_ddp and int(opt.world_size) < 9:
         opt.npu = opt.local_rank
         os.environ['KERNEL_NAME_ID'] = str(opt.local_rank)
         print("[npu id:", opt.local_rank, "]", "+++++++++++++++++++++++++++KERNEL_NAME_ID:", os.environ['KERNEL_NAME_ID'])
@@ -471,7 +471,7 @@ def main_worker(opt):
             hyp.update(yaml.load(f, Loader=yaml.FullLoader))  # update hyps
     opt.img_size.extend([opt.img_size[-1]] * (2 - len(opt.img_size)))  # extend to 2 sizes (train, test)
     global mixed_precision
-    device = torch_utils.select_device(opt.device, opt.local_rank, apex=mixed_precision, batch_size=opt.batch_size)
+    device = torch_utils.select_device(opt.device, opt.npu, apex=mixed_precision, batch_size=opt.batch_size)
     opt.total_batch_size = opt.batch_size
     if device.type == 'cpu':
         mixed_precision = False
