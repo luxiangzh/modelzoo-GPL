@@ -101,7 +101,7 @@ e2e_time=$(( $end_time - $start_time ))
 
 
 #启动评估
-bash ${test_path_dir}/evaluation_npu_1p.sh >> $test_path_dir/output/$ASCEND_DEVICE_ID/train_$ASCEND_DEVICE_ID.log 2>&1 &
+bash ${test_path_dir}/train_eval_1p.sh >> $test_path_dir/output/$ASCEND_DEVICE_ID/train_$ASCEND_DEVICE_ID.log 2>&1 &
 wait
 
 #结果打印，不需要修改
