@@ -636,6 +636,7 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
         # x[((x[..., 2:4] < min_wh) | (x[..., 2:4] > max_wh)).any(1), 4] = 0  # width-height
         device =x.device
         x = x.cpu()
+        xc = xc.cpu()
         x = x[xc[xi]]  # confidence
 
         # If none remain process next image
