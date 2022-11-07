@@ -73,7 +73,7 @@ then
       --batch-size $batch_size \
       --local_rank $i \
       --device_num 8 \
-      --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log 2>&1 &
+      --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_$ASCEND_DEVICE_ID.log 2>&1 &
 	done
 else
     nohup python3.7 -u -m torch.distributed.launch --nproc_per_node=8 train.py \
@@ -82,7 +82,7 @@ else
       --weights '' \
       --batch-size $batch_size \
       --device_num 8 \
-      --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log 2>&1 &
+      --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_$ASCEND_DEVICE_ID.log 2>&1 &
 
 fi
 
@@ -94,7 +94,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-FPS=`grep -a 'FPS'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log|awk 'END {print}'| awk -F "FPS: " '{print $2}'`
+FPS=`grep -a 'FPS'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_$ASCEND_DEVICE_ID.log|awk 'END {print}'| awk -F "FPS: " '{print $2}'`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
