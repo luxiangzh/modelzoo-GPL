@@ -71,7 +71,7 @@ python3 -u train.py \
     --weights '' \
     --batch-size $batch_size \
     --device $ASCEND_DEVICE_ID \
-    --epochs 1 > ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_perf_1p.log 2>&1 &
+    --epochs 1 > ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
 
 wait
 
@@ -81,7 +81,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-FPS=`grep -a 'FPS'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_1p.log|awk 'END {print}'| awk -F "FPS: " '{print $2}'`
+FPS=`grep -a 'FPS'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_${ASCEND_DEVICE_ID}.log|awk 'END {print}'| awk -F "FPS: " '{print $2}'`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
