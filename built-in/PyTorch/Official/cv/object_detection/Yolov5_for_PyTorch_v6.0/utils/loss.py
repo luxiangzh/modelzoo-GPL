@@ -124,7 +124,7 @@ class ComputeLoss:
         self.balance = {3: [4.0, 1.0, 0.4]}.get(det.nl, [4.0, 1.0, 0.25, 0.06, .02])  # P3-P7
         self.ssi = list(det.stride).index(16) if autobalance else 0  # stride 16 index
         self.BCEcls, self.BCEobj, self.gr, self.hyp, self.autobalance = BCEcls, BCEobj, 1.0, h, autobalance
-        self.index1, self.range_nb = None, None
+        self.index1, self.range_nb = None, dict()
         for k in 'na', 'nc', 'nl', 'anchors':
             setattr(self, k, getattr(det, k))
     
@@ -133,8 +133,8 @@ class ComputeLoss:
             self.index1 = torch.tensor([0, 1, 2, 3, 4, 5], device=device)
 
     def get_range_nb(self, n, device):
-        if self.range_nb is None:
-            self.range_nb = torch.arange(n, device=device).long()
+        if n not in self.range_nb:
+            self.range_nb[n] = torch.arange(n, device=device).long()
     
     def __call__(self, p, targets):  # predictions, targets, model
         device = targets.device
@@ -189,7 +189,7 @@ class ComputeLoss:
                 tmp = ps[5:, :]
                 tmp = tmp * all_mask_cat - (1. - all_mask_cat) * 50.
                 t = torch.full_like(tmp, 0)  # targets
-                t[tcls_cat, self.range_nb] = 1 
+                t[tcls_cat, self.range_nb[n]] = 1 
                 t *= all_mask_cat
                 lcls += (self.BCEcls(tmp, t).reshape(t.shape[0], self.nl, -1).sum(-1).sum(0)[valid_mask]
                         / (sum_mask_cat * t.shape[0])[valid_mask].float()).sum()
