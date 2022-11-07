@@ -15,6 +15,10 @@ do
       	batch_size=`echo ${para#*=}`
    elif [[ $para == --data_path* ]];then
         data_path=`echo ${para#*=}`
+   elif [[ $para == --conda_name* ]];then
+        conda_name=`echo ${para#*=}`
+        source ${test_path_dir}/set_conda.sh --conda_name=$conda_name
+        source activate $conda_name
    fi
 done
 
