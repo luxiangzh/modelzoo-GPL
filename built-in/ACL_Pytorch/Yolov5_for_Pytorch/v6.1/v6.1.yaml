@@ -1,0 +1,20 @@
+# data
+data_path: ./coco  # dataset root dir
+val: val2017.txt  # val images (relative to 'path') 5000 images
+gt: ./instances_val2017.json  # val annotation file
+
+# model
+pt: yolov5s.pt
+
+# parameters
+batch_size: 1
+image_size: [640, 640]
+class_num: 80
+
+anchors:
+  - [10,13, 16,30, 33,23]  # P3/8
+  - [30,61, 62,45, 59,119]  # P4/16
+  - [116,90, 156,198, 373,326]  # P5/32
+
+conf_thres: 0.4  # object confidence threshold
+iou_thres: 0.5  # IOU threshold for NMS
