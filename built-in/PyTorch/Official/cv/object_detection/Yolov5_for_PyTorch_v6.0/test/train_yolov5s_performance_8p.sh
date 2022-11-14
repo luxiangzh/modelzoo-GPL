@@ -68,14 +68,14 @@ do
 		                                           --weights '' \
 		                                           --batch-size $batch_size \
 		                                           --epochs 2 \
-		                                           --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
+		                                           --local_rank $i > $cur_path/test/output/${i}/train_${i}.log 2>&1 &
 	else
 	    python3.7 train.py --data ./data/coco.yaml \
 		                --cfg yolov5s.yaml \
 		                --weights '' \
 		                --batch-size $batch_size \
 		                --epochs 2 \
-		                --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
+		                --local_rank $i > $cur_path/test/output/${i}/train_${i}.log 2>&1 &
     fi                        
 done
 
@@ -87,7 +87,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-FPS=`grep -a 'FPS:'  ${cur_path}/test/output/0/train_8p_0.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
+FPS=`grep -a 'FPS:'  ${cur_path}/test/output/0/train_0.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
