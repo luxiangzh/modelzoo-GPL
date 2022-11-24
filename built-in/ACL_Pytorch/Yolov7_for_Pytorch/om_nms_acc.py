@@ -240,8 +240,7 @@ def eval(ground_truth_json, detection_results_json):
 
 
 class omEngine:
-    def __init__(self, weights, size, deivce) -> None:
-        self.img_new_shape = (size, size)
+    def __init__(self, weights, deivce) -> None:
         self.weights = weights
         self.device = deivce
         self.session = None
@@ -294,7 +293,7 @@ if __name__ == '__main__':
     coco91class = coco80_to_coco91_class()
 
     # load model
-    om_engine = omEngine(args.model, args.size, args.device)
+    om_engine = omEngine(args.model, args.device)
 
     # load dataset
     img_path_list = glob.glob(args.img_path + '/*.jpg')
