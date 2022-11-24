@@ -1,7 +1,7 @@
 #!/bin/bash
 
-###############æŒ‡å®šè®­ç»ƒè„šæœ¬æ‰§è¡Œè·¯å¾„###############
-# cdåˆ°ä¸Žtestæ–‡ä»¶å¤¹åŒå±‚çº§ç›®å½•ä¸‹æ‰§è¡Œè„šæœ¬ï¼Œæé«˜å…¼å®¹æ€§ï¼›test_path_dirä¸ºåŒ…å«testæ–‡ä»¶å¤¹çš„è·¯å¾„
+###############Ö¸¶¨ÑµÁ·½Å±¾Ö´ÐÐÂ·¾¶###############
+# cdµ½ÓëtestÎÄ¼þ¼ÐÍ¬²ã¼¶Ä¿Â¼ÏÂÖ´ÐÐ½Å±¾£¬Ìá¸ß¼æÈÝÐÔ£»test_path_dirÎª°üº¬testÎÄ¼þ¼ÐµÄÂ·¾¶
 cur_path=`pwd`
 cur_path_last_dirname=${cur_path##*/}
 if [ x"${cur_path_last_dirname}" == x"test" ];then
@@ -11,15 +11,17 @@ if [ x"${cur_path_last_dirname}" == x"test" ];then
 else
     test_path_dir=${cur_path}/test
 fi
-RANK_SIZE=8
-batch_size=512
-img_size=320
-model_name=yolov3
-# æ•°æ®é›†è·¯å¾„,ä¿æŒä¸ºç©º,ä¸éœ€è¦ä¿®æ”¹
+RANK_SIZE=1
+batch_size=64
+img_size=640
+model_name=yolov3-tiny
+# Êý¾Ý¼¯Â·¾¶,±£³ÖÎª¿Õ,²»ÐèÒªÐÞ¸Ä
 data_path=""
 datasets="voc"
-#ç½‘ç»œåç§°
-Network="Yolov3_for_PyTorch"
+#ÑµÁ·epochs
+epochs=2
+#ÍøÂçÃû³Æ yolov3_tiny-640*640
+Network="Yolov3_ID4107_for_PyTorch"
 
 for para in $*
 do
@@ -33,10 +35,14 @@ do
         datasets=`echo ${para#*=}`
    elif [[ $para == --img_size* ]];then
       	img_size=`echo ${para#*=}`
+   elif [[ $para == --conda_name* ]];then
+        conda_name=`echo ${para#*=}`
+        source ${test_path_dir}/set_conda.sh --conda_name=$conda_name
+        source activate $conda_name
    fi
 done
 
-# COCOæ•°æ®é›†å»ºç«‹è½¯é“¾æŽ¥
+# Êý¾Ý¼¯½¨Á¢ÈíÁ´½Ó
 if [ ${datasets} == "coco" ];then
   echo "data_path is: ${data_path}"
   if [ ! -d './data/coco' ]
@@ -45,17 +51,23 @@ if [ ${datasets} == "coco" ];then
   fi
 fi
 
-#éžå¹³å°åœºæ™¯æ—¶source çŽ¯å¢ƒå˜é‡
+# ·ÇÆ½Ì¨³¡¾°Ê±source »·¾³±äÁ¿
 check_etp_flag=`env | grep etp_running_flag`
 etp_flag=`echo ${check_etp_flag#*=}`
 if [ x"${etp_flag}" != x"true" ];then
     source  ${test_path_dir}/env_npu.sh
+    if [ ${datasets} == "voc" ];then
+      ln -nsf ${data_path} .
+    fi
+else
+  cp -r ${data_path}/VOC.tar.gz ${cur_path}
+  tar -xavf VOC.tar.gz
 fi
 
-# æŒ‡å®šè®­ç»ƒæ‰€ä½¿ç”¨çš„npu deviceå¡id
+# Ö¸¶¨ÑµÁ·ËùÊ¹ÓÃµÄnpu device¿¨id
 device_id=0
 
-# æ ¡éªŒæ˜¯å¦æŒ‡å®šäº†device_id,åˆ†åŠ¨æ€åˆ†é…device_idä¸Žæ‰‹åŠ¨æŒ‡å®šdevice_id,æ­¤å¤„ä¸éœ€è¦ä¿®æ”¹
+# Ð£ÑéÊÇ·ñÖ¸¶¨ÁËdevice_id,·Ö¶¯Ì¬·ÖÅädevice_idÓëÊÖ¶¯Ö¸¶¨device_id,´Ë´¦²»ÐèÒªÐÞ¸Ä
 if [ $ASCEND_DEVICE_ID ];then
     echo "device id is ${ASCEND_DEVICE_ID}"
 elif [ ${device_id} ];then
@@ -66,7 +78,7 @@ else
     exit 1
 fi
 
-#################åˆ›å»ºæ—¥å¿—è¾“å‡ºç›®å½•ï¼Œä¸éœ€è¦ä¿®æ”¹#################
+#################´´½¨ÈÕÖ¾Êä³öÄ¿Â¼£¬²»ÐèÒªÐÞ¸Ä#################
 if [ -d ${test_path_dir}/output/${ASCEND_DEVICE_ID} ];then
     rm -rf ${test_path_dir}/output/${ASCEND_DEVICE_ID}
     mkdir -p ${test_path_dir}/output/$ASCEND_DEVICE_ID
@@ -74,43 +86,44 @@ else
     mkdir -p ${test_path_dir}/output/$ASCEND_DEVICE_ID
 fi
 
-#è®­ç»ƒå¼€å§‹æ—¶é—´ï¼Œä¸éœ€è¦ä¿®æ”¹
+#ÑµÁ·¿ªÊ¼Ê±¼ä£¬²»ÐèÒªÐÞ¸Ä
 start_time=$(date +%s)
 
-nohup python3.7 -m torch.distributed.launch --nproc_per_node 8 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --weights '' --batch-size ${batch_size} --noval --noval --img-size ${img_size} >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
+nohup taskset -c 0-23 python3.7 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --epochs ${epochs} --weights '' --batch-size ${batch_size} --noval --img-size ${img_size} --local_rank ${device_id} >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
 wait
-#è®­ç»ƒç»“æŸæ—¶é—´ï¼Œä¸éœ€è¦ä¿®æ”¹
+#ÑµÁ·½áÊøÊ±¼ä£¬²»ÐèÒªÐÞ¸Ä
 end_time=$(date +%s)
 e2e_time=$(( $end_time - $start_time ))
 
-#ç»“æžœæ‰“å°ï¼Œä¸éœ€è¦ä¿®æ”¹
+#½á¹û´òÓ¡£¬²»ÐèÒªÐÞ¸Ä
 echo "------------------ Final result ------------------"
-#è¾“å‡ºæ€§èƒ½FPSï¼Œéœ€è¦æ¨¡åž‹å®¡è§†ä¿®æ”¹
+#Êä³öÐÔÄÜFPS£¬ÐèÒªÄ£ÐÍÉóÊÓÐÞ¸Ä
 fps=`grep -a 'it/s'  $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|awk -F " " '{print $NF}'|awk -F "i" '{print $1}'|tail -n 1`
 FPS=`echo "${batch_size} * ${fps}" |bc`
-#æ‰“å°ï¼Œä¸éœ€è¦ä¿®æ”¹
+#´òÓ¡£¬²»ÐèÒªÐÞ¸Ä
 echo "Final Performance images/sec : $FPS"
 
-#è¾“å‡ºè®­ç»ƒç²¾åº¦,éœ€è¦æ¨¡åž‹å®¡è§†ä¿®æ”¹
-train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
-#æ‰“å°ï¼Œä¸éœ€è¦ä¿®æ”¹
-echo "Final Train Accuracy : ${train_accuracy}"
+#Êä³öÑµÁ·¾«¶È,ÐèÒªÄ£ÐÍÉóÊÓÐÞ¸Ä
+#train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
+
+#´òÓ¡£¬²»ÐèÒªÐÞ¸Ä
+#echo "Final Train Accuracy : ${train_accuracy}"
 echo "E2E Training Duration sec : $e2e_time"
 
-#æ€§èƒ½çœ‹æŠ¤ç»“æžœæ±‡æ€»
-#è®­ç»ƒç”¨ä¾‹ä¿¡æ¯ï¼Œä¸éœ€è¦ä¿®æ”¹
+#ÐÔÄÜ¿´»¤½á¹û»ã×Ü
+#ÑµÁ·ÓÃÀýÐÅÏ¢£¬²»ÐèÒªÐÞ¸Ä
 BatchSize=${batch_size}
 DeviceType=`uname -m`
-CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'acc'
+CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'perf'
 
-##èŽ·å–æ€§èƒ½æ•°æ®ï¼Œä¸éœ€è¦ä¿®æ”¹
-#åžåé‡
+##»ñÈ¡ÐÔÄÜÊý¾Ý£¬²»ÐèÒªÐÞ¸Ä
+#ÍÌÍÂÁ¿
 ActualFPS=${FPS}
-#å•è¿­ä»£è®­ç»ƒæ—¶é•¿
+#µ¥µü´úÑµÁ·Ê±³¤
 TrainingTime=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'*1000/'${FPS}'}'`
 
 
-#å…³é”®ä¿¡æ¯æ‰“å°åˆ°${CaseName}.logä¸­ï¼Œä¸éœ€è¦ä¿®æ”¹
+#¹Ø¼üÐÅÏ¢´òÓ¡µ½${CaseName}.logÖÐ£¬²»ÐèÒªÐÞ¸Ä
 echo "Network = ${Network}" > $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "RankSize = ${RANK_SIZE}" >> $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "BatchSize = ${BatchSize}" >> $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
@@ -119,3 +132,7 @@ echo "CaseName = ${CaseName}" >> $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseN
 echo "ActualFPS = ${ActualFPS}" >> $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "TrainingTime = ${TrainingTime}" >> $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "E2ETrainingTime = ${e2e_time}" >> $test_path_dir/output/$ASCEND_DEVICE_ID/${CaseName}.log
+#´¦ÀíÊý¾Ý¼¯
+if [ x"${etp_flag}" == x"true" ];then
+    rm -rf ${cur_path}/VOC.tar.gz ${cur_path}/VOC
+fi
