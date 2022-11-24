@@ -1,0 +1,15 @@
+# 参考YOLOv7原Pytorch代码仓库的版本信息装包
+# https://github.com/WongKinYiu/yolov7/requirements.txt
+# 以下为本仓库代码开发时所用包的版本信息
+torch==1.8.0
+torchvision==0.9.0
+onnx==1.12.0
+onnxsim==0.4.8
+onnxruntime==1.10.0
+numpy >= 1.18.5
+opencv-python>=4.1.1
+pycocotools>=2.0
+Pillow>=7.1.2
+scipy>=1.4.1
+tqdm>=4.41.0
+seaborn>=0.11.0
