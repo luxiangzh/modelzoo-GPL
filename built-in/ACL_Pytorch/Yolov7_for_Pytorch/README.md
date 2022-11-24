@@ -127,8 +127,8 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
    3.3 执行ATC命令  
    运行`atc.sh`导出`OM`模型，默认保存在`output`文件夹下。
    ```
-   # 导出batchsize=1的om模型，若需导出其他batchsize的om模型，直接修改输入的第三个参数即可。
-   bash atc.sh yolov7x.onnx yolov7x_bs1 1 Ascend310P3
+   # 导出batchsize=8的om模型，若需导出其他batchsize的om模型，直接修改输入shape（第三个参数 8）即可。
+   bash atc.sh yolov7x.onnx yolov7x_bs8 8 Ascend310P3
    ```
       - `atc`命令参数说明（参数见`atc.sh`）：
         -   `--framework`：5代表ONNX模型  
@@ -178,13 +178,13 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
 2. 执行推理  
    运行`om_nms_acc.py`推理OM模型，结果默认保存在`output/predictions.json`，可设置参数`--eval`计算`mAP`，`--visible`将检测结果显示到图片。
    ```
-   python3.7.5 om_nms_acc.py --model=yolov7x_bs1.om --output=output --batch=1 --conf-thres=0.001 --iou-thres=0.65 --device=0 --eval
+   python3.7.5 om_nms_acc.py --model=yolov7x_bs8.om --output=output --batch=1 --conf-thres=0.001 --iou-thres=0.65 --device=0 --eval
    ```
 
 3. 性能验证  
    可使用`ais_infer`推理工具的纯推理模式验证不同`batch_size`的`OM`模型的性能，参考命令如下：
    ```
-   python3.7.5 ${ais_infer_path}/ais_infer.py --model=yolov7x_bs1.om --output=output --batchsize=1 --device=0 --loop=20 
+   python3.7.5 ${ais_infer_path}/ais_infer.py --model=yolov7x_bs8.om --output=output --batchsize=1 --device=0 --loop=1000 
    ```
 
 # 模型推理性能&精度
