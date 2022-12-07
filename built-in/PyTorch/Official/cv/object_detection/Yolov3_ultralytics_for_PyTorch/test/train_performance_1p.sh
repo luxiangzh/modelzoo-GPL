@@ -19,7 +19,7 @@ model_name=yolov3
 data_path=""
 datasets="voc"
 #训练epochs
-epochs=20
+epochs=2
 #网络名称
 Network="Yolov3_for_PyTorch"
 
@@ -38,12 +38,18 @@ do
    fi
 done
 
-# COCO数据集建立软链接
+# 数据集建立软链接
 if [ ${datasets} == "coco" ];then
   echo "data_path is: ${data_path}"
   if [ ! -d './data/coco' ]
   then
     ln -s ${data_path} ./data/coco
+  fi
+else
+  echo "data_path is: ${data_path}"
+  if [ ! -d './VOC' ]
+  then
+    ln -s ${data_path} ./VOC
   fi
 fi
 
@@ -79,7 +85,7 @@ fi
 #训练开始时间，不需要修改
 start_time=$(date +%s)
 
-nohup python3.7 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --epochs ${epochs} --weights '' --batch-size ${batch_size} --noval --img-size ${img_size} --local_rank $ASCEND_DEVICE_ID >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
+nohup taskset -c 0-23 python3.7 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --epochs ${epochs} --weights '' --batch-size ${batch_size} --noval --img-size ${img_size} --local_rank ${device_id} >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
 wait
 #训练结束时间，不需要修改
 end_time=$(date +%s)
@@ -94,10 +100,10 @@ FPS=`echo "${batch_size} * ${fps}" |bc`
 echo "Final Performance images/sec : $FPS"
 
 #输出训练精度,需要模型审视修改
-train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
+#train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
 
 #打印，不需要修改
-echo "Final Train Accuracy : ${train_accuracy}"
+#echo "Final Train Accuracy : ${train_accuracy}"
 echo "E2E Training Duration sec : $e2e_time"
 
 #性能看护结果汇总
