@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v6.0"
+Network="yolov5m_v6.0"
 
 cur_path=`pwd`
-model_name=yolov5s
-batch_size=256
+model_name=yolov5m
+batch_size=48
 
 for para in $*
 do
@@ -29,20 +29,25 @@ else
 fi
 
 #创建DeviceID输出目录，不需要修改
-if [ -d ${cur_path}/test/output/${ASCEND_DEVICE_ID} ];then
-    rm -rf ${cur_path}/test/output/${ASCEND_DEVICE_ID}
-    mkdir -p ${cur_path}/test/output/$ASCEND_DEVICE_ID/
-else
-    mkdir -p ${cur_path}/test/output/$ASCEND_DEVICE_ID/
-fi
-
-source ${cur_path}/test/env_npu.sh
+if [ -d ${cur_path}/test/output/${ASCEND_DEVICE_ID} ];
+	then
+	   rm -rf ${cur_path}/test/output/${ASCEND_DEVICE_ID}
+		mkdir -p ${cur_path}/test/output/${ASCEND_DEVICE_ID}
+	else
+	   mkdir -p ${cur_path}/test/output/${ASCEND_DEVICE_ID}
+	fi
 
 #训练开始时间，不需要修改
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-python3 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size ${batch_size} --device $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
+source ${cur_path}/test/env_npu.sh
+
+python3.7 -u train.py --data ./data/coco.yaml \
+                      --cfg yolov5m.yaml \
+                     --weights '' \
+                     --batch-size $batch_size \
+                     --device $ASCEND_DEVICE_ID > $cur_path/test/output/${ASCEND_DEVICE_ID}/train_perf_1p.log 2>&1 &
 
 wait
 
@@ -52,17 +57,21 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
+FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_1p.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
 
 #打印，不需要修改
-echo "ActualAcc : $acc"
+echo "ActualFPS : $FPS"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总
 #训练用例信息，不需要修改
 BatchSize=${batch_size}
 DeviceType=`uname -m`
-CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}
+CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'acc'
+
+##获取性能数据，不需要修改
+#单迭代训练时长
+TrainingTime=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'*1000/'${FPS}'}'`
 
 #关键信息打印到${CaseName}.log中，不需要修改
 echo "Network = ${Network}" > $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
