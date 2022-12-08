@@ -377,7 +377,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
                     'optimizer': None if final_epoch else optimizer.state_dict()
             }
-            torch.save(ckpt, 'yolov5s.pt')
+            torch.save(ckpt, 'yolov5.pt')
             print('ckpt saved...')
 
             # Stop DDP TODO: known issues shttps://github.com/ultralytics/yolov5/pull/4576

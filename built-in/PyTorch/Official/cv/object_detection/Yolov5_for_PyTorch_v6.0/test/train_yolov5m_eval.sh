@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v6.0"
+Network="yolov5m_v6.0"
 
 cur_path=`pwd`
-model_name=yolov5s
-batch_size=256
+model_name=yolov5m
+batch_size=128
 
 for para in $*
 do
