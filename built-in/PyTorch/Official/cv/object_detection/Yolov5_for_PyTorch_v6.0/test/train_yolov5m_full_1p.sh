@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v6.0"
+Network="yolov5m_v6.0"
 
 cur_path=`pwd`
-model_name=yolov5s
-batch_size=512
+model_name=yolov5m
+batch_size=48
 
 for para in $*
 do
@@ -17,49 +17,37 @@ do
 done
 
 # 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
-ASCEND_DEVICE_ID=0
-echo "device id is ${ASCEND_DEVICE_ID}"
+local_rank=0
+if [ $ASCEND_DEVICE_ID ];then
+    echo "device id is ${ASCEND_DEVICE_ID}"
+elif [ ${local_rank} ];then
+    export ASCEND_DEVICE_ID=${local_rank}
+    echo "device id is ${ASCEND_DEVICE_ID}"
+else
+    "[Error] device id must be config"
+    exit 1
+fi
 
-source ${cur_path}/test/env_npu.sh
+#创建DeviceID输出目录，不需要修改
+if [ -d ${cur_path}/test/output/${ASCEND_DEVICE_ID} ];
+	then
+	   rm -rf ${cur_path}/test/output/${ASCEND_DEVICE_ID}
+		mkdir -p ${cur_path}/test/output/${ASCEND_DEVICE_ID}
+	else
+	   mkdir -p ${cur_path}/test/output/${ASCEND_DEVICE_ID}
+	fi
 
 #训练开始时间，不需要修改
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-export MASTER_ADDR=127.0.0.1
-export MASTER_PORT=29500
-export WORLD_SIZE=8
+source ${cur_path}/test/env_npu.sh
 
-for i in $(seq 0 7)
-do
-    if [ -d ${cur_path}/test/output/${i} ];
-	then
-	    rm -rf ${cur_path}/test/output/${i}
-		mkdir -p ${cur_path}/test/output/${i}
-	else
-	    mkdir -p ${cur_path}/test/output/${i}
-	fi
-
-	export RANK=$i
-	export LOCAL_RANK=$i
-
-    if [ $(uname -m) = "aarch64" ]
-	then
-		let p_start=0+24*i
-	    let p_end=23+24*i
-	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \
-		                                           --cfg yolov5s.yaml \
-		                                           --weights '' \
-		                                           --batch-size $batch_size \
-		                                           --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
-	else
-	    python3.7 train.py --data ./data/coco.yaml \
-		                --cfg yolov5s.yaml \
-		                --weights '' \
-		                --batch-size $batch_size \
-		                --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
-	fi
-done
+python3.7 -u train.py --data ./data/coco.yaml \
+                      --cfg yolov5m.yaml \
+                     --weights '' \
+                     --batch-size $batch_size \
+                     --device $ASCEND_DEVICE_ID > $cur_path/test/output/${ASCEND_DEVICE_ID}/train_perf_1p.log 2>&1 &
 
 wait
 
@@ -68,20 +56,11 @@ end_time=$(date +%s)
 echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
-#训练后进行eval显示精度
-python3.7 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 256 --device 0 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log 2>&1 &
-
-wait
-
 #最后一个迭代FPS值
-FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_8p_0.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
-
-#取acc值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
+FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_1p.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
-echo "ActualACC : $acc"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总

@@ -1,5 +1,5 @@
 # 1.版本说明
-yolov5版本Tags=v6.0，配置yolov5s, python版本为3.7.5
+yolov5版本Tags=v6.0，配置yolov5s、yolov5m，python版本为3.7.5
 
 # 2.准备数据集
 
@@ -64,22 +64,26 @@ make install
 # 7.NPU 单机单卡性能测试  
 
 ```
-bash test/train_yolov5s_performance_1p.sh  
+bash test/train_yolov5s_performance_1p.sh  #yolov5s
+bash test/train_yolov5m_performance_1p.sh  #yolov5m
 ```
 
 # 8. NPU 单机八卡性能测试
 
 ```
-bash test/train_yolov5s_performance_8p.sh
+bash test/train_yolov5s_performance_8p.sh  #yolov5s
+bash test/train_yolov5m_performance_8p.sh  #yolov5m
 ```
 
 # 9. NPU 单机八卡精度测试
 训练:
 ```
-bash test/train_yolov5s_full_8p.sh   
+bash test/train_yolov5s_full_8p.sh  #yolov5s
+bash test/train_yolov5m_full_8p.sh  #yolov5m
 ```
 
 评估
 ```
-bash test/train_yolov5s_eval.sh
+bash test/train_yolov5s_eval.sh  #yolov5s
+bash test/train_yolov5m_eval.sh  #yolov5m
 ```

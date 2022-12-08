@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v6.0"
+Network="yolov5m_v6.0"
 
 cur_path=`pwd`
-model_name=yolov5s
-batch_size=512
+model_name=yolov5m
+batch_size=384
 
 for para in $*
 do
@@ -48,13 +48,13 @@ do
 		let p_start=0+24*i
 	    let p_end=23+24*i
 	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \
-		                                           --cfg yolov5s.yaml \
+		                                           --cfg yolov5m.yaml \
 		                                           --weights '' \
 		                                           --batch-size $batch_size \
 		                                           --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	else
 	    python3.7 train.py --data ./data/coco.yaml \
-		                --cfg yolov5s.yaml \
+		                --cfg yolov5m.yaml \
 		                --weights '' \
 		                --batch-size $batch_size \
 		                --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
