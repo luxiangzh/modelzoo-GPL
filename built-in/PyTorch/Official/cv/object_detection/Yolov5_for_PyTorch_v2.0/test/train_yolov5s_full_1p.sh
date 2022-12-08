@@ -20,6 +20,9 @@ batch_size=128
 # 数据集路径,保持为空,不需要修改
 data_path=""
 
+# 指定训练所使用的npu device卡id
+device_id=0
+
 #网络名称
 Network="Yolov5_for_PyTorch"
 
@@ -29,6 +32,8 @@ do
       	model_name=`echo ${para#*=}`
    elif [[ $para == --batch_size* ]];then
       	batch_size=`echo ${para#*=}`
+   elif [[ $para == --device_id* ]];then
+        device_id=`echo ${para#*=}`
    elif [[ $para == --data_path* ]];then
       	data_path=`echo ${para#*=}`
    fi
@@ -56,11 +61,10 @@ if [ x"${etp_flag}" != x"true" ];then
 fi
 
 # 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
-local_rank=0
 if [ $ASCEND_DEVICE_ID ];then
     echo "device id is ${ASCEND_DEVICE_ID}"
-elif [ ${local_rank} ];then
-    export ASCEND_DEVICE_ID=${local_rank}
+elif [ ${device_id} ];then
+    export ASCEND_DEVICE_ID=${device_id}
     echo "device id is ${ASCEND_DEVICE_ID}"
 else
     "[Error] device id must be config"

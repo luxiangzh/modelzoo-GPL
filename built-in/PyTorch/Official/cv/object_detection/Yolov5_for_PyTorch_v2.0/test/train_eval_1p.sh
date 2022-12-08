@@ -10,6 +10,11 @@ else
     test_path_dir=${cur_path}/test
 fi
 
+# 指定训练所使用的npu device卡id
+device_id=0
+
+batch_size=32
+
 #非平台场景时source 环境变量
 check_etp_flag=`env | grep etp_running_flag`
 etp_flag=`echo ${check_etp_flag#*=}`
@@ -17,6 +22,14 @@ if [ x"${etp_flag}" != x"true" ];then
     source  ${test_path_dir}/env_npu.sh
 fi
 
+for para in $*
+do
+   if [[ $para == --device_id* ]];then
+        device_id=`echo ${para#*=}`
+   elif [[ $para == --batch_size* ]];then
+      	batch_size=`echo ${para#*=}`
+   fi
+done
 
 export TASK_QUEUE_ENABLE=1
 export PTCOPY_ENABLE=1
@@ -24,11 +37,10 @@ export ASCEND_GLOBAL_LOG_LEVEL=3
 export DYNAMIC_OP="ADD#MUL"
 
 # 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
-local_rank=0
 if [ $ASCEND_DEVICE_ID ];then
     echo "device id is ${ASCEND_DEVICE_ID}"
-elif [ ${local_rank} ];then
-    export ASCEND_DEVICE_ID=${local_rank}
+elif [ ${device_id} ];then
+    export ASCEND_DEVICE_ID=${device_id}
     echo "device id is ${ASCEND_DEVICE_ID}"
 else
     "[Error] device id must be config"
@@ -36,4 +48,4 @@ else
 fi
 
 cd ${cur_path}
-python3.7 test.py --data data/coco.yaml --coco_instance_path  ../coco/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu $ASCEND_DEVICE_ID
+python3.7 test.py --data data/coco.yaml --coco_instance_path  ../coco/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size ${batch_size} --device npu --npu $ASCEND_DEVICE_ID
