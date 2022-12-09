@@ -87,3 +87,13 @@ bash test/train_yolov5m_full_8p.sh  #yolov5m
 bash test/train_yolov5s_eval.sh  #yolov5s
 bash test/train_yolov5m_eval.sh  #yolov5m
 ```
+# 训练结果展示
+
+**表 1**  yolov5m训练结果展示表（6248cpu+280T）
+
+| NAME     | mAP50 |  FPS | AMP_Type |
+| -------  | -----  | ---: | -------: |
+| 1p-竞品A  | - | 181 |       O1 |
+| 1p-NPU   | - | 178 |       O1 |
+| 8p-竞品A  | 0.641 | 1264 |       O1 |
+| 8p-NPU   | 0.636 | 1281 |       O1 |
