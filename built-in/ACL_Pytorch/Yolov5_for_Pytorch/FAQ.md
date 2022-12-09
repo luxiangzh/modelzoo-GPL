@@ -10,11 +10,15 @@
 **问题原因**：pytorch 1.11版本存在问题，该问题官网已有issue并修复，更换版本即可，开发版本：1.10.1。<br>
 <img src="img/pytorch_issue.png" width = 80% />  
 
-2. atc转模型失败—tbe初始化失败<br>
+2. onnxsim动态shape不支持
+<img src="img/onnxsim不支持.png" width = 80% /><br>
+**问题原因**：onnxsim版本太低，升级>0.4.1，最新版已支持动态shape模型简化。
+
+3. atc转模型失败—tbe初始化失败<br>
 <img src="img/tbe初始化失败.png" width = 80% /><br>
 **问题原因**：python版本太低，升级>3.7，开发版本：Python3.7.5
 
-3. atc转模型失败—算子不支持<br>
+4. atc转模型失败—算子不支持<br>
 <img src="img/算子不支持.png" width = 80% /><br>
 **问题原因**：使用CANN包版本较早，后处理算子还未合入，目前5.0.4及以后的CANN都是支持的，建议使用最新CANN包。
 
