@@ -5,7 +5,7 @@ Network="yolov5s_v6.0"
 
 cur_path=`pwd`
 model_name=yolov5s
-batch_size=256
+batch_size=128
 
 for para in $*
 do
@@ -42,7 +42,7 @@ source ${cur_path}/test/env_npu.sh
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-python3 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size ${batch_size} --device $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
+python3 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size ${batch_size} --device $ASCEND_DEVICE_ID --half > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
 
 wait
 
