@@ -69,7 +69,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3.7 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 256 --device 0 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log 2>&1 &
+python3.7 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device 0 --half > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log 2>&1 &
 
 wait
 
