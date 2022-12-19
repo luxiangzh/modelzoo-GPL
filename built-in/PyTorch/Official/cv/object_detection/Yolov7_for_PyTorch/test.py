@@ -149,8 +149,6 @@ def test(data,
             # Run model
             t = time_synchronized()
             out, train_out = model(img, augment=augment)  # inference and training outputs
-            out = out.cpu()
-            train_out = [tout.cpu() for tout in train_out]
             t0 += time_synchronized() - t
 
             # Compute loss
