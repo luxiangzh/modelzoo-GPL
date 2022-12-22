@@ -10,22 +10,27 @@ cur_path=`pwd`
 model_name=yolov5m
 batch_size=384
 device_number=8
+head_rank=0
 for para in $*
 do
-   if [[ $para == --model_name* ]];then
+    if [[ $para == --model_name* ]];then
         model_name=`echo ${para#*=}`
-   elif [[ $para == --batch_size* ]];then
+    elif [[ $para == --batch_size* ]];then
         batch_size=`echo ${para#*=}`
-   elif [[ $para == --data_path* ]];then
+    elif [[ $para == --data_path* ]];then
         data_path=`echo ${para#*=}`
-   elif [[ $para == --node_rank* ]];then
+    elif [[ $para == --node_rank* ]];then
         node_rank=`echo ${para#*=}`
-   elif [[ $para == --master_addr* ]];then
+    elif [[ $para == --master_addr* ]];then
         master_addr=`echo ${para#*=}`
-   elif [[ $para == --master_port* ]];then
+    elif [[ $para == --master_port* ]];then
         master_port=`echo ${para#*=}`
-   elif [[ $para == --nnodes* ]];then
+    elif [[ $para == --nnodes* ]];then
         nnodes=`echo ${para#*=}`
+    elif [[ $para == --device_number* ]];then
+        device_number=`echo ${para#*=}`
+    elif [[ $para == --head_rank* ]];then
+        head_rank=`echo ${para#*=}`
    fi
 done
 
@@ -63,7 +68,7 @@ export MASTER_ADDR=${master_addr}
 export MASTER_PORT=${master_port}
 export WORLD_SIZE=$((nnodes * device_number))
 
-for i in $(seq 0 7)
+for i in $(seq ${head_rank} $((head_rank + device_number - 1)))
 do
     if [ -d ${cur_path}/test/output/${i} ];
     then
