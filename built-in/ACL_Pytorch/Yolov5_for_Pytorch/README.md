@@ -42,7 +42,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 | 配套                                                     | 版本     | 环境准备指导                                                                                                                                      |
 | ------------------------------------------------------- |--------|---------------------------------------------------------------------------------------------------------------------------------------------|
 | 固件与驱动                                               | 22.0.4 | [Pytorch框架推理环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/pies)                                               |
-| CANN                                                    | 6.0.0  | [推理应用开发学习文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/600alpha003/infacldevg/aclpythondevg/aclpythondevg_0000.html) |
+| CANN                                                    | 6.0.RC1  | [推理应用开发学习文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/600alpha003/infacldevg/aclpythondevg/aclpythondevg_0000.html) |
 | Python                                                  | 3.7.5  | -                                                                                                                                           |
 | PyTorch                                                 | 1.10.1 | -                                                                                                                                           |
 | 说明：Atlas 300I Duo 推理卡请以CANN版本选择实际固件与驱动版本。 | \      | \                                                                                                                                           |
@@ -117,7 +117,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    - 命令参数说明：
      -   `${tag}`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`
-     -   `${model}`：模型大小，可选`yolov5[n/s/m/l/x]`
+     -   `${model}`：模型大小，可选`yolov5[n/s/m/l]`,当前未适配X
 
 2. 导出`ONNX`模型  
    运行`bash pth2onnx.sh`导出动态shape的`ONNX`模型。
@@ -126,7 +126,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    - 命令参数说明：
      -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`, 默认`6.1`。
-     -   `--model`：模型大小，可选`yolov5[n/s/m/l/x]`, 默认`yolov5s`。
+     -   `--model`：模型大小，可选`yolov5[n/s/m/l]`, 默认`yolov5s`。
      -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_op`。`nms_op`方式下，pth导出onnx模型过程中会增加NMS后处理算子，后处理算子的参数`class_num`、`conf_thres`和`iou_thres`在[model.yaml](model.yaml)中设置。
 
 
@@ -195,7 +195,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    - 命令参数说明：
      -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`, 默认`6.1`。
-     -   `--model`：模型大小，可选`yolov5[n/s/m/l/x]`, 默认`yolov5s`。
+     -   `--model`：模型大小，可选`yolov5[n/s/m/l]`, 默认`yolov5s`。
      -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_op`。
      -   `--batch_size`: 模型推理batch大小，默认`4`。
      -   `--cfg_file`：模型推理参数设置，默认读取文件[model.yaml](model.yaml)。
