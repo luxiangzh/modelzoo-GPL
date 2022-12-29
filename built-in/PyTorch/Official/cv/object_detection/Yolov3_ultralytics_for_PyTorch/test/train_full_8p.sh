@@ -19,7 +19,7 @@ model_name=yolov3
 data_path=""
 datasets="voc"
 #网络名称
-Network="Yolov3_for_PyTorch"
+Network="Yolov3_ultralytics_for_PyTorch"
 
 for para in $*
 do
@@ -43,6 +43,8 @@ if [ ${datasets} == "coco" ];then
   then
     ln -s ${data_path} ./data/coco
   fi
+elif [ "${data_path}" == "" ];then
+  echo "There is no dataset, download required"
 else
   echo "data_path is: ${data_path}"
   if [ ! -d './VOC' ]
