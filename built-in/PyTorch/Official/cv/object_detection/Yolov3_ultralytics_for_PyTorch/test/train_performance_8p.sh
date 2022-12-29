@@ -21,7 +21,7 @@ datasets="voc"
 #训练epochs
 epochs=2
 #网络名称
-Network="Yolov3_for_PyTorch"
+Network="Yolov3_ultralytics_for_PyTorch"
 
 for para in $*
 do
@@ -45,6 +45,8 @@ if [ ${datasets} == "coco" ];then
   then
     ln -s ${data_path} ./data/coco
   fi
+elif [ "${data_path}" == "" ];then
+  echo "There is no dataset, download required"
 else
   echo "data_path is: ${data_path}"
   if [ ! -d './VOC' ]
@@ -108,7 +110,7 @@ echo "E2E Training Duration sec : $e2e_time"
 #训练用例信息，不需要修改
 BatchSize=${batch_size}
 DeviceType=`uname -m`
-CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'acc'
+CaseName=${Network}_bs${BatchSize}_${RANK_SIZE}'p'_'perf'
 
 ##获取性能数据，不需要修改
 #吞吐量
