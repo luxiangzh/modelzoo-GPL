@@ -531,6 +531,10 @@ def parse_opt(known=False):
 
 
 def main(opt, callbacks=Callbacks()):
+    torch.npu.set_compile_mode(jit_compile=False)
+    option = {}
+    option['NPU_FUZZY_COMPILE_BLACKLIST'] = "SigmoidCrossEntropyWithLogitsGradV2"
+    torch.npu.set_option(option)
     # Checks
     if RANK in [-1, 0]:
         print_args(FILE.stem, opt)
