@@ -47,7 +47,7 @@ bash test/train_full_8p.sh --data_path=/path/to/kitti
 #### 2.2. Evaluation
 
 ```shell script
-python3 evaluate.py --local_rank 0 --pretrained_path ../checkpoints/complexer_yolo/Model_complexer_yolo_epoch_best.pth
+bash train_eval.sh 
 ```
 (The `conf-thresh`, `nms-thresh`, and `iou-thresh` params can be adjusted. By default, these params have been set to _**0.5**_)
 
