@@ -58,6 +58,7 @@ e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
 python3.7 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device 0 --half > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_1p.log 2>&1 &
+wait
 
 #最后一个迭代FPS值
 FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_1p.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
