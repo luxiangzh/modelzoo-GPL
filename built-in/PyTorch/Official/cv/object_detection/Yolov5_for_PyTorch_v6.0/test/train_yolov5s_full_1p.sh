@@ -47,7 +47,7 @@ python3.7 -u train.py --data ./data/coco.yaml \
                       --cfg yolov5s.yaml \
                      --weights '' \
                      --batch-size $batch_size \
-                     --device $ASCEND_DEVICE_ID > $cur_path/test/output/${ASCEND_DEVICE_ID}/train_perf_1p.log 2>&1 &
+                     --device $ASCEND_DEVICE_ID > $cur_path/test/output/${ASCEND_DEVICE_ID}/train_1p.log 2>&1 &
 
 wait
 
@@ -56,11 +56,19 @@ end_time=$(date +%s)
 echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
+#训练后进行eval显示精度
+python3.7 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device 0 --half > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_1p.log 2>&1 &
+wait
+
 #最后一个迭代FPS值
-FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_1p.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
+FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_1p.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
+
+#取acc值
+acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_1p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
+echo "ActualACC : $acc"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总
@@ -80,5 +88,6 @@ echo "BatchSize = ${BatchSize}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${Cas
 echo "DeviceType = ${DeviceType}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "CaseName = ${CaseName}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "ActualFPS = ${FPS}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
+echo "TrainAccuracy = ${acc}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "TrainingTime = ${TrainingTime}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "E2ETrainingTime = ${e2e_time}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
