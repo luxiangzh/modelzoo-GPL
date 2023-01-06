@@ -522,8 +522,7 @@ class ComputeLoss:
                 pbox = torch.cat((pxy, pwh), 0)  # predicted box
 
                 # Regression
-                for p in range(batchsize):
-                    iou = bbox_iou(pbox, tbox[i], x1y1x2y2=False, CIoU=True, Trans=False)  # iou(prediction, target)
+                iou = bbox_iou(pbox, tbox[i], x1y1x2y2=False, CIoU=True, Trans=False)  # iou(prediction, target)
                 # iou = torch.npu_ciou(pbox, tbox[i], trans=True, is_cross=False).squeeze()
                 iou = iou * (allmask) + (1. - allmask)
                 lbox += (1.0 - iou).sum() / (sum_mask)  # iou loss
