@@ -101,7 +101,7 @@ FPS=`echo "${batch_size} * ${fps}" |bc`
 echo "Final Performance images/sec : $FPS"
 
 #输出训练精度,需要模型审视修改
-train_accuracy=`grep -a 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
+train_accuracy=`grep -w 'all' $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|tail -1|awk -F ' ' '{print $NF}'`
 #打印，不需要修改
 echo "Final Train Accuracy : ${train_accuracy}"
 echo "E2E Training Duration sec : $e2e_time"
