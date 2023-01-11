@@ -475,7 +475,7 @@ class ModelEMA:
             self.updates += 1
             d = self.decay(self.updates)
 
-            if x.device.type == 'npu':
+            if x.device.type != 'npu':
                 from apex.contrib.combine_tensors import combine_npu
                 d_inv = 1. - d
                 d = torch.tensor([d], device=x.device)
@@ -483,14 +483,16 @@ class ModelEMA:
                 if not self.is_fused:
                     pg0, pg1, pg2 = [], [], []  # optimizer parameters groups
 
-                    # this process needs special attention, the order of params should be identical to model
-                    for k, v in self.ema.named_modules():
-                        if hasattr(v, 'bias') and isinstance(v.bias, nn.Parameter):
-                            pg2.append(v.bias)  # biases
-                        if isinstance(v, nn.BatchNorm2d):
-                            pg0.append(v.weight)  # no decay
-                        elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
-                            pg1.append(v.weight)  # apply decay
+                    bn = tuple(
+                        v for k, v in nn.__dict__.items() if 'Norm' in k)  # normalization layers, i.e. BatchNorm2d()
+                    for v in self.ema.modules():
+                        for p_name, p in v.named_parameters(recurse=0):
+                            if p_name == 'bias':  # bias (no decay)
+                                pg2.append(p)
+                            elif p_name == 'weight' and isinstance(v, bn):  # weight (no decay)
+                                pg1.append(p)
+                            else:
+                                pg0.append(p)  # weight (with decay)
 
                     ema_all_params = pg2 + pg0 + pg1
                     self.ema_params_fused = combine_npu(ema_all_params)

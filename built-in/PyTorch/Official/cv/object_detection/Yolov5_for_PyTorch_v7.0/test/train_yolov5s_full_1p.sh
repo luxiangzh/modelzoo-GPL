@@ -47,6 +47,7 @@ python3 -u train.py \
     --cfg yolov5s.yaml \
     --weights '' \
     --batch-size $batch_size \
+    --optimizer 'NpuFusedSGD' \
     --device $ASCEND_DEVICE_ID \
     --epochs 300 > $cur_path/test/output/$ASCEND_DEVICE_ID/train_${ASCEND_DEVICE_ID}_full_1p.log 2>&1 &
 
