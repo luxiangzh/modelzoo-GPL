@@ -48,6 +48,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import dataloader_fixed
 if torch.__version__ > '1.8':
     import torch_npu
 import torch.distributed as dist
