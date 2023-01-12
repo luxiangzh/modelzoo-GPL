@@ -69,7 +69,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3.7 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device 0 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log 2>&1 &
+python3.7 val.py --data ./data/coco.yaml --conf-thres 0.0005 --iou-thres 0.50 --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log 2>&1 &
 
 wait
 
@@ -77,7 +77,7 @@ wait
 FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_8p_0.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
 
 #取acc值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
+acc=`grep -a 'IoU=0.50     ' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
 echo "ActualFPS : $FPS"
