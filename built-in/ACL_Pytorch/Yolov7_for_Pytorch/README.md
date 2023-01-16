@@ -28,13 +28,13 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
 - 该模型需要以下插件与驱动  
   **表 1**  版本配套表
 
-| 配套                                                     | 版本      | 环境准备指导                                                 |
-| ------------------------------------------------------- |---------| ------------------------------------------------------------ |
-| 固件与驱动                                                | 22.0.3  | [Pytorch框架推理环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/pies) |
-| CANN                                                    | 6.0.RC1 | -                                                            |
-| Python                                                  | 3.7.5   | -                                                            |
-| PyTorch                                                 | 1.10.1  | -                                                            |
-| 说明：Atlas 300I Duo 推理卡请以CANN版本选择实际固件与驱动版本。 | \       | \                                                            |
+| 配套                                                     | 版本     | 环境准备指导                                                 |
+| ------------------------------------------------------- |--------| ------------------------------------------------------------ |
+| 固件与驱动                                                | 22.0.3 | [Pytorch框架推理环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/pies) |
+| CANN                                                    | 6.0.0  | -                                                            |
+| Python                                                  | 3.7.5  | -                                                            |
+| PyTorch                                                 | 1.8.0  | -                                                            |
+| 说明：Atlas 300I Duo 推理卡请以CANN版本选择实际固件与驱动版本。 | \      | \                                                            |
 
 
 # 快速上手
@@ -50,7 +50,7 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
    
 2. 安装依赖  
    ```
-   pip3 install -r requirements.txt
+   pip3.7.5 install -r requirements.txt
    ```
 
 3. 获取`OM`推理代码  
@@ -131,14 +131,16 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
    bash atc.sh yolov7x.onnx yolov7x_bs8 8 Ascend310P3
    ```
       - `atc`命令参数说明（参数见`atc.sh`）：
-        -   `--framework`：5代表ONNX模型  
-        -   `--model`：ONNX模型文件
-        -   `--output`：输出的OM模型
-        -   `--input_format`：输入数据的格式
-        -   `--input_shape`：输入数据的shape
-        -   `--log`：日志级别
-        -   `--soc_version`：处理器型号
+        -   `--framework`: 5代表ONNX模型  
+        -   `--model`: ONNX模型文件
+        -   `--output`: 输出的OM模型
+        -   `--input_format`: 输入数据的格式
+        -   `--input_shape`: 输入数据的shape
+        -   `--log`: 日志级别
+        -   `--soc_version`: 处理器型号
         -   `--insert_op_conf`: aipp配置文件
+        -   `--optypelist_for_implmode`: 设置optype列表中算子的实现方式。该参数需要与--op_select_implmode参数配合使用。
+        -   `--op_select_implmode`: 设置网络模型中所有算子是高精度实现还是高性能实现。高精度是指在fp16输入的情况下，通过泰勒展开/牛顿迭代等手段进一步提升算子的精度；高性能是指在fp16输入的情况下，不影响网络精度前提的最优性能实现。
 
 
 4. 使用`aipp`进行预处理
@@ -178,25 +180,25 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
 2. 执行推理  
    运行`om_nms_acc.py`推理OM模型，结果默认保存在`output/predictions.json`，可设置参数`--eval`计算`mAP`，`--visible`将检测结果显示到图片。
    ```
-   python3.7.5 om_nms_acc.py --model=yolov7x_bs8.om --output=output --batch=1 --conf-thres=0.001 --iou-thres=0.65 --device=0 --eval
+   python3.7.5 om_nms_acc.py --model=yolov7x_bs8.om --output=output --batch=8 --conf-thres=0.001 --iou-thres=0.65 --device=0 --eval
    ```
 
 3. 性能验证  
    可使用`ais_infer`推理工具的纯推理模式验证不同`batch_size`的`OM`模型的性能，参考命令如下：
    ```
-   python3.7.5 ${ais_infer_path}/ais_infer.py --model=yolov7x_bs8.om --output=output --batchsize=1 --device=0 --loop=1000 
+   python3.7.5 -m ais_bench --model=yolov7x_bs8.om --output=output --batchsize=8 --device=0 --loop=1000 
    ```
 
 # 模型推理性能&精度
 
 调用ACL接口推理计算，性能&精度参考下列数据。
 
-|      | mAP | 310P    | T4     | 310P/T4 |
-|------|---|---------|--------|---------|
-| bs1  | 0.523 | 98.351  | 71.508 | 1.37538 |
-| bs4  | 0.523 | 112.555 | 92.083 | 1.22232 |
-| bs8  | 0.523 | 115.377 | 89.986 | 1.28217 |
-| bs16 | 0.523 | 113.940 | 88.409 | 1.28878 |
-| bs32 | 0.523 | 114.171 | 82.898 | 1.37724 |
-| bs64 | 0.523 | 111.379 | 73.922 | 1.50671 |
-| 最优bs | 0.523 | 115.377 | 92.083 | 1.25297 |
+|      | mAP   | 310P    | T4     | 310P/T4 |
+|------|-------|---------|--------|---------|
+| bs1  | 0.525 | 133.632 | 71.508 | 1.87    |
+| bs4  | 0.525 | 144.010 | 92.083 | 1.56    |
+| bs8  | 0.525 | 147.187 | 89.986 | 1.64    |
+| bs16 | 0.525 | 145.478 | 88.409 | 1.65    |
+| bs32 | 0.525 | 123.214 | 82.898 | 1.49    |
+| bs64 | 0.525 | 115.592 | 73.922 | 1.56    |
+| 最优bs | 0.525 | 147.187 | 92.083 | 1.60    |
