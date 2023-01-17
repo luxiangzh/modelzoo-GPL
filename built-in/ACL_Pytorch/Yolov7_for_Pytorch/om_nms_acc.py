@@ -282,8 +282,6 @@ if __name__ == '__main__':
     parser.add_argument('--iou-thres', type=float, default=0.65, help='IOU threshold for NMS')
     parser.add_argument('--device', type=int, default=0, help='device id')
     parser.add_argument('--eval', action='store_true', help='compute mAP')
-    parser.add_argument('--visible', action='store_true',
-                        help='draw detect result at image and save to output/img')
     args = parser.parse_args()
 
     if args.visible:
@@ -337,11 +335,6 @@ if __name__ == '__main__':
                                         'category_id': coco91class[int(p[5])],
                                         'bbox': [round(x, 3) for x in b],
                                         'score': round(p[4], 5)})
-
-            # visualize bounding boxes
-            if args.visible:
-                img_dw = draw_bbox(boxout, img0_list[idx], (0, 255, 0), 2, coco_names)
-                cv2.imwrite(os.path.join(f'{args.output_dir}/img', basename), img_dw)
 
     print('saveing predictions.json to output/')
     with open(f'{args.output_dir}/predictions.json', 'w') as f:
