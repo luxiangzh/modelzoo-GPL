@@ -13,6 +13,6 @@
 # limitations under the License.
 
 atc --framework=5 --model=$1 --output=$2 --input_format=NCHW --input_shape="images:"$3", 3, 640, 640" --log=error \
---soc_version=$4 --insert_op_conf=aipp.cfg
+--soc_version=$4 --insert_op_conf=aipp.cfg --optypelist_for_implmode="Sigmoid" --op_select_implmode=high_performance
 
 
