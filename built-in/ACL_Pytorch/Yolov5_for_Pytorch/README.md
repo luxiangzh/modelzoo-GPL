@@ -42,7 +42,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 | 配套                                                     | 版本     | 环境准备指导                                                                                                                                      |
 | ------------------------------------------------------- |--------|---------------------------------------------------------------------------------------------------------------------------------------------|
 | 固件与驱动                                               | 22.0.4 | [Pytorch框架推理环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/pies)                                               |
-| CANN                                                    | 6.0.RC1  | [推理应用开发学习文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/600alpha003/infacldevg/aclpythondevg/aclpythondevg_0000.html) |
+| CANN                                                    | 6.0.0  | [推理应用开发学习文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/600alpha003/infacldevg/aclpythondevg/aclpythondevg_0000.html) |
 | Python                                                  | 3.7.5  | -                                                                                                                                           |
 | PyTorch                                                 | 1.10.1 | -                                                                                                                                           |
 | 说明：Atlas 300I Duo 推理卡请以CANN版本选择实际固件与驱动版本。 | \      | \                                                                                                                                           |
@@ -56,28 +56,30 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    git clone https://github.com/ultralytics/yolov5.git
    cd yolov5
-   ```
-   
-2. 安装依赖  
-   ```
-   pip3 install -r requirements.txt
+   git checkout v2.0/v3.1/v4.0/v5.0/v6.0/v6.1  # 切换到所用版本
    ```
 
-3. 获取`OM`推理代码  
+2. 获取`OM`推理代码  
    将推理部署代码放到`yolov5`源码相应目录下。
    ```
     Yolov5_for_Pytorch
-    └── common           放到yolov5下
-      ├── util             模型/数据接口
-      ├── quantify         量化接口
-      ├── atc_cfg          atc转模型配置文件
-      └── patch            v2.0/v3.1/v4.0/v5.0/v6.0/v6.1 兼容性修改
-    ├── model.yaml       放到yolov5下 
-    ├── pth2onnx.sh      放到yolov5下
-    ├── onnx2om.sh       放到yolov5下
-    └── om_val.py        放到yolov5下
+    └── common             放到yolov5下
+      ├── util               模型/数据接口
+      ├── quantify           量化接口
+      ├── atc_cfg            atc转模型配置文件
+      └── patch              v2.0/v3.1/v4.0/v5.0/v6.0/v6.1 兼容性修改
+    ├── model.yaml         放到yolov5下 
+    ├── pth2onnx.sh        放到yolov5下
+    ├── onnx2om.sh         放到yolov5下
+    ├── om_val.py          放到yolov5下
+    └── requirements.txt   放到yolov5下
    ```   
 
+3. 安装依赖  
+   ```
+   pip3 install -r requirements.txt
+   ```
+   
 
 ## 准备数据集
 - 该模型使用 [coco2017 val数据集](https://cocodataset.org/#download) 进行精度评估，在`yolov5`源码根目录下新建`coco`文件夹，数据集放到`coco`里，文件结构如下：
@@ -91,7 +93,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ├── instances_val2017.json
    └── val2017.txt
    ```
-   `val2017.txt`中保存`.jpg`的相对路径，文件内容如下：
+   `val2017.txt`中保存`.jpg`的相对路径，请自行生成该`txt`文件，文件内容实例如下：
    ```
    ./val2017/00000000139.jpg
    ./val2017/00000000285.jpg
@@ -120,9 +122,10 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
      -   `${model}`：模型大小，可选`yolov5[n/s/m/l]`,当前未适配X
 
 2. 导出`ONNX`模型  
-   运行`bash pth2onnx.sh`导出动态shape的`ONNX`模型。
+   运行`bash pth2onnx.sh`导出动态shape的`ONNX`模型，模型参数在[model.yaml](model.yaml)中设置。
    ```
-   bash pth2onnx.sh --tag 6.1 --model yolov5s --nms_mode nms_op
+   bash pth2onnx.sh --tag 6.1 --model yolov5s --nms_mode nms_script  # nms_script
+   bash pth2onnx.sh --tag 6.1 --model yolov5s --nms_mode nms_op  # nms_op
    ```
    - 命令参数说明：
      -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`, 默认`6.1`。
@@ -158,7 +161,8 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    3.3 导出非量化`OM`模型  
    运行`onnx2om.sh`导出`OM`模型。
    ```
-   bash onnx2om.sh --tag 6.1 --model yolov5s --nms_mode nms_op --bs 4 --soc Ascend310P3
+   bash onnx2om.sh --tag 6.1 --model yolov5s --nms_mode nms_script --bs 4 --soc Ascend310P3  # nms_script
+   bash onnx2om.sh --tag 6.1 --model yolov5s_nms --nms_mode nms_op --bs 4 --soc Ascend310P3  # nms_op
    ```
       - `atc`命令参数说明（参数见`onnx2om.sh`）：
         -   `--model`：ONNX模型文件
@@ -176,8 +180,9 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    python3 common/quantify/gen_calib_data.py  
    ```
    （2）导出`OM`模型时设置`--quantify`参数，使能模型量化，量化对性能的提升视模型而定，实际效果不同。 
-   ```shell
-   bash onnx2om.sh --tag 6.1 --model yolov5s --nms_mode nms_op --bs 4 --soc Ascend310P3 --quantify True
+   ```
+   bash onnx2om.sh --tag 6.1 --model yolov5s --nms_mode nms_script --bs 4 --soc Ascend310P3 --quantify True  # nms_script
+   bash onnx2om.sh --tag 6.1 --model yolov5s_nms --nms_mode nms_op --bs 4 --soc Ascend310P3 --quantify True  # nms_op
    ```
    （3）部分网络层量化后损失较大，可在 [simple_config.cfg](common/atc_cfg/simple_config.cfg) 中配置不需要量化的层名称，默认为空列表。[skip_layers.cfg](common/atc_cfg/skip_layers.cfg) 中提供了参考写法，通常网络的首尾卷积层量化损失大些，其他版本可以用[Netron](https://github.com/lutzroeder/netron)打开模型，查找不需要量化的层名称。
 
@@ -187,8 +192,8 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 1. 安装`ais-infer`推理工具  
    `ais-infer`工具获取及使用方式请点击查看 [[ais_infer 推理工具使用文档](https://gitee.com/ascend/tools/tree/master/ais-bench_workload/tool/ais_infer)]
 
-2. 执行推理  
-   运行`om_val.py`推理OM模型，结果默认保存在`predictions.json`。
+2. 执行推理 & 精度验证  
+   运行`om_val.py`推理OM模型，模型参数在[model.yaml](model.yaml)中设置，结果默认保存在`predictions.json`。
    ```
    python3 om_val.py --tag 6.1 --model=yolov5s_bs4.om --nms_mode nms_script --batch_size=4  # nms_script
    python3 om_val.py --tag 6.1 --model=yolov5s_nms_bs4.om --nms_mode nms_op --batch_size=4  # nms_op
@@ -211,27 +216,27 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 # 模型推理性能&精度
 
 调用ACL接口推理计算，性能&精度参考下列数据。
-1. 方式二 nms后处理脚本（nms_script）
+1. 方式一 nms后处理脚本（nms_script）
 
-    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP_50) | OM模型性能 (fps) |
-    |:------:|:----------:|:-------------:|:------------------:|:-----------:|:------------:|:--------------:|
-    | 2.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |    55.3    |   1079.271   |
-    | 3.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |    56.5    |   853.275    |
-    | 4.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |    55.3    |   951.630    |
-    | 5.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |    55.5    |   955.388    |
-    | 6.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |    55.8    |   666.238    |
-    | 6.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |    56.5    |   665.806    |
+    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
+    |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
+    | 2.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   1079.271   |
+    | 3.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   853.275    |
+    | 4.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   951.630    |
+    | 5.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.5     |   955.388    |
+    | 6.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.8     |   666.238    |
+    | 6.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   665.806    |
 
-2. 方式一 nms后处理算子（nms_op)
+2. 方式二 nms后处理算子（nms_op)
 
-    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP_50) | OM模型性能 (fps) |
-    |:------:|:----------:|:-------------:|:------------------:|:-----------:|:------------:|:--------------:|
-    | 2.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |    40.9     |   948.276    |
-    | 3.1   | Ascend310P3 |     8      | coco val2017 | conf=0.4 iou=0.5   |    42.3     |   728.035    |
-    | 4.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |    40.5     |   862.770    |
-    | 5.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |    40.7     |   860.746    |
-    | 6.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |    41.2     |   876.578    |
-    | 6.1   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |    43.4     |   881.867    |
+    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
+    |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
+    | 2.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.9     |   948.276    |
+    | 3.1   | Ascend310P3 |     8      | coco val2017 | conf=0.4 iou=0.5   |     42.3     |   728.035    |
+    | 4.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.5     |   862.770    |
+    | 5.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.7     |   860.746    |
+    | 6.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     41.2     |   876.578    |
+    | 6.1   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     43.4     |   881.867    |
 
 
 # FAQ
