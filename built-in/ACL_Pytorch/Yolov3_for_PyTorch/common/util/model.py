@@ -18,11 +18,7 @@ import numpy as np
 
 from pathlib import Path
 from common.util.dataset import coco80_to_coco91_class, correct_bbox, save_coco_json
-
-try:
-    from utils.general import non_max_suppression, scale_coords  # tag > 2.0
-except:
-    from utils.utils import non_max_suppression, scale_coords  # tag = 2.0
+from utils.general import non_max_suppression, scale_coords
 
 
 def forward_nms_op(model, dataloader):
@@ -32,7 +28,7 @@ def forward_nms_op(model, dataloader):
         valid_num, img, img_info, img0, img_name, shapes = dataloader[i]
 
         # om infer
-        result = model.infer([img.astype(np.float16), img_info.astype(np.float16)])
+        result = model.infer([img, img_info])
         box_out = result[0]
         box_out_num = result[1]
 
@@ -50,7 +46,7 @@ def forward_nms_op(model, dataloader):
 def forward_nms_script(model, dataloader, cfg):
     pred_results = []
     for (img, targets, paths, shapes) in tqdm(dataloader):
-        img = img.half()
+        img = img.float()
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         nb, _, height, width = img.shape  # batch size, channels, height, width
 
