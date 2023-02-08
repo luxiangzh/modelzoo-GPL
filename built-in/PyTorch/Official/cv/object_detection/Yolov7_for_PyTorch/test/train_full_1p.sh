@@ -21,7 +21,7 @@ if [[ $data_path == "" ]];then
     exit 1
 fi
 
-ln -snf $data_path ./
+ln -snf $data_path ./coco
 
 # 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
 ASCEND_DEVICE_ID=0
