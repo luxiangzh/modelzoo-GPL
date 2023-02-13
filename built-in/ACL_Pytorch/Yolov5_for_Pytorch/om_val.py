@@ -15,7 +15,8 @@
 import yaml
 import json
 import argparse
-from ais_bench.infer.interface import InferSession
+from ais_bench.infer.interface import InferSession, MemorySummary
+from ais_bench.infer.summary import summary
 
 from utils.datasets import create_dataloader
 from common.util.dataset import BatchDataLoader, evaluate
@@ -40,6 +41,12 @@ def main(opt, cfg):
 
         # inference & nms
         pred_results = forward_nms_script(model, dataloader, cfg)
+
+    s = model.sumary()
+    summary.npu_compute_time_list = s.exec_time_list
+    summary.h2d_latency_list = MemorySummary.get_H2D_time_list()
+    summary.d2h_latency_list = MemorySummary.get_D2H_time_list()
+    summary.report(opt.batch_size, output_prefix=None, display_all_summary=False)
 
     pred_json_file = f"{opt.model.split('.')[0]}_{opt.tag}_predictions.json"
     print(f'saving results to {pred_json_file}')
