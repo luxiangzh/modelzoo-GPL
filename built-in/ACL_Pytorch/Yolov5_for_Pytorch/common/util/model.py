@@ -54,14 +54,24 @@ def forward_nms_script(model, dataloader, cfg):
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         nb, _, height, width = img.shape  # batch size, channels, height, width
 
+        padding = False
+        batch_size = model.get_inputs()[0].shape[0]
+        if nb != batch_size:
+            img = np.pad(img, ((0, batch_size - nb), (0,0), (0,0),(0,0)), 'constant', constant_values=0)
+            padding = True
+        else:
+            img = img.numpy()
+
         # om infer
-        result = model.infer([img.numpy()])
+        result = model.infer([img])
         if len(result) == 3:  # number of output nodes is 3, each shape is (bs, na, no, ny, nx)
             out = []
             for i in range(len(result)):
                 anchors = torch.tensor(cfg['anchors'])
                 stride = torch.tensor(cfg['stride'])
                 cls_num = cfg['class_num']
+                if padding == True:
+                    result[i] = result[i][:nb]
                 correct_bbox(result[i], anchors[i], stride[i], cls_num, out)
             box_out = torch.cat(out, 1)
         else:  # only use the first output node, which shape is (bs, -1, no)
