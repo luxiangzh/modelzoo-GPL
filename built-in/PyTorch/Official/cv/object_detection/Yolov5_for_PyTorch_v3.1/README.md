@@ -81,3 +81,12 @@ python3 test.py --data /data/coco.yaml --coco_path the-path-to-your-coco --img-s
 
 # 10.导出onnx指令
 python export_onnx.py --weights ./xxx.pt --img-size 640 --batch-size 1
+
+# 11.训练结果展示
+
+**表 1**  训练结果展示表
+
+|  NAME  | Acc@1 |   FPS   | Epochs | AMP_Type | Torch_Version |
+| :----: | :---: | :-----: | :----: | :------: | :-----------: |
+| 1p-NPU |   -   | 209.89  |   1    |    O1    |      1.8      |
+| 8p-NPU |   -   | 1408.38 |  300   |    O1    |      1.8      |
