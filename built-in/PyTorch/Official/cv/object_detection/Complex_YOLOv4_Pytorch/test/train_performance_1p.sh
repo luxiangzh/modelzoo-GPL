@@ -64,7 +64,7 @@ FPS=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'/'${step_time}'}'`
 loss=`grep -a 'Epoch:.*Loss'  ${cur_path}/test/output/$device_id/train_perf_1p.log|awk 'END {print}'| awk -F "Loss" '{print $2}' | awk -F " " '{print $2}' | cut -d '(' -f2 | cut -d ')' -f1`
 
 #打印，不需要修改
-echo "ActualFPS : $FPS"
+echo "Final Performance images/sec : $FPS"
 echo "ActualLoss : ${loss}"
 echo "E2E Training Duration sec : $e2e_time"
 

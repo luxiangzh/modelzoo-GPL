@@ -75,8 +75,8 @@ FPS=`grep -a 'FPS' ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DE
 acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log | grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
-echo "ActualFPS : $FPS"
-echo "ActualACC : $acc"
+echo "Final Performance images/sec : $FPS"
+echo "Final Train Accuracy : $acc"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总
