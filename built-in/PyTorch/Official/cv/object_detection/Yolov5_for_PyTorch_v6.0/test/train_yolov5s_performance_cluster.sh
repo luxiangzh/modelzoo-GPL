@@ -115,7 +115,7 @@ if [[ x"${master_addr}" == x"${HCCL_IF_IP}" ]];then
     FPS=`grep -a 'FPS:'  ${cur_path}/test/output/0/train_${WORLD_SIZE}p_0.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
 
     #打印，不需要修改
-    echo "ActualFPS : $FPS"
+    echo "Final Performance images/sec : $FPS"
     echo "E2E Training Duration sec : $e2e_time"
 
     #稳定性精度看护结果汇总

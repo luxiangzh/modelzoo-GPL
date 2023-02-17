@@ -85,7 +85,7 @@ e2e_time=$(( $end_time - $start_time ))
 FPS=`grep -a 'FPS'  ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}_performance_1p.log|awk 'END {print}'| awk -F "FPS:" '{print $2}' | awk -F "]" '{print $1}'`
 
 #打印，不需要修改
-echo "ActualFPS : $FPS"
+echo "Final Performance images/sec : $FPS"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总
