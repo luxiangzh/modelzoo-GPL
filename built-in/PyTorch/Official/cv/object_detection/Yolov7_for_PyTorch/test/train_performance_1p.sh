@@ -50,7 +50,7 @@ nohup taskset -c 0-23 python3 train.py \
     --img 640 640 \
     --cfg cfg/training/yolov7.yaml \
     --weights '' \
-    --epochs 15 \
+    --epochs 4 \
     --name $model_name \
     --hyp data/hyp.scratch.p5.yaml > ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
 wait
