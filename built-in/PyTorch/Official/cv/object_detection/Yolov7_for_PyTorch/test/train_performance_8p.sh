@@ -57,7 +57,7 @@ nohup taskset -c $p_start-$p_end python3 train.py \
     --img 640 640 \
     --cfg cfg/training/yolov7.yaml \
     --weights '' \
-    --epochs 30 \
+    --epochs 10 \
     --name $model_name \
     --local_rank $i \
     --hyp data/hyp.scratch.p5.bs256.yaml > ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
