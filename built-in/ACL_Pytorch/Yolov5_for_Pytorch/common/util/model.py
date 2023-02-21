@@ -75,6 +75,8 @@ def forward_nms_script(model, dataloader, cfg):
                 correct_bbox(result[i], anchors[i], stride[i], cls_num, out)
             box_out = torch.cat(out, 1)
         else:  # only use the first output node, which shape is (bs, -1, no)
+            if padding == True:
+                result[0] = result[0][:nb]
             box_out = torch.tensor(result[0])
 
         # non_max_suppression
