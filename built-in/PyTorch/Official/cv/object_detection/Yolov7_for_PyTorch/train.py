@@ -654,7 +654,7 @@ if __name__ == '__main__':
         assert torch.npu.device_count() > opt.local_rank
         torch.npu.set_device(opt.local_rank)
         device = torch.device('npu', opt.local_rank)
-        dist.init_process_group(backend='hccl', init_method='env://')  # distributed backend
+        dist.init_process_group(backend="hccl", world_size=opt.world_size, rank=opt.global_rank)
         assert opt.batch_size % opt.world_size == 0, '--batch-size must be multiple of CUDA device count'
         opt.batch_size = opt.total_batch_size // opt.world_size
 
