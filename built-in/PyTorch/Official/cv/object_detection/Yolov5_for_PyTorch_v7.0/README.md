@@ -149,6 +149,16 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      bash ./test/train_yolo5s_performance_8p.sh   # 8p性能
 
      ```
+   - 多机多卡训练指令
+   
+     启动多机多卡训练。
+     ```
+     bash test/train_yolov7_cluster.sh --nnodes=机器数量 --node_rank=机器序号(0,1,2...) --master_addr=主机服务器地址 --master_port=主机服务器端口号
+     ```
+     ps:脚本默认为8卡，若使用自定义卡数，继续在上面命令后添加 --device_number=每台机器使用卡数 --head_rank=起始卡号，例如分别为4、0时，代表使用0-3卡训练。
+
+     --epochs传入训练周期数，默认300， --batch_size传入模型total batch size，可以以单卡batch_size=64做参考设置。
+
      
    - 模型评估。
 
