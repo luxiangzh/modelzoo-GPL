@@ -419,8 +419,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             if final_epoch or saved_epoch:  # if save
                 # Save model
                 ckpt = {'epoch': epoch,
-                        'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
-                        # 'model': deepcopy(de_parallel(model)).cpu(),
+                        # 'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
+                        'model': deepcopy(de_parallel(model)).cpu(),
                         'optimizer': optimizer.state_dict()}
 
                 # Save last, best and delete
