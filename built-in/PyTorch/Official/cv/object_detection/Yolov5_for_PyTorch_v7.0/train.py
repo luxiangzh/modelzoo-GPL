@@ -471,6 +471,8 @@ def parse_opt(known=False):
     parser.add_argument('--save-period', type=int, default=-1, help='Save checkpoint every x epochs (disabled if < 1)')
     parser.add_argument('--seed', type=int, default=0, help='Global training seed')
     parser.add_argument('--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
+    parser.add_argument('--addr', default='127.0.0.1', type=str, help='master addr')
+    parser.add_argument('--port', default='29500', type=str, help='master port')
 
     # Logger arguments
     parser.add_argument('--entity', default=None, help='Entity')
@@ -488,8 +490,8 @@ def main(opt, callbacks=Callbacks()):
 
     if opt.device_num > 1:
         print("multi npu training")
-        os.environ['MASTER_ADDR'] = '127.0.0.1'
-        os.environ['MASTER_PORT'] = '29501'
+        os.environ['MASTER_ADDR'] = opt.addr
+        os.environ['MASTER_PORT'] = opt.port
         opt.world_size = opt.device_num
     else:
         print("1p training")
