@@ -447,9 +447,8 @@ def main(opt):
 
 
 if __name__ == "__main__":
+    # Disable Jit compile
     torch.npu.set_compile_mode(jit_compile=False)
-    option = dict()
-    option["NPU_FUZZY_COMPILE_BLACKLIST"] = "Identity"
-    torch.npu.set_option(option)
+
     opt = parse_opt()
     main(opt)

@@ -55,6 +55,17 @@ YOLOv3是在 COCO 数据集上预训练的对象检测架构和模型系列，�
   > **说明：** 
   >只需执行一条对应的PyTorch版本依赖安装命令。
 
+- 编译安装torchvision。
+
+  ***为了更快的推理性能，请编译安装而非直接安装torchvision***
+
+   ```
+    git clone -b v0.9.1 https://github.com/pytorch/vision.git #根据torch版本选择不同分支
+    cd vision
+    python setup.py bdist_wheel
+    pip3 install dist/*.whl
+   ```
+
 - 编译安装Opencv-python（可选）
 
   为了获得最好的图像处理性能，***请编译安装opencv-python而非直接安装***。编译安装步骤如下：

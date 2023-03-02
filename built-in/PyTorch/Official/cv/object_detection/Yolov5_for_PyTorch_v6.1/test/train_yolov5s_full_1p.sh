@@ -64,7 +64,7 @@ python3 val.py \
     --iou 0.65 \
     --half \
     --device npu \
-    --batch-size 32 \
+    --batch-size 128 \
     --local_rank 0 > $cur_path/test/output/$ASCEND_DEVICE_ID/train_acc_1p.log 2>&1 &
 
 wait

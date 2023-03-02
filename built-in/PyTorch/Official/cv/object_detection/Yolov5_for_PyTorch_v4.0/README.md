@@ -50,7 +50,16 @@ YOLOv5是一种单阶段目标检测算法，该算法在YOLOv4的基础上添�
   ```shell script
   pip install -r requirements.txt
   ```
+- 编译安装torchvision。
 
+  ***为了更快的推理性能，请编译安装而非直接安装torchvision***
+
+   ```
+    git clone -b v0.9.1 https://github.com/pytorch/vision.git #根据torch版本选择不同分支
+    cd vision
+    python setup.py bdist_wheel
+    pip3 install dist/*.whl
+   ```
 
 ## 准备数据集
 
@@ -76,7 +85,6 @@ YOLOv5是一种单阶段目标检测算法，该算法在YOLOv4的基础上添�
 （2）运行coco2yolo.py
 
 （3）运行上述脚本后，将在coco_data根目录生成train2017.txt和val2017.txt
-
 
 # 开始训练
 

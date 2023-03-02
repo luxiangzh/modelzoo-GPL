@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
+import torchvision
 import yaml
 from scipy.signal import butter, filtfilt
 from tqdm import tqdm
@@ -88,7 +89,7 @@ def check_anchors(dataset, model, thr=4.0, imgsz=640):
         r = wh[:, None] / k[None]
         x = torch.min(r, 1. / r).min(2)[0]  # ratio metric
         best = x.max(1)[0]  # best_x
-        return (best > 1. / thr).float().mean()  #  best possible recall
+        return (best > 1. / thr).double().mean()  #  best possible recall
 
     bpr = metric(m.anchor_grid.clone().cpu().view(-1, 2))
     print('Best Possible Recall (BPR) = %.4f' % bpr, end='')
@@ -616,6 +617,7 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
     Returns:
          detections with shape: nx6 (x1, y1, x2, y2, conf, cls)
     """
+
     if prediction.dtype is torch.float16:
         prediction = prediction.float()  # to FP32
 
@@ -676,11 +678,8 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
         # Batched NMS
         c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
         boxes, scores = x[:, :4] + c, x[:, 4]  # boxes (offset by class), scores
-        if scores.device.type != 'cuda':
-            i = nms(boxes, scores, iou_thres)
-        else:
-            import torchvision
-            i = torchvision.ops.boxes.nms(boxes, scores, iou_thres)
+        i = torchvision.ops.nms(boxes, scores, iou_thres)  # NMS
+
         if i.shape[0] > max_det:  # limit detections
             i = i[:max_det]
         if merge and (1 < n < 3E3):  # Merge NMS (boxes merged using weighted mean)
@@ -699,38 +698,6 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
             break  # time limit exceeded
 
     return output
-
-
-def nms(bboxes, scores, threshold=0.5):
-    x1 = bboxes[:,0]
-    y1 = bboxes[:,1]
-    x2 = bboxes[:,2]
-    y2 = bboxes[:,3]
-    areas = (x2-x1)*(y2-y1)
-    _, order = scores.sort(0, descending=True)
-
-    keep = []
-    while order.numel() > 0:
-        if order.numel() == 1:
-            i = order.item()
-            keep.append(i)
-            break
-        else:
-            i = order[0].item()
-            keep.append(i)
-  
-        xx1 = x1[order[1:]].clamp(min=x1[i])
-        yy1 = y1[order[1:]].clamp(min=y1[i])
-        xx2 = x2[order[1:]].clamp(max=x2[i])
-        yy2 = y2[order[1:]].clamp(max=y2[i])
-        inter = (xx2-xx1).clamp(min=0) * (yy2-yy1).clamp(min=0)
-
-        iou = inter / (areas[i]+areas[order[1:]]-inter)
-        idx = (iou <= threshold).nonzero().squeeze()
-        if idx.numel() == 0:
-            break
-        order = order[idx+1]
-    return torch.LongTensor(keep)
 
 def strip_optimizer(f='weights/best.pt'):  # from utils.utils import *; strip_optimizer()
     # Strip optimizer from *.pt files for lighter files (reduced by 1/2 size)
@@ -844,8 +811,8 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
         return x, x.max(1)[0]  # x, best_x
 
     def fitness(k):  # mutation fitness
-        _, best = metric(torch.tensor(k, dtype=torch.float32), wh)
-        return (best * (best > thr).float()).mean()  # fitness
+        _, best = metric(torch.tensor(k, dtype=torch.float64), wh)
+        return (best * (best > thr).double()).mean()  # fitness
 
     def print_results(k):
         k = k[np.argsort(k.prod(1))]  # sort small to large
@@ -871,7 +838,7 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
     wh0 = np.concatenate([l[:, 3:5] * s for s, l in zip(shapes, dataset.labels)])  # wh
 
     # Filter
-    i = (wh0 < 3.0).any(1).sum()
+    i = (wh0 < 3.0).any(1).double().sum()
     if i:
         print('WARNING: Extremely small objects found. '
               '%g of %g labels are < 3 pixels in width or height.' % (i, len(wh0)))
