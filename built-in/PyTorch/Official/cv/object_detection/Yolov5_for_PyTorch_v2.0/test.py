@@ -283,6 +283,9 @@ if __name__ == '__main__':
     opt.data = check_file(opt.data)  # check file
     print(opt)
 
+    # Disable Jit compile
+    torch.npu.set_compile_mode(jit_compile=False)
+    
     if opt.task in ['val', 'test']:  # run normally
         test(opt.data,
              opt.weights,

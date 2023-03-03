@@ -1,1 +1,0 @@
-nohup python -m torch.distributed.launch --nproc_per_node=8 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 512 --epochs 300 &

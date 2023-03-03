@@ -36,7 +36,18 @@ python3 coco2yolo.py
 
 # 4.NPU依赖
 按照requirements.txt安装python依赖包，还需安装(NPU-driver.run, NPU-firmware.run, NPU-toolkit.run, torch-ascend.whl, apex.whl)
-pillow建议安装较新版本，与之对应的torchvision版本如果无法直接安装，可以使用源码安装对应版本，参考链接：https：//github.com/pytorch/vision
+pillow建议安装较新版本
+
+- 编译安装torchvision
+
+  ***为了更快的推理性能，请编译安装而非直接安装torchvision***
+
+   ```
+    git clone -b v0.9.1 https://github.com/pytorch/vision.git #根据torch版本选择不同分支
+    cd vision
+    python setup.py bdist_wheel
+    pip3 install dist/*.whl
+   ```
 
 # 5.编译安装Opencv-python
 

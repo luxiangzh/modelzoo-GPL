@@ -299,38 +299,6 @@ def wh_iou(wh1, wh2):
     inter = torch.min(wh1, wh2).prod(2)  # [N,M]
     return inter / (wh1.prod(2) + wh2.prod(2) - inter)  # iou = inter / (area1 + area2 - inter)
 
-
-def nms(bboxes, scores, threshold=0.5):
-    x1 = bboxes[:, 0]
-    y1 = bboxes[:, 1]
-    x2 = bboxes[:, 2]
-    y2 = bboxes[:, 3]
-    areas = (x2 - x1) * (y2 - y1)
-    _, order = scores.sort(0, descending=True)
-
-    keep = []
-    while order.numel() > 0:
-        if order.numel() == 1:
-            i = order.item()
-            keep.append(i)
-            break
-        else:
-            i = order[0].item()
-            keep.append(i)
-  
-        xx1 = x1[order[1:]].clamp(min=x1[i])
-        yy1 = y1[order[1:]].clamp(min=y1[i])
-        xx2 = x2[order[1:]].clamp(max=x2[i])
-        yy2 = y2[order[1:]].clamp(max=y2[i])
-        inter = (xx2 - xx1).clamp(min=0) * (yy2 - yy1).clamp(min=0)
-
-        iou = inter / (areas[i] + areas[order[1:]] - inter)
-        idx = (iou <= threshold).nonzero().squeeze()
-        if idx.numel() == 0:
-            break
-        order = order[idx + 1]
-    return torch.LongTensor(keep)
-
 def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False,
                         labels=(), batch_size=32):
     """Runs Non-Maximum Suppression (NMS) on inference results
@@ -338,6 +306,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     Returns:
          list of detections, on (n,6) tensor per image [xyxy, conf, cls]
     """
+        
     if prediction.dtype is torch.float16:
         prediction = prediction.float()  # to FP32
 
@@ -407,10 +376,8 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         # Batched NMS
         c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
         boxes, scores = x[:, :4] + c, x[:, 4]  # boxes (offset by class), scores
-        if scores.device.type != 'cuda':
-            i = nms(boxes, scores, iou_thres)  # NMS
-        else:
-            i = torchvision.ops.nms(boxes, scores, iou_thres)  # NMS
+        i = torchvision.ops.nms(boxes, scores, iou_thres)  # NMS
+
         if i.shape[0] > max_det:  # limit detections
             i = i[:max_det]
         if merge and (1 < n < 3E3):  # Merge NMS (boxes merged using weighted mean)
