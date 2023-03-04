@@ -167,10 +167,6 @@ def run(data,
     loss = torch.zeros(3, device=device)
     jdict, stats, ap, ap_class = [], [], [], []
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
-        torch.npu.set_compile_mode(jit_compile=False)
-        option={}
-        option["NPU_FUZZY_COMPILE_BLACKLIST"] = "Identity"
-        torch.npu.set_option(option)
         t1 = time_sync()
         img = img.to(device, non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -361,5 +357,8 @@ def main(opt):
 
 
 if __name__ == "__main__":
+    # Disable Jit compile
+    torch.npu.set_compile_mode(jit_compile=False)
+
     opt = parse_opt()
     main(opt)

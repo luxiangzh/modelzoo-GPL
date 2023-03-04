@@ -110,10 +110,9 @@ def run(data,
         callbacks=Callbacks(),
         compute_loss=None,
         ):
-    option = {}
-    option["NPU_FUZZY_COMPILE_BLACKLIST"] = "Identity"
-    torch.npu.set_option(option)
+    # Disable Jit compile
     torch.npu.set_compile_mode(jit_compile=False)
+
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -372,6 +371,6 @@ def main(opt):
             plot_val_study(x=x)  # plot
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     opt = parse_opt()
     main(opt)

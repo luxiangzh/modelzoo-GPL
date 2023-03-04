@@ -5,7 +5,7 @@ Network="yolov5s_v3.1"
 
 cur_path=`pwd`
 model_name=yolov5s
-batch_size=32
+batch_size=128
 
 for para in $*
 do

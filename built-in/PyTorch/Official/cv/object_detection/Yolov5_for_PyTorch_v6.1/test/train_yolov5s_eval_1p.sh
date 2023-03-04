@@ -5,7 +5,7 @@ Network="yolov5s_v6.1"
 
 cur_path=`pwd`
 model_name=yolov5s
-batch_size=32
+batch_size=128
 
 for para in $*
 do
@@ -49,7 +49,7 @@ python3 val.py \
     --iou 0.65 \
     --half \
     --device npu \
-    --batch-size 32 \
+    --batch-size $batch_size \
     --local_rank $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log 2>&1 &
 
 wait

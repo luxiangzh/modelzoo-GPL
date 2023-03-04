@@ -38,8 +38,8 @@ def check_anchors(dataset, model, thr=4.0, imgsz=640):
         r = wh[:, None] / k[None]
         x = torch.min(r, 1 / r).min(2)[0]  # ratio metric
         best = x.max(1)[0]  # best_x
-        aat = (x > 1 / thr).float().sum(1).mean()  # anchors above threshold
-        bpr = (best > 1 / thr).float().mean()  # best possible recall
+        aat = (x > 1 / thr).double().sum(1).mean()  # anchors above threshold
+        bpr = (best > 1 / thr).double().mean()  # best possible recall
         return bpr, aat
 
     stride = m.stride.to(m.anchors.device).view(-1, 1, 1)  # model strides
@@ -93,8 +93,8 @@ def kmean_anchors(dataset='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen
         return x, x.max(1)[0]  # x, best_x
 
     def anchor_fitness(k):  # mutation fitness
-        _, best = metric(torch.tensor(k, dtype=torch.float32), wh)
-        return (best * (best > thr).float()).mean()  # fitness
+        _, best = metric(torch.tensor(k, dtype=torch.float64), wh)
+        return (best * (best > thr).double()).mean()  # fitness
 
     def print_results(k, verbose=True):
         k = k[np.argsort(k.prod(1))]  # sort small to large
@@ -120,7 +120,7 @@ def kmean_anchors(dataset='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen
     wh0 = np.concatenate([l[:, 3:5] * s for s, l in zip(shapes, dataset.labels)])  # wh
 
     # Filter
-    i = (wh0 < 3.0).any(1).sum()
+    i = (wh0 < 3.0).any(1).double().sum()
     if i:
         LOGGER.info(f'{PREFIX}WARNING ⚠️ Extremely small objects found: {i} of {len(wh0)} labels are <3 pixels in size')
     wh = wh0[(wh0 >= 2.0).any(1)].astype(np.float32)  # filter > 2 pixels

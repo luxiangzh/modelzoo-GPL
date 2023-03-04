@@ -42,7 +42,6 @@ import os
 from pathlib import Path
 from threading import Thread
 
-
 import apex
 from apex import amp
 
@@ -87,8 +86,8 @@ def test(data,
 
     else:  # called directly
         set_logging()
-        device = torch.device('npu:{}'.format(opt.deivce))
-        torch.npu.set_device('npu:{}'.format(opt.deivce))
+        device = torch.device('npu:{}'.format(opt.device))
+        torch.npu.set_device('npu:{}'.format(opt.device))
 
         # Directories
         save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
@@ -340,10 +339,8 @@ if __name__ == '__main__':
     opt.data = check_file(opt.data)  # check file
     print(opt)
 
+    # Disable Jit compile
     torch.npu.set_compile_mode(jit_compile=False)
-    option = {}
-    option["NPU_FUZZY_COMPILE_BLACKLIST"] = "Identity"
-    torch.npu.set_option(option)
 
     if opt.task in ('train', 'val', 'test'):  # run normally
         test(opt.data,
