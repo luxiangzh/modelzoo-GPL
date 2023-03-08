@@ -488,7 +488,6 @@ def main(opt, callbacks=Callbacks()):
         train(opt.hyp, opt, device, callbacks)
         if WORLD_SIZE > 1 and RANK == 0:
             LOGGER.info('Destroying process group... ')
-            #dist.destroy_process_group()
 
     # Evolve hyperparameters (optional)
     else:
