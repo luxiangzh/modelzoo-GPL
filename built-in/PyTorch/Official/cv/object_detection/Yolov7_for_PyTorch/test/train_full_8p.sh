@@ -72,7 +72,7 @@ e2e_time=$(( $end_time - $start_time ))
 FPS=`grep -a 'FPS' ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log | awk -F " " '{print $4}' | sort -n | tail -5 | awk '{a+=$1} END {if (NR != 0) printf("%.3f",a/NR)}'`
 
 #取acc值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log | grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
+acc=`grep -a "IoU=0.50:0.95" ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log | grep 'Average Precision' | grep 'AP'| grep 'area=   all' | awk -F " " '{print $13}' | awk 'BEGIN {max = 0} {if ($1+0 > max+0) max=$1} END {print max}'  `
 
 #打印，不需要修改
 echo "Final Performance images/sec : $FPS"
