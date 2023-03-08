@@ -37,6 +37,9 @@ from pathlib import Path
 
 import cv2
 import torch
+if torch.__version__ >= '1.8':
+    import torch_npu
+    from torch.npu.contrib import transfer_to_npu
 import torch.backends.cudnn as cudnn
 from numpy import random
 
@@ -197,6 +200,7 @@ def detect(save_img=False):
 
 
 if __name__ == '__main__':
+    torch.npu.set_compile_mode(jit_compile=False)
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='yolov7.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
