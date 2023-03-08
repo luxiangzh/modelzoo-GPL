@@ -91,7 +91,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
    mkdir datasets
    ln -s coco_path ./datasets/coco  # coco_path为数据集实际路径
    ```
-  
+
   - 编译安装torchvision
   
     ***为了更快的推理性能，请编译安装而非直接安装torchvision***
@@ -208,4 +208,4 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
 ## FAQ
 
-无。
+1. 训练过程中若遇到该问题`wandb: ERROR api_key not configured (no-tty). call wandb.login(key=[your_api_key])`，在不能获取到key的情况下，请卸载三方库`wandb`，再进行训练。
