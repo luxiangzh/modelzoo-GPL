@@ -17,15 +17,15 @@ YOLO算法作为one-stage目标检测算法最典型的代表，其基于深度�
 - 参考实现：
 
   ```
-  url=https://github.com/WongKinYiu/yolov7/tree/master
+  url=https://github.com/WongKinYiu/yolov7.git
   commit_id=072f76c72c641c7a1ee482e39f604f6f8ef7ee92
   ```
 
 - 适配昇腾 AI 处理器的实现：
 
   ```
-  url=https://gitee.com/ascend/ModelZoo-PyTorch.git
-  code_path=PyTorch/built-in/cv/detection
+  url=https://gitee.com/ascend/modelzoo-GPL
+  code_path=built-in/PyTorch/Official/cv/object_detection
   ```
 
 - 通过Git获取代码方法如下：
@@ -43,47 +43,77 @@ YOLO算法作为one-stage目标检测算法最典型的代表，其基于深度�
 
 ## 准备环境
 
-- 当前模型支持的固件与驱动、 CANN 以及 PyTorch 如下表所示。
+- 当前模型支持的 PyTorch 版本和已知三方库依赖如下表所示。
 
-  **表 1**  版本配套表
+  **表 1**  版本支持表
 
-  | 配套       | 版本                                                         |
-  | ---------- | ------------------------------------------------------------ |
-  | 硬件       | [1.0.17](https://www.hiascend.com/hardware/firmware-drivers?tag=commercial) |
-  | 固件与驱动  | [6.0.RC1](https://www.hiascend.com/hardware/firmware-drivers?tag=commercial) |
-  | CANN       | [6.0.RC1](https://www.hiascend.com/software/cann/commercial?version=6.0.RC1) |
-  | PyTorch    | [1.8.1](https://gitee.com/ascend/pytorch/tree/master/)       |
-
+  | Torch_Version      | 三方库依赖版本                                 |
+  | :--------: | :----------------------------------------------------------: |
+  | PyTorch 1.5 | pillow==8.4.0 |
+  | PyTorch 1.8 | pillow==9.1.0 |
+  
 - 环境准备指导。
 
-  请参考《[Pytorch框架训练环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/ptes)》。
-
+  请参考《[Pytorch框架训练环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/ptes)》，需要安装二进制算子包。
+  
 - 安装依赖。
 
+  在模型源码包根目录下执行命令，安装模型对应PyTorch版本需要的依赖。
   ```
-  pip3.7 install -r requirements.txt
+  pip install -r 1.5_requirements.txt  # PyTorch1.5版本
+  
+  pip install -r 1.8_requirements.txt  # PyTorch1.8版本
   ```
-  pillow建议安装较新版本，与之对应的torchvision版本如果无法直接安装，可使用源码安装对应的版本，源码参考链接：https://github.com/pytorch/vision 
-  建议：Pillow版本是9.1.0 torchvision版本是0.6.0。
+  > **说明：** 
+  >只需执行一条对应的PyTorch版本依赖安装命令。
 
 
 ## 准备数据集
 
+1. 获取数据集。
 
    用户自行获取coco数据集，包含images图片和annotations文件。其中images图片和annotations文件从[coco官网](https://cocodataset.org/#download)获取，另外还需要labels图片，用户可以从[google drive](https://drive.google.com/uc?export=download&id=1cXZR_ckHki6nddOmcysCuuJFM--T-Q6L)中获取。将获取后的数据集解压放置服务器的任意目录下(建议放到源码包根目录XXX/coco/下)。
 
   数据集目录结构如下所示：
 
-```
-    coco
-       |-- annotations
-       |-- images
-          |-- train2017
-          |-- val2017   
-       |-- labels
-          |-- train2017
-          |-- val2017
-```	  
+  ```
+      coco
+        |-- annotations
+        |-- images
+            |-- train2017
+            |-- val2017   
+        |-- labels
+            |-- train2017
+            |-- val2017
+  ```	  
+  > **说明：** 
+  > 该数据集的训练过程脚本只作为一种参考示例。
+2. 在源码包根目录下配置数据集路径。
+
+  - 编译安装torchvision
+  
+    ***为了更快的推理性能，请编译安装而非直接安装torchvision***
+
+     ```
+      git clone -b v0.9.1 https://github.com/pytorch/vision.git #根据torch版本选择不同分支
+      cd vision
+      python setup.py bdist_wheel
+      pip3 install dist/*.whl
+     ```
+3. 编译安装Opencv-python。
+
+   为了获得最好的图像处理性能，**请编译安装opencv-python而非直接安装**。编译安装步骤如下：
+
+   ```
+   export GIT_SSL_NO_VERIFY=true
+   git clone https://github.com/opencv/opencv.git
+   cd opencv
+   mkdir -p build
+   cd build
+   cmake -D BUILD_opencv_python3=yes -D BUILD_opencv_python2=no -D PYTHON3_EXECUTABLE=/usr/local/python3.7.5/bin/python3.7m -D PYTHON3_INCLUDE_DIR=/usr/local/python3.7.5/include/python3.7m -D PYTHON3_LIBRARY=/usr/local/python3.7.5/lib/libpython3.7m.so -D PYTHON3_NUMPY_INCLUDE_DIRS=/usr/local/python3.7.5/lib/python3.7/site-packages/numpy/core/include -D   PYTHON3_PACKAGES_PATH=/usr/local/python3.7.5/lib/python3.7/site-packages -D PYTHON3_DEFAULT_EXECUTABLE=/usr/local/python3.7.5/bin/python3.7m ..
+   make -j$nproc
+   make install
+   ```
 
 # 开始训练
 

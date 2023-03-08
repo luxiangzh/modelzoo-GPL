@@ -155,7 +155,6 @@ def test(data,
             # if compute_loss:
             #     loss += compute_loss([x.float() for x in train_out], targets)[1][:3]  # box, obj, cls
             device = 'cpu'
-
             # Run NMS
             targets[:, 2:] *= torch.Tensor([width, height, width, height]).to(device)  # to pixels
             lb = [targets[targets[:, 0] == i, 1:] for i in range(nb)] if save_hybrid else []  # for autolabelling
@@ -321,6 +320,7 @@ def test(data,
 
 
 if __name__ == '__main__':
+    torch.npu.set_compile_mode(jit_compile=False)
     parser = argparse.ArgumentParser(prog='test.py')
     parser.add_argument('--weights', nargs='+', type=str, default='yolov7.pt', help='model.pt path(s)')
     parser.add_argument('--data', type=str, default='data/coco.yaml', help='*.data path')
