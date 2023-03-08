@@ -392,7 +392,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
-    dist.destroy_process_group() if rank not in [-1, 0] else None
+
     torch.npu.empty_cache()
     return results
 
