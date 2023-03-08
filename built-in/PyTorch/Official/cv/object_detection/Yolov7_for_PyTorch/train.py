@@ -377,7 +377,7 @@ def train(hyp, opt, device, tb_writer=None):
         optimizer.zero_grad()
         start_time = time.time()
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
-            if i == 5:
+            if i == 10:
                 start_time = time.time()
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255.0  # uint8 to float32, 0-255 to 0.0-1.0
@@ -451,8 +451,8 @@ def train(hyp, opt, device, tb_writer=None):
             # end batch ------------------------------------------------------------------------------------------------
         if rank in [-1, 0]:
             epoch_time = time.time() - start_time
-            if i >= 5:
-                print('Training speed is {} FPS'.format(total_batch_size * (i + 1 - 5) / epoch_time))
+            if i >= 10:
+                print('Training speed is {} FPS'.format(total_batch_size * (i + 1 - 10) / epoch_time))
             else:
                 print('Training speed is {} FPS'.format(total_batch_size * (i + 1) / epoch_time))
         # end epoch ----------------------------------------------------------------------------------------------------
@@ -546,7 +546,7 @@ def train(hyp, opt, device, tb_writer=None):
                                               if (save_dir / f).exists()]})
         # Test best.pt
         logger.info('%g epochs completed in %.3f hours.\n' % (epoch - start_epoch + 1, (time.time() - t0) / 3600))
-        if opt.data.endswith('coco.yaml') and nc == 80:  # if COCO
+        if (not opt.notest) and opt.data.endswith('coco.yaml') and nc == 80:  # if COCO
             for m in (last, best) if best.exists() else (last):  # speed, mAP tests
                 results, _, _ = test.test(opt.data,
                                           batch_size=batch_size,
@@ -581,6 +581,7 @@ def train(hyp, opt, device, tb_writer=None):
 
 
 if __name__ == '__main__':
+    torch.npu.set_compile_mode(jit_compile=False)
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='yolo7.pt', help='initial weights path')
     parser.add_argument('--cfg', type=str, default='', help='model.yaml path')

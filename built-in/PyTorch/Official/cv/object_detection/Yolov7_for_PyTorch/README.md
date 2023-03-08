@@ -49,14 +49,14 @@ YOLO算法作为one-stage目标检测算法最典型的代表，其基于深度�
 
   | 配套       | 版本                                                         |
   | ---------- | ------------------------------------------------------------ |
-  | 硬件       | [1.0.17](https://www.hiascend.com/hardware/firmware-drivers?tag=commercial) |
-  | 固件与驱动  | [6.0.RC1](https://www.hiascend.com/hardware/firmware-drivers?tag=commercial) |
-  | CANN       | [6.0.RC1](https://www.hiascend.com/software/cann/commercial?version=6.0.RC1) |
+  | 硬件       | [1.0.18](https://www.hiascend.com/hardware/firmware-drivers?tag=commercial) |
+  | 固件与驱动  | [6.0.1](https://www.hiascend.com/hardware/firmware-drivers?tag=commercial) |
+  | CANN       | [6.0.1](https://www.hiascend.com/software/cann/commercial?version=6.0.RC1) |
   | PyTorch    | [1.8.1](https://gitee.com/ascend/pytorch/tree/master/)       |
 
 - 环境准备指导。
 
-  请参考《[Pytorch框架训练环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/ptes)》。
+  请参考《[Pytorch框架训练环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/ptes)》，需要安装二进制算子包。
 
 - 安装依赖。
 

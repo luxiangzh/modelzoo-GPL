@@ -646,21 +646,6 @@ class ComputeLoss:
 
         return tcls, tbox, indices, anch, targets_mask, targets_sum_mask
 
-
-class DeterministicIndex2(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, x, indices_list):
-        ctx.x = x
-        ctx.indices_list = indices_list
-        return x[indices_list[0], indices_list[1], indices_list[2], :]
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        tmp = torch.zeros_like(ctx.x)
-        ind0, ind1, ind2 = ctx.indices_list
-        tmp[ind0, ind1, ind2, :] = grad_output
-        return tmp, None
-
 class ComputeLossOTA:
     # Compute losses
     def __init__(self, model, autobalance=False):
@@ -696,23 +681,16 @@ class ComputeLossOTA:
     def __call__(self, p, targets, imgs):  # predictions, targets, model  
         na, nt = len(self.anchors), targets.shape[0]
         batch_size = p[0].shape[0]
-        nt_max = 32 * batch_size
-        while nt > nt_max:
-            nt_max *= 2
-            print('**************** nt max=', nt_max)
-        max_target = torch.ones(nt_max, 6, device=targets.device) * self.nc  # (6, 1024)
-        max_target[:nt] = targets
-        max_target = max_target.T
-
+        targets_save = targets.clone()
+        targets = targets.T
         device=targets.device
-
+        lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
         indices, anch = [], []
-
-        if nt_max not in self.ais:
-            ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt_max)  # na, nt (3, 543)
-            self.ais[nt_max] = ai
-        ai = self.ais[nt_max]
-        max_target = torch.cat((max_target.unsqueeze(1).repeat(1, na, 1), ai[None, :, :]), 0)
+        if nt not in self.ais:
+            ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # na, nt (3, 543)
+            self.ais[nt] = ai
+        ai = self.ais[nt]
+        targets = torch.cat((targets.unsqueeze(1).repeat(1, na, 1), ai[None, :, :]), 0)
         
         gt = 0.5  # bias
         off = torch.tensor([[0, 0],
@@ -729,14 +707,12 @@ class ComputeLossOTA:
                 self.gains[i] = gain
             gain = self.gains[i]
             # Match targets to anchors
-            #t = targets * gain
-            t, offsets = max_target * gain[:, None, None], 0
+            t, offsets = targets * gain[:, None, None], 0
             if nt:
                 # Matches
                 r = t.index_select(0, self.index[4:6]) / anchors.T[:, :, None]  # wh ratio
                 fg_mask = torch.max(r, 1. / r).max(0)[0] < 4.0  # compare bool tensor
                 fg_mask = fg_mask.reshape(-1).repeat(5, 1)
-                #t = t[j]  # filter (792, 7)
                 # Offsets
                 t = t.reshape(t.size(0), -1)
                 gxy = t.index_select(0, self.index[2:4])  # grid xy (792, 2)
@@ -773,25 +749,17 @@ class ComputeLossOTA:
                 indices.append((bag_cpu))  # image, anchor, grid indices
                 anch.append(anchors.cpu()[bag_cpu[:, 1]])  # anchors
             else:
-                t = max_target[0]
-                offsets = 0
-                b = t.index_select(0, self.index[0]).long().squeeze(0)  
-                gxy = t.index_select(0, self.index[2:4]) 
-                gij = (gxy - offsets).long()
-                gi = gij.index_select(0, self.index[0]).clamp_(0, gain[2] - 1).squeeze(0)  # grid xy indices
-                gj = gij.index_select(0, self.index[1]).clamp_(0, gain[3] - 1).squeeze(0)  # grid xy indices
-                _, _, h, w, _ = pi.shape
-                grid = torch.stack([gi, gj], dim=2)
-                grid_cat.append(grid.cpu()[cur_mask])
-                g = gj * w + gi + offset
-                offset += h * w
+                for pi in p:
+                    obji = torch.zeros_like(pi[..., 4])
+                    lobj += BCEobj(pi[..., 4], obji).mean() * self.balance[i]
+                    if self.autobalance:
+                        self.balance[i] = self.balance[i] * 0.9999 + 0.0001 / obji.detach().item()
+                if self.autobalance:
+                    self.balance = [x / self.balance[self.ssi] for x in self.balance]
+                lobj *= self.hyp['obj']
 
-                # Append
-                a = t.index_select(0, self.index[6]).long().squeeze(0)  # anchor indices
-                bag = torch.cat([b, a, g], 1)
-                bag_cpu = bag.cpu()[cur_mask]
-                indices.append((bag_cpu))  # image, anchor, grid indices
-                anch.append(anchors.cpu()[bag_cpu[:, 1]])  # anchors
+                loss = lbox + lobj + lcls
+                return (loss * batch_size).to(self.default_device), torch.cat((lbox, lobj, lcls)).detach().to(self.default_device)
         
         pre_gen_gains = [torch.tensor(pp.shape, device='cpu')[[3, 2, 3, 2]] for pp in p]
         grid_cat = torch.cat(grid_cat)
@@ -815,7 +783,7 @@ class ComputeLossOTA:
         cat_cat = torch.cat([anch_cat, pre_gen_gains_cat, grid_cat, strides_cat[:, None], from_which_layer_cat[:, None]], 1)
 
         p_cat = torch.cat([pi.view(pi.shape[0], pi.shape[1], pi.shape[2] * pi.shape[3], -1) for pi in p], 2)
-        targets_cpu = targets.cpu()
+        targets_cpu = targets_save.cpu()
         fixed_lens, src_lens, fixed_tlens, src_tlens = [], [], [], []
         all_this_bag, all_this_idx, all_fixed_len, all_fixed_gt_len = [], [], [], []
         all_this_targets = []
@@ -825,23 +793,19 @@ class ComputeLossOTA:
             all_this_idx.append(idx)
             this_bag = bag_cat[idx]
             len_this_b = len(this_bag)
-            fixed_len = int(np.ceil(len_this_b / 128.) * 128)
-            all_fixed_len.append(fixed_len)
+            all_fixed_len.append(len_this_b)
             all_this_bag.append(this_bag)
-            target_length += fixed_len
+            target_length += len_this_b
 
             t_idx = (targets_cpu[:, 0] == batch_idx)
             this_target = targets_cpu[t_idx]
             src_tlen = len(this_target)
             src_tlens.append(src_tlen)
             all_this_targets.append(this_target)
-            fixed_tlen = int(np.ceil(src_tlen / 32.) * 32)
-            fixed_gt_len += fixed_tlen
-            all_fixed_gt_len.append(fixed_tlen)
+            fixed_gt_len += src_tlen
+            all_fixed_gt_len.append(src_tlen)
 
-
-        target_length = int(np.ceil(target_length / 1024.) * 1024) + 512
-        target_gt_length = int(np.ceil(fixed_gt_len / 128.) * 128)
+        target_gt_length = fixed_gt_len
 
         if target_length not in self.all_attrs:
             all_bag = torch.zeros((target_length, 3), dtype=torch.long)
@@ -876,7 +840,7 @@ class ComputeLossOTA:
         all_cat = all_cat.to(self.default_device)
         all_targets = all_targets.to(self.default_device)
         
-        fg_pred = DeterministicIndex2.apply(p_cat, (all_bag[:, 0], all_bag[:, 1], all_bag[:, 2])).contiguous()
+        fg_pred = p_cat[all_bag[:, 0], all_bag[:, 1], all_bag[:, 2]].contiguous()
         p_obj_cat = fg_pred[:, 4:5]
         p_cls_cat = fg_pred[:, 5:]
         txywh = all_targets[:, 2:6] * imgs[0].shape[1] 
@@ -978,7 +942,7 @@ class ComputeLossOTA:
         tobj = torch.zeros_like(p_cat[..., 0], device=device)  # target obj
 
         src_gt_num = len(matching_targets)
-        fixed_gt_num = int(np.ceil(src_gt_num / 512) * 512)
+        fixed_gt_num = src_gt_num
 
         valid_mask = torch.ones((fixed_gt_num))
         if fixed_gt_num > src_gt_num:
@@ -1001,7 +965,7 @@ class ComputeLossOTA:
         if n:
             # Regression
             bs, as_, gs = bags[:, 0], bags[:, 1], bags[:, 2]
-            ps = DeterministicIndex2.apply(p_cat, (bs, as_, gs)).contiguous()
+            ps = p_cat[bs, as_, gs].contiguous()
             pxy = ps[:, :2].sigmoid() * 2. - 0.5
             # pxy = ps[:, :2].sigmoid() * 3. - 1.
             pwh = (ps[:, 2:4].sigmoid() * 2) ** 2 * cats[:, :2]
@@ -1025,9 +989,10 @@ class ComputeLossOTA:
                 idx = cats[:, 9] == ni
                 idx_mask = idx & valid_mask
                 idx_mask_sum = idx_mask.sum()
-                lbox += 1 - (iou * idx_mask).sum() / idx_mask_sum  # iou loss
-                if self.nc > 1:
-                    lcls += (self.BCEcls(ps[:, 5:], t).sum(1) * idx_mask).sum() / idx_mask_sum / self.nc
+                if idx_mask_sum:
+                    lbox += 1 - (iou * idx_mask).sum() / idx_mask_sum  # iou loss
+                    if self.nc > 1:
+                        lcls += (self.BCEcls(ps[:, 5:], t).sum(1) * idx_mask).sum() / idx_mask_sum / self.nc
 
         obji_all = self.BCEobj(p_cat[..., 4], tobj).sum(0).sum(0)
         offset = 0
