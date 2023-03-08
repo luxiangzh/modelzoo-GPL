@@ -39,7 +39,6 @@ import cv2
 import torch
 if torch.__version__ >= '1.8':
     import torch_npu
-    from torch.npu.contrib import transfer_to_npu
 import torch.backends.cudnn as cudnn
 from numpy import random
 
@@ -53,6 +52,7 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized,
 
 def detect(save_img=False):
     source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
+    trace = False
     save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
