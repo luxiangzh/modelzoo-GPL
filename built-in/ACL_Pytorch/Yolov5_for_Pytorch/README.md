@@ -106,8 +106,8 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 模型推理提供两种方式，区别如下：  
 1. `nms`后处理脚本（`nms_script`）   
     直接用官网`export.py`导出`onnx`模型，模型结构和官网一致，推理流程也和官方一致，NMS后处理采用脚本实现。
-    * 注意：如果使用的是nms_script方式，需要修改model.yaml文件，将其中的conf_thres:0.4和iou_thres:0.5修改为conf_thres:0.001和iou_thres:0.6，与github的yolov5 
-    主仓设置的一致，script精度测试使用的阈值也为该阈值。
+    * 注意：如果使用的是nms_script方式，需要修改model.yaml文件，将其中的配置conf_thres:0.4和iou_thres:0.5修改为conf_thres:0.001和iou_thres:0.6，后   
+    续该方式下精度测试也是采用修改后的配置。
  
 2. `nms`后处理算子（`nms_op`）  
     * 注意：为提升模型端到端推理性能，我们对上一步导出的`onnx`模型做了修改，增加后处理算子，将`NMS`后处理的计算集成到模型中。后处理算子存在阈值约束，要求 
