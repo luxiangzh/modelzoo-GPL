@@ -392,7 +392,6 @@ def train(hyp, opt, device, tb_writer=None):
                                             aliases=['last', 'stripped'])
         wandb_logger.finish_run()
 
-    dist.destroy_process_group() if rank not in [-1, 0] else None
     torch.npu.empty_cache()
     return results
 
