@@ -110,7 +110,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
  
 2. `nms`后处理算子（`nms_op`）  
     * 注意：为提升模型端到端推理性能，我们对上一步导出的`onnx`模型做了修改，增加后处理算子，将`NMS`后处理的计算集成到模型中。后处理算子存在阈值约束，要求 
-    `conf>0.1`，由于其硬性要求，所以model.yaml文件设置默认conf_thres:0.4。使用nms_op方式，不需要修改model.yaml文件
+    `conf>0.1`，由于其硬性要求，所以model.yaml文件默认设置conf_thres:0.4。使用nms_op方式，不需要修改model.yaml文件。
 
 ### 1 模型转换  
 将模型权重文件`.pth`转换为`.onnx`文件，再使用`ATC`工具将`.onnx`文件转为离线推理模型`.om`文件。
