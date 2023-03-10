@@ -166,10 +166,14 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):  # weight (with decay)
             g1.append(v.weight)
 
+    optimizer = None
     if opt.adam:
         optimizer = Adam(g0, lr=hyp['lr0'], betas=(hyp['momentum'], 0.999))  # adjust beta1 to momentum
     else:
-        optimizer = apex.optimizers.NpuFusedSGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
+        if os.environ["use_amp"] == "apex":
+            optimizer = apex.optimizers.NpuFusedSGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
+        elif os.environ["use_amp"] == "native":
+            optimizer = torch_npu.optim.NpuFusedSGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
 
     optimizer.add_param_group({'params': g1, 'weight_decay': hyp['weight_decay']})  # add g1 with weight_decay
     optimizer.add_param_group({'params': g2})  # add g2 (biases)
@@ -177,7 +181,12 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 f"{len(g0)} weight, {len(g1)} weight (no decay), {len(g2)} bias")
     del g0, g1, g2
 
-    model, optimizer = amp.initialize(model, optimizer, loss_scale=128, combine_grad=True)
+    if os.environ["use_amp"] == "apex":
+        model, optimizer = amp.initialize(model, optimizer, loss_scale=128, combine_grad=True)
+    elif os.environ["use_amp"] == "native":
+        scaler = torch.npu.amp.GradScaler(dynamic=False, init_scale=128)
+    else:
+        raise RuntimeError('amp is necessary on NPU.')
 
     # Scheduler
     if opt.linear_lr:
@@ -325,25 +334,42 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     imgs = nn.functional.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
-            pred = model(imgs)  # forward
-            loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
+            if os.environ["use_amp"] == "apex":
+                pred = model(imgs)
+                loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
+            elif os.environ["use_amp"] == "native":
+                with torch.npu.amp.autocast():
+                    pred = model(imgs)  # forward
+                    loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
+
             if RANK != -1:
                 loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
             if opt.quad:
                 loss *= 4.
 
             # Backward
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
+            if os.environ["use_amp"] == "apex":
+                with amp.scale_loss(loss, optimizer) as scaled_loss:
+                    scaled_loss.backward()
+            elif os.environ["use_amp"] == "native":
+                scaler.scale(loss).backward()
 
             # Optimize
             if ni - last_opt_step >= accumulate:
-                optimizer.step()
+                if os.environ["use_amp"] == "apex":
+                    optimizer.step()
+                elif os.environ["use_amp"] == "native":
+                    scaler.step(optimizer)
+                    scaler.update()
                 optimizer.zero_grad()
                 if ema:
                     x = torch.tensor([1.]).to(device)
                     if device.type == 'npu':
-                        params_fp32_fused = optimizer.get_model_combined_params()
+                        params_fp32_fused = None
+                        if os.environ["use_amp"] == "apex":
+                            params_fp32_fused = optimizer.get_model_combined_params()
+                        elif os.environ["use_amp"] == "native":
+                            params_fp32_fused = optimizer.get_combined_params()
                         ema.update(model, x, params_fp32_fused[0])
                     else:
                         ema.update(model, x)
@@ -440,7 +466,16 @@ def parse_opt(known=False):
     parser.add_argument('--bbox_interval', type=int, default=-1, help='W&B: Set bounding-box image logging interval')
     parser.add_argument('--artifact_alias', type=str, default='latest', help='W&B: Version of dataset artifact to use')
 
+    # amp
+    parser.add_argument('--native_amp', action='store_true', help='use torch amp')
+
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
+
+    if opt.native_amp:
+        os.environ['use_amp'] = 'native'
+    else:
+        os.environ['use_amp'] = 'apex'
+
     return opt
 
 
