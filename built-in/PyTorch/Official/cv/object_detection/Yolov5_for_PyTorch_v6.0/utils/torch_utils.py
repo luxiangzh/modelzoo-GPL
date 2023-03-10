@@ -337,7 +337,11 @@ class ModelEMA:
             d = self.decay(self.updates)
 
             if x.device.type == 'npu':
-                from apex.contrib.combine_tensors import combine_npu
+                if os.environ["use_amp"] == "apex":
+                    from apex.contrib.combine_tensors import combine_npu
+                elif os.environ["use_amp"] == "native":
+                    from torch_npu.utils import npu_combine_tensors as combine_npu
+
                 d_inv = 1. - d
                 d = torch.tensor([d], device=x.device)
 
