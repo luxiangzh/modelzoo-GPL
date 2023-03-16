@@ -467,7 +467,7 @@ def main(opt, callbacks=Callbacks()):
     if opt.device_num > 1:
         print("multi npu training")
         os.environ['MASTER_ADDR'] = '127.0.0.1'  # master ip
-        os.environ['MASTER_PORT'] = '29501'
+        os.environ['MASTER_PORT'] = '29500'
         os.environ['RANK'] = str(opt.local_rank)
         opt.world_size = opt.device_num
     else:
