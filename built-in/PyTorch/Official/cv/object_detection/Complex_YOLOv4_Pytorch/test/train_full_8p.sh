@@ -46,6 +46,9 @@ end_time=$(date +%s)
 echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
+#训练后进行评估
+python3 evaluate.py --local_rank $device_id --pretrained_path ../checkpoints/complexer_yolo/Model_complexer_yolo_epoch_best.pth > ${cur_path}/test/output/$device_id/train_eval_1p.log 2>&1
+
 #最后一个迭代FPS值
 step_time=`grep -a 'Epoch:'  ${cur_path}/test/output/$device_id/train_acc_8p.log|awk 'END {print}'| awk -F " " '{print $8}'| cut -d ')' -f1`
 FPS=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'/'${step_time}'}'`
@@ -53,9 +56,13 @@ FPS=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'/'${step_time}'}'`
 #最后一个迭代loss值
 loss=`grep -a 'Epoch:'  ${cur_path}/test/output/$device_id/train_acc_8p.log|awk 'END {print}'| awk -F " " '{print $15}'` | cut -d '(' -f2 | cut -d ')' -f1
 
+#评估的精度值
+map=`grep -a 'mAP:' ${cur_path}/test/output/$device_id/train_eval_1p.log | awk -F " " '{print $2}'`
+
 #打印，不需要修改
 echo "Final Performance images/sec : $FPS"
 echo "ActualLoss : ${loss}"
+echo "Final Train Accuracy : $map"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总
