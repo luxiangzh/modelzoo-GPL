@@ -371,8 +371,6 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
             # Optimize - https://pytorch.org/docs/master/notes/amp_examples.html
             if ni - last_opt_step >= accumulate:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10.0)  # clip gradients
-                # optimizer.clip_optimizer_grad_norm_fused(max_norm=10.0)
                 optimizer.step()
                 optimizer.zero_grad()
                 if ema:
@@ -381,7 +379,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                         params_fp32_fused = optimizer.get_model_combined_params()
                         ema.update(model, x, params_fp32_fused[0])
                     else:
-                        ema.update(model)
+                        ema.update(model, x)
                 last_opt_step = ni
 
             if i < 10:
