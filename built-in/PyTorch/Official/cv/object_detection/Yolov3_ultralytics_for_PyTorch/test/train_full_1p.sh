@@ -95,8 +95,16 @@ e2e_time=$(( $end_time - $start_time ))
 #结果打印，不需要修改
 echo "------------------ Final result ------------------"
 #输出性能FPS，需要模型审视修改
-fps=`grep -a 'it/s'  $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|gawk -F " " '{print $NF}'|gawk -F "i" '{print $1}'|tail -n 1`
-FPS=`echo "${batch_size} * ${fps}" |bc`
+it=`grep -a 'it/s'  $test_path_dir/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log|gawk -F " " '{print $NF}'|gawk -F "i" '{print $1}'|tail -n 1`
+unit='s/'
+IsUnit=$(echo $it | grep "${unit}")
+if [[ "$IsUnit" == "" ]]
+then
+  FPS=`echo "${batch_size} * ${it}" |bc`
+else
+  its=`echo "$it" | awk '{printf "%.2f\n",$1}'`
+  FPS=`echo "${batch_size} / ${its}" |bc`
+fi
 #打印，不需要修改
 echo "Final Performance images/sec : $FPS"
 
