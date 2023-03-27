@@ -59,7 +59,7 @@ python3 test.py --local_rank 0 --pretrained_path ../checkpoints/complex_yolov4/c
 
 ### 3. Baseline
 
-| NAME     | Acc@1 |  FPS | Epochs | AMP_Type |
+| NAME     | mAP |  FPS | Epochs | AMP_Type |
 | -------  | ----- | ---: | ------ | -------: |
 | 1p-竞品V |     - |    10 |     1 |      -   |
 | 1p-NPU   |     - |   11 |      1 |     O1   |
