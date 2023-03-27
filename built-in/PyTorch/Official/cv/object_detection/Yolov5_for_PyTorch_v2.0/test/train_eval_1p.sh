@@ -28,6 +28,8 @@ do
         device_id=`echo ${para#*=}`
    elif [[ $para == --batch_size* ]];then
       	batch_size=`echo ${para#*=}`
+   elif [[ $para == --data_path* ]];then
+        data_path=`echo ${para#*=}`
    fi
 done
 
@@ -48,4 +50,4 @@ else
 fi
 
 cd ${cur_path}
-python3.7 test.py --data data/coco.yaml --coco_instance_path  ../coco/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size ${batch_size} --device npu --npu $ASCEND_DEVICE_ID
+python3.7 test.py --data data/coco.yaml --coco_instance_path  ${data_path}/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size ${batch_size} --device npu --npu $ASCEND_DEVICE_ID
