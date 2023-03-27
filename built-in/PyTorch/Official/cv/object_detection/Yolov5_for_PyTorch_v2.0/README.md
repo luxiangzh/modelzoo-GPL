@@ -101,6 +101,12 @@ bash test/train_yolov5s_performance_cluster.sh  --data_path=数据集路径 --nn
 ```
 ps:脚本默认为8卡，若使用自定义卡数，继续在上面命令后添加 --device_number=每台机器使用卡数 --head_rank=起始卡号，例如分别为4、0时，代表使用0-3卡训练
 
+# 7.3 NPU 单机单卡评测指令  
+yolov5s:
+
+```
+bash test/train_eval_1p.sh  --data_path=数据集路径
+```
 
 # 8.GPU 单机单卡训练指令  
 python train.py --data coco.yaml --cfg yolov5x.yaml --weights '' --batch-size 32 --device 0  
