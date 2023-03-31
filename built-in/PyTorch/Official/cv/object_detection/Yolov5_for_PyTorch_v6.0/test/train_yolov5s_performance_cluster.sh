@@ -4,7 +4,7 @@
 # bash test/train_yolov5s_performance_cluster.sh --data_path=dataset --nnodes=2 --node_rank=0 --master_addr=x.x.x.x --master_port=50000 
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_for_PyTorch_v6.0"
+Network="yolov5s_ID4102_for_PyTorch_v6.0"
 
 cur_path=`pwd`
 model_name=yolov5s

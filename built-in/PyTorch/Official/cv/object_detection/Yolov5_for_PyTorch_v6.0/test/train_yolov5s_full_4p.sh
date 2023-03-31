@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #网络名称,同目录名称,需要模型审视修改
-Network="yolov5s_v6.0"
+Network="yolov5s_ID4102_for_PyTorch_v6.0"
 
 cur_path=`pwd`
 model_name=yolov5s
