@@ -192,16 +192,16 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
 **表 2**  yolov5m训练结果展示表
 
-| NAME     | mAP50 |  FPS | AMP_Type | Torch_Version |
+| NAME     | mAP0.5 |  FPS | AMP_Type | Torch_Version |
 | :-----:  | :---:  | :--: | :------: | :------: |
 | 1p-竞品A  | - | 181 |       O1 |    1.5 |
-| 8p-竞品A | 0.641 |  1264  |    O1    |      1.5      |
+| 8p-竞品A | 64.1 |  1264  |    O1    |      1.5      |
 | 1p-NPU | - | 176.3 | O1 | 1.8 |
-|  8p-NPU  | 0.636 | 1432.2 |    O1    |      1.8      |
+|  8p-NPU  | 63.6 | 1432.2 |    O1    |      1.8      |
 
 **表 3**  yolov5s训练结果展示表
 
-| NAME     | mAP50 |  FPS | AMP_Type | Torch_Version | Architecture |
+| NAME     | mAP0.5~0.95 |  FPS | AMP_Type | Torch_Version | Architecture |
 | :-----:  | :---:  | :------: | :-----:  | :-----:  | :-----: |
 | 1p-NPU | - | 265 | O1 | 1.8 | |
 | 8p-NPU   | 34.03 | 2044.5 |       O1 |    1.8 | Arm |
