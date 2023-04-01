@@ -92,3 +92,11 @@ python3 test.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5_0.pt' --
 
 # 13.导出onnx指令
 python export_onnx.py --weights ./xxx.pt --img-size 640 --batch-size 1
+
+# 14.训练结果展示
+
+**表 1**  训练结果展示表
+
+|   NAME   | Accuracy | FPS  | Torch_Version | CPU |
+| :------: | :---: | :--: | :-------: | :------: |
+|  8p-NPU  |  34.1  | 1781.91 |      1.8      |      arm      |

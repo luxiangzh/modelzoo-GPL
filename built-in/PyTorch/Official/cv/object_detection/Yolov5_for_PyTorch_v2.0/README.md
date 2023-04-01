@@ -124,3 +124,17 @@ python export_onnx.py --weights ./xxx.pt --img-size 640 --batch-size 1
 python detect.py --source file.jpg --weights 'yolov5l.pt' --device npu --data coco.yaml（可选）
 
 注：若保存的模型文件中无`names`字段，须传入data参数
+
+# 13. 训练结果展示
+
+表1 yolov5s训练结果展示表
+
+|  NAME  | Accuracy |  FPS   | Torch_Version | CPU  |
+| :----: | :------: | :----: | :-----------: | :--: |
+| 8p-NPU |  34.02   | 1686.7 |      1.8      | arm  |
+
+表2 yolov5x训练结果展示表
+
+|   NAME   | Accuracy |  FPS   | Torch_Version | CPU  |
+| :------: | :---: | :----: | :-----------: | :--: |
+|  8p-NPU  |   48.2   | 665.6 |      1.8      | arm  |
