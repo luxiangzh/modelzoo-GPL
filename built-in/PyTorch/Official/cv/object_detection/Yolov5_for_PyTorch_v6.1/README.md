@@ -98,3 +98,11 @@ bash test/train_yolov5s_full_8p.sh
 ```
 bash test/train_yolov5s_eval_1p.sh 
 ```
+
+# 训练结果展示
+
+**表 1**  训练结果展示表
+
+| NAME     | Accuracy |  FPS | Torch_Version |
+| :-----:  | :------: | :-----:  | :-----:  |
+| 8p-NPU  | 34.11 | 1538 | 1.11 |
