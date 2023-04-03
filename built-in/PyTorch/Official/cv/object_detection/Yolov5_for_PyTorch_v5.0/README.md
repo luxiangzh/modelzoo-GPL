@@ -100,3 +100,5 @@ python export_onnx.py --weights ./xxx.pt --img-size 640 --batch-size 1
 |   NAME   | Accuracy | FPS  | Torch_Version | CPU |
 | :------: | :---: | :--: | :-------: | :------: |
 |  8p-NPU  |  34.1  | 1781.91 |      1.8      |      arm      |
+|  1p-NPU  |  - | 219.36 |      1.8      |      非arm      |
+|  8p-NPU  | -  | 1335.43 |      1.8      |      非arm      |
