@@ -29,6 +29,18 @@ else
      test_path_dir=${cur_path}/test
 fi
 
+# 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
+device_id=0
+if [ $ASCEND_DEVICE_ID ];then
+    echo "device id is ${ASCEND_DEVICE_ID}"
+elif [ ${local_rank} ];then
+    export ASCEND_DEVICE_ID=${device_id}
+    echo "device id is ${ASCEND_DEVICE_ID}"
+else
+    "[Error] device id must be config"
+    exit 1
+fi
+
 # 非平台场景时source 环境变量
 check_etp_flag=$(env | grep etp_running_flag)
 etp_flag=$(echo ${check_etp_flag#*=})
