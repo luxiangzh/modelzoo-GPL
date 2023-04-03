@@ -131,7 +131,9 @@ python detect.py --source file.jpg --weights 'yolov5l.pt' --device npu --data co
 
 |  NAME  | Accuracy |  FPS   | Torch_Version | CPU  |
 | :----: | :------: | :----: | :-----------: | :--: |
-| 8p-NPU |  34.02   | 1686.7 |      1.8      | arm  |
+| 8p-NPU-ARM |  34.02   | 1686.7 |      1.8      | arm  |
+| 1p-NPU-非ARM |  -   | 305.6 |      1.8      | arm  |
+| 8p-NPU-非ARM |  -   | 1251.7 |      1.8      | arm  |
 
 表2 yolov5x训练结果展示表
 
