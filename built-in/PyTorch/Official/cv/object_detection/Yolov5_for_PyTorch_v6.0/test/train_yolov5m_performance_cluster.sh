@@ -52,6 +52,18 @@ if [ x"${etp_flag}" != x"true" ]; then
      source ${test_path_dir}/env_npu.sh
 fi
 
+# 校验是否指定了device_id,分动态分配device_id与手动指定device_id,此处不需要修改
+device_id=0
+if [ $ASCEND_DEVICE_ID ];then
+    echo "device id is ${ASCEND_DEVICE_ID}"
+elif [ ${local_rank} ];then
+    export ASCEND_DEVICE_ID=${device_id}
+    echo "device id is ${ASCEND_DEVICE_ID}"
+else
+    "[Error] device id must be config"
+    exit 1
+fi
+
 #配置数据集路径
 sed -i 's#train: .*#train: '${data_path}'/train2017.txt#' ${cur_path}/data/coco.yaml
 sed -i 's#val: .*#val: '${data_path}'/val2017.txt#' ${cur_path}/data/coco.yaml
