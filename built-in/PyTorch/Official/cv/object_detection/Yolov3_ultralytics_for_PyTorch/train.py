@@ -42,9 +42,11 @@ import os
 import random
 import sys
 import time
+import yaml
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from tqdm import tqdm
 
 import numpy as np
 import torch
@@ -53,13 +55,23 @@ if torch.__version__ > '1.8':
     import torch_npu
 import torch.distributed as dist
 import torch.nn as nn
-import yaml
-# from torch.cuda import amp
 import apex
 from apex import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import SGD, Adam, lr_scheduler
-from tqdm import tqdm
+try:
+    from torch_npu.utils.profiler import Profile
+except:
+    print("Profile not in torch_npu.utils.profiler now.. Auto Profile disabled.", flush=True)
+    class Profile:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+        def end(self):
+            pass
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # root directory
@@ -330,6 +342,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         if RANK in [-1, 0]:
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
+        profile = Profile(start_step=int(os.getenv('PROFILE_START_STEP', 10)),
+                          profile_type=os.getenv('PROFILE_TYPE'))
+
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255  # uint8 to float32, 0-255 to 0.0-1.0
@@ -354,14 +369,13 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     imgs = nn.functional.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
-            # with amp.autocast(enabled=npu):
-            if 1:
-                pred = model(imgs)  # forward
-                loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
-                if RANK != -1:
-                    loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
-                if opt.quad:
-                    loss *= 4.
+            profile.start()
+            pred = model(imgs)  # forward
+            loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
+            if RANK != -1:
+                loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
+            if opt.quad:
+                loss *= 4.
 
             # Backward
             # scaler.scale(loss).backward()
@@ -379,6 +393,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     params_fp32_fused = optimizer.get_model_combined_params()
                     ema.update(model, x, params_fp32_fused[0])
                 last_opt_step = ni
+            profile.end()
 
             # Log
             if RANK in [-1, 0]:

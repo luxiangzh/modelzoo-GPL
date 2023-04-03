@@ -15,9 +15,11 @@ import math
 import os
 import random
 import time
+import yaml
 from copy import deepcopy
 from pathlib import Path
 from threading import Thread
+from tqdm import tqdm
 
 import numpy as np
 import torch.distributed as dist
@@ -26,13 +28,11 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 import torch.utils.data
-import yaml
 
 import apex
 from apex import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm
 
 import test  # import test.py to get mAP after each epoch
 from models.experimental import attempt_load
@@ -47,6 +47,19 @@ from utils.loss import ComputeLoss
 from utils.plots import plot_images, plot_labels, plot_results, plot_evolution
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_distributed_zero_first, is_parallel
 from utils.wandb_logging.wandb_utils import WandbLogger, check_wandb_resume
+try:
+    from torch_npu.utils.profiler import Profile
+except:
+    print("Profile not in torch_npu.utils.profiler now.. Auto Profile disabled.", flush=True)
+    class Profile:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+        def end(self):
+            pass
 
 logger = logging.getLogger(__name__)
 
@@ -288,6 +301,9 @@ def train(hyp, opt, device, tb_writer=None):
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
 
+        profile = Profile(start_step=int(os.getenv('PROFILE_START_STEP', 10)),
+                          profile_type=os.getenv('PROFILE_TYPE'))
+
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             if i == opt.warmup_steps and rank in [-1, 0]:
                 torch.npu.synchronize()
@@ -315,6 +331,7 @@ def train(hyp, opt, device, tb_writer=None):
                     imgs = F.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
+            profile.start()
             pred = model(imgs)  # forward
             loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
             if rank != -1:
@@ -337,6 +354,7 @@ def train(hyp, opt, device, tb_writer=None):
                         ema.update(model, x, params_fp32_fused[0])
                     else:
                         ema.update(model, x)
+            profile.end()
 
             # Print
             if rank in [-1, 0]:

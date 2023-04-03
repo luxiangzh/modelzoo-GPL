@@ -49,6 +49,19 @@ from utils import google_utils
 from utils.datasets import *
 from utils.utils import *
 import torch.multiprocessing as mp
+try:
+    from torch_npu.utils.profiler import Profile
+except:
+    print("Profile not in torch_npu.utils.profiler now.. Auto Profile disabled.", flush=True)
+    class Profile:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+        def end(self):
+            pass
 
 mixed_precision = True
 try:  # Mixed precision training https://github.com/NVIDIA/apex
@@ -286,6 +299,9 @@ def train(hyp, tb_writer, opt, device):
         optimizer.zero_grad()
         start_time = time.time()
         d_1 = time.time()
+        profile = Profile(start_step=int(os.getenv('PROFILE_START_STEP', 10)),
+                          profile_type=os.getenv('PROFILE_TYPE'))
+
         for i, (imgs, targets, paths, _) in enumerate(dataloader):
             t_time = time.time()
             d_time = t_time - d_1
@@ -312,6 +328,7 @@ def train(hyp, tb_writer, opt, device):
                     imgs = F.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
+            profile.start()
             pred = model(imgs)
 
             # Loss
@@ -340,6 +357,7 @@ def train(hyp, tb_writer, opt, device):
                         ema.update(model, x, params_fp32_fused[0])
                     else:
                         ema.update(model, x)
+            profile.end()
 
             if i <= 10:
                 sum_time = (time.time() - start_time) / (i + 1)

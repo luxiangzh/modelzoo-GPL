@@ -67,6 +67,19 @@ from utils.loss import ComputeLoss
 from utils.metrics import fitness
 from utils.plots import plot_evolve, plot_labels
 from utils.torch_utils import EarlyStopping, ModelEMA, de_parallel, select_device, torch_distributed_zero_first
+try:
+    from torch_npu.utils.profiler import Profile
+except:
+    print("Profile not in torch_npu.utils.profiler now.. Auto Profile disabled.", flush=True)
+    class Profile:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+        def end(self):
+            pass
 
 
 WORLD_SIZE = 1
@@ -313,6 +326,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         optimizer.zero_grad()
         start_time = time.time()
         fps = 0
+        profile = Profile(start_step=int(os.getenv('PROFILE_START_STEP', 10)),
+                          profile_type=os.getenv('PROFILE_TYPE'))
+
         for i, (imgs, targets, paths, _) in enumerate(train_loader):  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255  # uint8 to float32, 0-255 to 0.0-1.0
@@ -337,7 +353,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     imgs = nn.functional.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
-            # with amp.autocast(enabled=cuda):
+            profile.start()
             pred = model(imgs)  # forward
             loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
             if RANK != -1:
@@ -366,6 +382,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     else:
                         ema.update(model, x)
                 last_opt_step = ni
+            profile.end()
 
             if i <= 10:
                 sum_time = (time.time() - start_time) / (i + 1)

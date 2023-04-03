@@ -19,8 +19,10 @@ import os
 import random
 import sys
 import time
+import yaml
 from copy import deepcopy
 from pathlib import Path
+from tqdm import tqdm
 
 import numpy as np
 import torch
@@ -28,14 +30,25 @@ if torch.__version__ >= '1.8':
     import torch_npu
 import torch.distributed as dist
 import torch.nn as nn
-import yaml
 from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import Adam, SGD, lr_scheduler
-from tqdm import tqdm
 
 import apex
 from apex import amp
+try:
+    from torch_npu.utils.profiler import Profile
+except:
+    print("Profile not in torch_npu.utils.profiler now.. Auto Profile disabled.", flush=True)
+    class Profile:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+        def end(self):
+            pass
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -308,6 +321,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         optimizer.zero_grad()
         start_time = time.time()
         d_l = time.time()
+        profile = Profile(start_step=int(os.getenv('PROFILE_START_STEP', 10)),
+                          profile_type=os.getenv('PROFILE_TYPE'))
+
         for i, (imgs, targets, paths, _) in enumerate(train_loader):  # batch -------------------------------------------------------------
             t_time = time.time()
             d_time = t_time - d_l
@@ -334,6 +350,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     imgs = nn.functional.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
+            profile.start()
             if os.environ["use_amp"] == "apex":
                 pred = model(imgs)
                 loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
@@ -374,6 +391,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     else:
                         ema.update(model, x)
                 last_opt_step = ni
+            profile.end()
 
             if i <= 10:
                 sum_time = (time.time() - start_time) / (i + 1)
