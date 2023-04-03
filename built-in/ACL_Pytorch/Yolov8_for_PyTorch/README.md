@@ -77,9 +77,6 @@ YOLO系列网络模型是最为经典的one-stage算法，也是目前工业领�
 
    ```
    pip3 install -r requirements.txt
-   cd ultralytics
-   pip3 install -r requirements.txt
-   cd  ..
    ```
    
 
@@ -177,7 +174,7 @@ YOLO系列网络模型是最为经典的one-stage算法，也是目前工业领�
       3. 执行ATC命令。
 
          ```
-         atc --framework=5 --model=yolov8n.onnx --input_format=NCHW --input_shape='images:{batchsize},3,640,640' --output_type=FP16 --output=yolov8n_bs{batchsize} --log=error --soc_version=Ascend{chip_name}
+         atc --framework=5 --model=yolov8n.onnx --input_format=NCHW --input_shape='images:{batchsize},3,640,640' --output_type=FP16 --output=yolov8n_bs{batchsize} --log=error --soc_version=Ascend{chip_name} --op_precision_mode=op_precision.ini
          ```
 
          - 参数说明：
@@ -194,7 +191,7 @@ YOLO系列网络模型是最为经典的one-stage算法，也是目前工业领�
          - 自定义参数说明：
            - {batchsize} 需要指定为要生成的 om 模型的批处理大小， 如 1、4、8、16 等，此处以 8 为示例进行说明。
 
-         运行成功后生成 yolov8n_bs1.om 模型文件。
+         运行成功后生成 yolov8n_bs8.om 模型文件。
 
     
 2. 开始推理验证。
@@ -205,7 +202,7 @@ YOLO系列网络模型是最为经典的one-stage算法，也是目前工业领�
 
    2. 参数设置
 
-      在 `ultralytics\ultralytics\yolo\cfg` 文件夹的 `default.yaml` 与 `ultralytics\ultralytics\yolo\data\datasets` 文件夹的 `coco.yaml` 中填入相关参数。
+      在 `ultralytics/ultralytics/yolo/cfg` 文件夹的 `default.yaml` 与 `ultralytics/ultralytics/yolo/data/datasets` 文件夹的 `coco.yaml` 中填入相关参数。
       
       请根据实际情况修改相关参数。
 
