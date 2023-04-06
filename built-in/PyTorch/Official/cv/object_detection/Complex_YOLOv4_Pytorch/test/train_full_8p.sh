@@ -50,7 +50,7 @@ e2e_time=$(( $end_time - $start_time ))
 python3 evaluate.py --local_rank $device_id --pretrained_path ../checkpoints/complexer_yolo/Model_complexer_yolo_epoch_best.pth > ${cur_path}/test/output/$device_id/train_eval_1p.log 2>&1
 
 #最后一个迭代FPS值
-step_time=`grep -a 'Epoch:'  ${cur_path}/test/output/$device_id/train_acc_8p.log|awk 'END {print}'| awk -F " " '{print $8}'| cut -d ')' -f1`
+step_time=`grep -a 'Epoch:.*Time' ${cur_path}/test/output/$device_id/train_acc_8p.log  |awk 'END {print}'| awk -F "Time" '{print $2}' | awk -F "Data" '{print $1}' | awk -F " " '{print $3}'| cut -d ')' -f1`
 FPS=`awk 'BEGIN{printf "%.2f\n", '${batch_size}'/'${step_time}'}'`
 
 #最后一个迭代loss值
