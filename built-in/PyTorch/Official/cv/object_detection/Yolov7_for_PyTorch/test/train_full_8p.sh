@@ -72,11 +72,11 @@ e2e_time=$(( $end_time - $start_time ))
 FPS=`grep -a 'FPS' ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log | awk -F " " '{print $4}' | sort -n | tail -5 | awk '{a+=$1} END {if (NR != 0) printf("%.3f",a/NR)}'`
 
 #取acc值
-acc=`grep -a "IoU=0.50:0.95" ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log | grep 'Average Precision' | grep 'AP'| grep 'area=   all' | awk -F " " '{print $13}' | awk 'BEGIN {max = 0} {if ($1+0 > max+0) max=$1} END {print max}'  `
+train_accuracy=`grep -a "IoU=0.50:0.95" ${cur_path}/test/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log | grep 'Average Precision' | grep 'AP'| grep 'area=   all' | awk -F " " '{print $13}' | awk 'BEGIN {max = 0} {if ($1+0 > max+0) max=$1} END {print max}'  `
 
 #打印，不需要修改
 echo "Final Performance images/sec : $FPS"
-echo "Final Train Accuracy : $acc"
+echo "Final Train Accuracy : $train_accuracy"
 echo "E2E Training Duration sec : $e2e_time"
 
 #稳定性精度看护结果汇总
@@ -97,4 +97,5 @@ echo "DeviceType = ${DeviceType}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${C
 echo "CaseName = ${CaseName}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "ActualFPS = ${FPS}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "TrainingTime = ${TrainingTime}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
+echo "TrainAccuracy = ${train_accuracy}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "E2ETrainingTime = ${e2e_time}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
