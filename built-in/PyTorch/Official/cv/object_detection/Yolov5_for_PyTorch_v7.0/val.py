@@ -130,7 +130,9 @@ def process_batch(detections, labels, iouv):
     return torch.tensor(correct, dtype=torch.bool, device=iouv.device)
 
 
-@smart_inference_mode()
+# @smart_inference_mode()
+# torch_npu 1.11 暂不支持 inference_mode，规避处理
+@torch.no_grad()
 def run(
         data,
         weights=None,  # model.pt path(s)
