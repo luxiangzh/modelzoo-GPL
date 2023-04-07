@@ -156,6 +156,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      bash test/train_yolov5m_performance_8p.sh  # yolov5m 8p_performance
      bash test/train_yolov5s_full_8p.sh  # yolov5s 8p_accuracy
      bash test/train_yolov5m_full_8p.sh  # yolov5m 8p_accuracy
+     bash test/train_yolov5m_full_8p_high_preci.sh  # yolov5m 8p_high_precision 
      ```
 
    - NPU 多机多卡训练指令
@@ -194,12 +195,19 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
 | NAME     | mAP0.5 |  FPS | AMP_Type | Torch_Version |
 | :-----:  | :---:  | :--: | :------: | :------: |
-| 1p-竞品A  | - | 181 |       O1 |    1.5 |
-| 8p-竞品A | 64.1 |  1264  |    O1    |      1.5      |
+| 1p-竞品A  | - | 181 |       O1 |    1.8 |
+| 8p-竞品A | 64.1 |  1264  |    O1    |      1.8      |
 | 1p-NPU | - | 176.3 | O1 | 1.8 |
 |  8p-NPU  | 63.6 | 1432.2 |    O1    |      1.8      |
 
-**表 3**  yolov5s训练结果展示表
+**表 3**  yolov5m高精度8p训练结果展示表
+
+| NAME     | mAP0.5 |  FPS | AMP_Type | Torch_Version |
+| :-----:  | :---:  | :--: | :------: | :------: |
+| 8p-竞品A | 64.1 |  1264  |    O1    |      1.8      |
+|  8p-NPU  | 64.5 | 1432.2 |    O1    |      1.8      |
+
+**表 4**  yolov5s训练结果展示表
 
 | NAME     | mAP0.5~0.95 |  FPS | AMP_Type | Torch_Version | Architecture |
 | :-----:  | :---:  | :------: | :-----:  | :-----:  | :-----: |
