@@ -29,6 +29,7 @@ echo "start_time: ${start_time}"
 export MASTER_ADDR=127.0.0.1
 export MASTER_PORT=29500
 export WORLD_SIZE=8
+export WORKERS=64
 
 for i in $(seq 0 7)
 do
@@ -50,7 +51,6 @@ do
 	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \
 		                                           --cfg yolov5m.yaml \
 		                                           --weights '' \
-		                                           --workers 64 \
 												   --hyp hyp.scratch-high.yaml \
 		                                           --batch-size $batch_size \
 												   --epochs 400 \

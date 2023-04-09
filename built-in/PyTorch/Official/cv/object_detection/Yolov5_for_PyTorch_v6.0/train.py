@@ -183,7 +183,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
     if os.environ["use_amp"] == "apex":
         model, optimizer = amp.initialize(model, optimizer, loss_scale=128, combine_grad=True, \
-                                          combine_ddp=True if not npu and RANK != -1 else False)
+                                          combine_ddp=True if npu and RANK != -1 else False)
     elif os.environ["use_amp"] == "native":
         scaler = torch.npu.amp.GradScaler(dynamic=False, init_scale=128)
     else:
