@@ -50,6 +50,7 @@ do
 	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \
 		                                           --cfg yolov5m.yaml \
 		                                           --weights '' \
+		                       --workers 64 \
 												   --hyp hyp.scratch-high.yaml \
 		                                           --batch-size $batch_size \
 												   --epochs 400 \

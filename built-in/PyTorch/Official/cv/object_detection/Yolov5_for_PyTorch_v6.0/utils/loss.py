@@ -166,12 +166,12 @@ class ComputeLoss:
         self.get_range_nb(n, device)
         if sum_mask.item() > 0:
             ps = DeterministicIndex.apply(p_cat, (b_cat, a_cat, g_cat)).permute(1, 0).contiguous()
-            pxy = ps.index_select(0, self.index1[:2])
-            pwh = ps.index_select(0, self.index1[2:4])
+            pxy = ps[:2]
+            pwh = ps[2:4]
             pxy = pxy.sigmoid() * 2. - 0.5
             pwh = (pwh.sigmoid() * 2) ** 2 * anchors_cat.T
             pbox = torch.cat((pxy, pwh), 0)  # predicted box
-            iou = bbox_iou(pbox, tbox_cat, x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
+            iou = torch.npu_ciou(pbox, tbox_cat, is_cross=False, trans=True)  # iou(prediction, target)
             iou = iou * all_mask_cat + (1. - all_mask_cat)
             valid_mask = sum_mask_cat > 0
             lbox += ((1.0 - iou).reshape(self.nl, -1).sum(1)[valid_mask] / sum_mask_cat[valid_mask]).sum()  # iou loss
@@ -263,7 +263,7 @@ class ComputeLoss:
                 t = t.repeat(1, 1, na).view(6, -1)  # filter
 
                 # Offsets
-                gxy = t.index_select(0, self.index1[2:4])
+                gxy = t[2:4]
                 z = torch.zeros_like(gxy)
 
                 jk = (gxy % 1. < g) & (gxy > 1.)
@@ -276,14 +276,14 @@ class ComputeLoss:
                 t = t * all_mask
 
             # Define
-            b = t.index_select(0, self.index1[0]).long().view(-1)   #(3072 * 5)
-            c = t.index_select(0, self.index1[1]).long().view(-1)   #(3072 * 5)
-            gxy = t.index_select(0, self.index1[2:4]) #(2, 3072 * 5)
-            gwh = t.index_select(0, self.index1[4:6]) #(2, 3072 * 5)
+            b = t[0].long().view(-1)   #(3072 * 5)
+            c = t[1].long().view(-1)   #(3072 * 5)
+            gxy = t[2:4] #(2, 3072 * 5)
+            gwh = t[4:6] #(2, 3072 * 5)
             gij = gxy - offsets
             gij2 = gij.long()
-            gi = gij2.index_select(0, self.index1[0]).view(-1) #(2, 3072 * 5)
-            gj = gij2.index_select(0, self.index1[1]).view(-1) #(2, 3072 * 5)
+            gi = gij2[0].view(-1) #(2, 3072 * 5)
+            gj = gij2[1].view(-1) #(2, 3072 * 5)
 
             # Append
             indices.append((b, a, gj, gi))  # image, anchor, grid indices
