@@ -30,6 +30,7 @@ export MASTER_ADDR=127.0.0.1
 export MASTER_PORT=29500
 export WORLD_SIZE=8
 
+
 for i in $(seq 0 7)
 do
     if [ -d ${cur_path}/test/output/${i} ];
@@ -45,6 +46,7 @@ do
 
     if [ $(uname -m) = "aarch64" ]
 	then
+	    export WORKERS=64
 		let p_start=0+24*i
 	    let p_end=23+24*i
 	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \

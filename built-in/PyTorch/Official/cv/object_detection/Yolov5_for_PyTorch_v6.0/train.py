@@ -182,7 +182,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     del g0, g1, g2
 
     if os.environ["use_amp"] == "apex":
-        model, optimizer = amp.initialize(model, optimizer, loss_scale=128, combine_grad=True)
+        model, optimizer = amp.initialize(model, optimizer, loss_scale=128, combine_grad=True, \
+                                          combine_ddp=True if npu and RANK != -1 else False)
     elif os.environ["use_amp"] == "native":
         scaler = torch.npu.amp.GradScaler(dynamic=False, init_scale=128)
     else:
@@ -262,7 +263,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         callbacks.run('on_pretrain_routine_end')
 
     # DDP mode
-    if npu and RANK != -1:
+    if not npu and RANK != -1:
         model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK, broadcast_buffers=False)
 
     # Model parameters

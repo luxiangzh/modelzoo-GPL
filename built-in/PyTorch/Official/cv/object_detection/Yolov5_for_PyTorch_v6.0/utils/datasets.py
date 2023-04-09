@@ -115,7 +115,8 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
 
     batch_size = min(batch_size, len(dataset))
     nd = torch.npu.device_count()  # number of CUDA devices
-    nw = min([os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0, workers])  # number of workers
+    nw = int(os.environ['WORKERS']) if 'WORKERS' in os.environ \
+        else min([os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0, workers])  # number of workers
     sampler = torch.utils.data.distributed.DistributedSampler(dataset) if rank != -1 else None
     loader = torch.utils.data.DataLoader
     # Use torch.utils.data.DataLoader() if dataset.properties will update during training else InfiniteDataLoader()
