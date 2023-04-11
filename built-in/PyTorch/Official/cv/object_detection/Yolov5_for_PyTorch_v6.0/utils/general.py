@@ -610,7 +610,7 @@ def clip_coords(boxes, shape):
         boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, shape[0])  # y1, y2
 
 def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False,
-                        labels=()):
+                        labels=(), max_det=300):
     """Runs Non-Maximum Suppression (NMS) on inference results
 
     Returns:
@@ -622,7 +622,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
 
     # Settings
     min_wh, max_wh = 2, 4096  # (pixels) minimum and maximum box width and height
-    max_det = 300  # maximum number of detections per image
+    max_det = max_det  # maximum number of detections per image
     max_nms = 30000  # maximum number of boxes into torchvision.ops.nms()
     redundant = True  # require redundant detections
     multi_label &= nc > 1  # multiple labels per box (adds 0.5ms/img)
