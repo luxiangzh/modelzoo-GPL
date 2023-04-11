@@ -50,7 +50,7 @@ import torch.utils.data.distributed
 from tqdm import tqdm
 import apex
 from apex import amp
-
+from torch_npu.utils.profiler import Profile
 sys.path.append('./')
 
 from data_process.kitti_dataloader import create_train_dataloader, create_val_dataloader
@@ -108,13 +108,13 @@ def main():
 
     # model
     model = create_model(configs)
-    
+
     if configs.local_rank is not None:
         torch.npu.set_device(configs.local_rank)
         model.npu(configs.local_rank)
     else:
         model.npu()
-    
+
     # load weight from a checkpoint
     if configs.pretrained_path is not None:
         assert os.path.isfile(configs.pretrained_path), "=> no checkpoint found at '{}'".format(configs.pretrained_path)
@@ -128,18 +128,18 @@ def main():
         model.load_state_dict(torch.load(configs.resume_path, map_location=device))
         if logger is not None:
             logger.info('resume training model from checkpoint {}'.format(configs.resume_path))
-    
+
     # Make sure to create optimizer after moving the model to npu
     optimizer = create_optimizer(configs, model)
     lr_scheduler = create_lr_scheduler(optimizer, configs)
     configs.step_lr_in_epoch = True if configs.lr_type in ['multi_step'] else False
-    
+
     # Amp
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1", user_cast_preferred=True, combine_grad=True)
-    
+
     # Data Parallel
     model = make_data_parallel(model, configs)
-    
+
     # resume optimizer, lr_scheduler from a checkpoint
     if configs.resume_path is not None:
         utils_path = configs.resume_path.replace('Model_', 'Utils_')
@@ -203,7 +203,7 @@ def main():
                         'f1': f1.mean(),
                         'ap_class': ap_class.mean()
                     }
-                    print(val_metrics_dict) 
+                    print(val_metrics_dict)
                 # Save best checkpoint
                 if mAP > best:
                     if configs.is_master_node:
@@ -228,6 +228,8 @@ def train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, con
     model.train()
     torch.npu.synchronize()
     start_time = time.time()
+    profiler = Profile(start_step=int(os.getenv("PROFILE_START_STEP", 10)),
+                       profile_type=os.getenv("PROFILE_TYPE"))
     for batch_idx, batch_data in enumerate(tqdm(train_dataloader)):
         if configs.perf and batch_idx == 400:
             break
@@ -248,6 +250,7 @@ def train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, con
         if skip > 0:
             continue
         imgs = imgs.to(device, non_blocking=True)
+        profiler.start()
         total_loss, outputs = model(imgs, targets)
 
         # For torch.nn.DataParallel case
@@ -265,7 +268,7 @@ def train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, con
                 lr_scheduler.step()
             # zero the parameter gradients
             optimizer.zero_grad()
-
+        profiler.end()
         losses.update(to_python_float(total_loss.data), batch_size)
 
         # measure elapsed time
@@ -281,7 +284,7 @@ def train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, con
         if logger is not None and configs.is_master_node:
             if (global_step % configs.print_freq) == 0:
                 logger.info(progress.get_message(batch_idx))
-        
+
 
 def profiling(train_dataloader, model, optimizer, lr_scheduler, epoch, configs, logger, device):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -298,7 +301,7 @@ def profiling(train_dataloader, model, optimizer, lr_scheduler, epoch, configs, 
     torch.npu.synchronize()
     start_time = time.time()
     for batch_idx, batch_data in enumerate(tqdm(train_dataloader)):
-        with torch.autograd.profiler.profile(use_npu=True) as prof:  
+        with torch.autograd.profiler.profile(use_npu=True) as prof:
             data_time.update(time.time() - start_time)
             _, imgs, targets = batch_data
             global_step = num_iters_per_epoch * (epoch - 1) + batch_idx + 1
