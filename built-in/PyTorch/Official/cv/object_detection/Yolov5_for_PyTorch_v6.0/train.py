@@ -622,6 +622,7 @@ def run(**kwargs):
 
 
 if __name__ == "__main__":
+    torch.npu.set_compile_mode(jit_compile=True)
     seed_everything()
     opt = parse_opt()
     main(opt)
