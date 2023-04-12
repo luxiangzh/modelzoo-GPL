@@ -614,18 +614,22 @@ class LoadImagesAndLabels(Dataset):
         if nl:
             labels_out[1:, :] = torch.from_numpy(np.ascontiguousarray(labels.T))
 
-        # Convert
-        img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
-        img = np.ascontiguousarray(img)
-
-        return torch.from_numpy(img), labels_out, self.img_files[index], shapes
+        return img, labels_out, self.img_files[index], shapes
 
     @staticmethod
     def collate_fn(batch):
-        img, label, path, shapes = zip(*batch)  # transposed
+        imgs, label, path, shapes = zip(*batch)  # transposed
+        h = imgs[0].shape[0]
+        w = imgs[0].shape[1]
+        tensor = torch.zeros((len(imgs), 3, h, w), dtype=torch.uint8)
+        for i, numpy_array in enumerate(imgs):
+            if numpy_array.ndim < 3:
+                numpy_array = np.expand_dims(numpy_array, axis=-1)
+                numpy_array = numpy_array.transpose((2, 0, 1))[::-1]
+                tensor[i] += torch.from_numpy(np.ascontiguousarray(numpy_array))
         for i, l in enumerate(label):
             l[0, :] = i  # add target image index for build_targets()
-        return torch.stack(img, 0), torch.cat(label, 1), path, shapes
+        return tensor, torch.cat(label, 1), path, shapes
 
     @staticmethod
     def collate_fn4(batch):
