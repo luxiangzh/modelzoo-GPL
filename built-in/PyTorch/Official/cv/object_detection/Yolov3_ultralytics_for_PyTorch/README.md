@@ -193,6 +193,7 @@ YOLOv3是在 COCO 数据集上预训练的对象检测架构和模型系列，�
    ```
 
    --data_path参数（可选）填写数据集路径，需写到数据集的一级目录。
+   
    --datasets参数（可选）填写数据集名称。
    
    模型训练脚本参数说明如下。
@@ -204,7 +205,7 @@ YOLOv3是在 COCO 数据集上预训练的对象检测架构和模型系列，�
    --epochs                            //重复训练次数
    --batch-size                        //训练批次大小
    --name                              //保存的文件名
-   -save-period                        //保存周期
+   --save-period                       //保存周期
    --noval                             //设置仅验证最后一个epoch
    --weight_decay                      //权重衰减，默认：0.0005
    --loss-scale                        //混合精度loss scale大小
@@ -214,18 +215,18 @@ YOLOv3是在 COCO 数据集上预训练的对象检测架构和模型系列，�
 
 **表 2**  训练结果展示表
 
-|  NAME  | Acc@1 |   FPS   | Epochs | AMP_Type | Torch_Version | Dataset  | Model_Name  | Img_Size |
-| :----: | :---: | :-----: | :----: | :------: | :-----------: | :------: | :---------: | -------- |
-| 1p-NPU |   -   | 151.68  |   2    |    O1    |      1.8      |   voc    | yolov3-tiny | 640*640  |
-| 8p-NPU | 0.248 | 1013.76 |  300   |    O1    |      1.8      |   voc    | yolov3-tiny | 640*640  |
-| 1p-NPU |   -   | 154.24  |   2    |    O1    |      1.8      | coco2017 | yolov3-tiny | 640*640  |
-| 8p-NPU | 0.244 | 1264.64 |  300   |    O1    |      1.8      | coco2017 | yolov3-tiny | 640*640  |
+|  NAME  | Acc@1 |   FPS   | Epochs | AMP_Type | Torch_Version | Dataset  | Model_Name  | Img_Size | CPU  |
+| :----: | :---: | :-----: | :----: | :------: | :-----------: | :------: | :---------: | -------- | ---- |
+| 1p-NPU |   -   | 151.68  |   2    |    O1    |      1.8      |   voc    | yolov3-tiny | 640*640  | ARM  |
+| 8p-NPU | 0.248 | 1013.76 |  300   |    O1    |      1.8      |   voc    | yolov3-tiny | 640*640  | ARM  |
+| 1p-NPU |   -   | 154.24  |   2    |    O1    |      1.8      | coco2017 | yolov3-tiny | 640*640  | ARM  |
+| 8p-NPU | 0.385 | 1264.64 |  300   |    O1    |      1.8      | coco2017 | yolov3-tiny | 640*640  | ARM  |
 
 # 版本说明
 
 ## 变更
 
-2023.2.13：更新内容，重新发布。
+2023.02.13：更新内容，重新发布。
 
 ## FAQ
 
