@@ -55,6 +55,9 @@ YOLO算法作为one-stage目标检测算法最典型的代表，其基于深度�
 - 环境准备指导。
 
   请参考《[Pytorch框架训练环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/ptes)》，需要安装二进制算子包。
+
+  > **说明：** 
+  > 在X86_64架构下，官方torch包使用的是MKI加速库。如果需要使用blas和lapack加速库来提升性能，请使用源码编译安装方式安装官方torch包。
   
 - 安装依赖。
 
@@ -183,9 +186,14 @@ YOLO算法作为one-stage目标检测算法最典型的代表，其基于深度�
 | NAME     | mAP |  FPS | AMP_Type |
 | -------  | -----  | ---: | -------: |
 | 1p-竞品A  | - | 53.76 |       O1 |
-| 1p-NPU   | - | 55.36 |       O1 |
+| 1p-NPU-ARM   | - | 55.36 |       O1 |
+| 1p-NPU-非ARM   | - | 44.176 |       O1 |
 | 8p-竞品A  | 0.509 | 396.8 |       O1 |
-| 8p-NPU   | 0.509 | 435 |       O1 |
+| 8p-NPU-ARM   | 0.509 | 435 |       O1 |
+| 8p-NPU-非ARM   | - | 281.344 |       O1 |
+
+> **说明：** 
+> 表2中非ARM的性能值是直接使用官方torch包测试的结果。
 
 
 # 版本说明
