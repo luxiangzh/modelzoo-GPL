@@ -215,18 +215,23 @@ YOLOv3是在 COCO 数据集上预训练的对象检测架构和模型系列，�
 
 **表 2**  训练结果展示表
 
-|  NAME  | Acc@1 |   FPS   | Epochs | AMP_Type | Torch_Version | Dataset  | Model_Name  | Img_Size | CPU  |
+|  NAME  | Acc@1 |   FPS   | Epochs | AMP_Type | Torch_Version | Dataset | Model_Name  | Img_Size | CPU  |
+| :----: | :---: | :-----: | :----: | :------: | :-----------: | :-----: | :---------: | -------- | ---- |
+| 1p-NPU |   -   | 151.68  |   2    |    O1    |      1.8      |   voc   | yolov3-tiny | 640*640  | ARM  |
+| 8p-NPU | 0.248 | 1013.76 |  300   |    O1    |      1.8      |   voc   | yolov3-tiny | 640*640  | ARM  |
+
+
+|  NAME  |  mAR  |   FPS   | Epochs | AMP_Type | Torch_Version | Dataset  | Model_Name  | Img_Size | CPU  |
 | :----: | :---: | :-----: | :----: | :------: | :-----------: | :------: | :---------: | -------- | ---- |
-| 1p-NPU |   -   | 151.68  |   2    |    O1    |      1.8      |   voc    | yolov3-tiny | 640*640  | ARM  |
-| 8p-NPU | 0.248 | 1013.76 |  300   |    O1    |      1.8      |   voc    | yolov3-tiny | 640*640  | ARM  |
 | 1p-NPU |   -   | 154.24  |   2    |    O1    |      1.8      | coco2017 | yolov3-tiny | 640*640  | ARM  |
 | 8p-NPU | 0.385 | 1264.64 |  300   |    O1    |      1.8      | coco2017 | yolov3-tiny | 640*640  | ARM  |
+
 
 # 版本说明
 
 ## 变更
 
-2023.02.13：更新内容，重新发布。
+2023.04.14：更新内容，重新发布。
 
 ## FAQ
 
