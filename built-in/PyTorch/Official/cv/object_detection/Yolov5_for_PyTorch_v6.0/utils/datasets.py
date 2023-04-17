@@ -97,6 +97,11 @@ def exif_transpose(image):
             image.info["exif"] = exif.tobytes()
     return image
 
+def seed_worker(worker_id):
+    """Set dataloader worker seed https://pytorch.org/docs/stable/notes/randomness.html#dataloader."""
+    worker_seed = torch.initial_seed() % 2 ** 32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=None, augment=False, cache=False, pad=0.0,
                       rect=False, rank=-1, workers=8, image_weights=False, quad=False, prefix=''):
@@ -113,12 +118,15 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
                                       image_weights=image_weights,
                                       prefix=prefix)
 
+    high_preci = 'WORKERS' in os.environ
+    generator = torch.Generator()
+    generator.manual_seed(6148914691236517205 + rank)
     batch_size = min(batch_size, len(dataset))
     nd = torch.npu.device_count()  # number of CUDA devices
-    nw = int(os.environ['WORKERS']) if 'WORKERS' in os.environ \
+    nw = int(os.environ['WORKERS']) if high_preci \
         else min([os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0, workers])  # number of workers
     sampler = torch.utils.data.distributed.DistributedSampler(dataset) if rank != -1 else None
-    loader = torch.utils.data.DataLoader
+    loader = InfiniteDataLoader if high_preci else torch.utils.data.DataLoader 
     # Use torch.utils.data.DataLoader() if dataset.properties will update during training else InfiniteDataLoader()
     dataloader = loader(dataset,
                         batch_size=batch_size,
@@ -126,6 +134,8 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
                         sampler=sampler,
                         pin_memory=True,
                         drop_last=True,
+                        worker_init_fn=seed_worker if high_preci else None,
+                        generator=generator if high_preci else None,
                         collate_fn=LoadImagesAndLabels.collate_fn4 if quad else LoadImagesAndLabels.collate_fn)
     return dataloader, dataset
 

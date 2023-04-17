@@ -46,7 +46,7 @@ do
 
     if [ $(uname -m) = "aarch64" ]
 	then
-	    export WORKERS=64
+	    export WORKERS=24
 		let p_start=0+24*i
 	    let p_end=23+24*i
 	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \
