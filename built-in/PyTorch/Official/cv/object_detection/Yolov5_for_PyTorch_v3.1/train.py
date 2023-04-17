@@ -68,6 +68,19 @@ from utils.general import (
     check_git_status, check_img_size, increment_dir, print_mutation, plot_evolution, set_logging, init_seeds)
 from utils.google_utils import attempt_download
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts
+try:
+    from torch_npu.utils.profiler import Profile
+except:
+    print("Profile not in torch_npu.utils.profiler now.. Auto Profile disabled.", flush=True)
+    class Profile:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+        def end(self):
+            pass
 
 logger = logging.getLogger(__name__)
 
@@ -283,6 +296,9 @@ def train(hyp, opt, device, tb_writer=None):
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
 
+        profile = Profile(start_step=int(os.getenv('PROFILE_START_STEP', 10)),
+                          profile_type=os.getenv('PROFILE_TYPE'))
+
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             if i == opt.warmup_steps and rank in [-1, 0]:
                 torch.npu.synchronize()
@@ -310,6 +326,7 @@ def train(hyp, opt, device, tb_writer=None):
                     imgs = F.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             # Forward
+            profile.start()
             pred = model(imgs)  # forward
             loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
             if rank != -1:
@@ -330,6 +347,7 @@ def train(hyp, opt, device, tb_writer=None):
                         ema.update(model, x, params_fp32_fused[0])
                     else:
                         ema.update(model, x)
+            profile.end()
 
             # Print
             if rank in [-1, 0]:
