@@ -118,9 +118,13 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
                                       image_weights=image_weights,
                                       prefix=prefix)
 
-    high_preci = 'WORKERS' in os.environ
+    """ build generator for InfiniteDataLoader.
+    The magic number 6148914691236517205 is from
+    https://github.com/ultralytics/ultralytics/blob/main/ultralytics/yolo/data/dataloaders/v5loader.py"""
     generator = torch.Generator()
     generator.manual_seed(6148914691236517205 + rank)
+    
+    high_preci = 'WORKERS' in os.environ
     batch_size = min(batch_size, len(dataset))
     nd = torch.npu.device_count()  # number of CUDA devices
     nw = int(os.environ['WORKERS']) if high_preci \
