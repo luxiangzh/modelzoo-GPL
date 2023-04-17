@@ -123,12 +123,11 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
     https://github.com/ultralytics/ultralytics/blob/main/ultralytics/yolo/data/dataloaders/v5loader.py"""
     generator = torch.Generator()
     generator.manual_seed(6148914691236517205 + rank)
-    
-    high_preci = 'WORKERS' in os.environ
+
+    high_preci = os.getenv('high_preci', False)
     batch_size = min(batch_size, len(dataset))
     nd = torch.npu.device_count()  # number of CUDA devices
-    nw = int(os.environ['WORKERS']) if high_preci \
-        else min([os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0, workers])  # number of workers
+    nw = min([os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0, workers])  # number of workers
     sampler = torch.utils.data.distributed.DistributedSampler(dataset) if rank != -1 else None
     loader = InfiniteDataLoader if high_preci else torch.utils.data.DataLoader 
     # Use torch.utils.data.DataLoader() if dataset.properties will update during training else InfiniteDataLoader()

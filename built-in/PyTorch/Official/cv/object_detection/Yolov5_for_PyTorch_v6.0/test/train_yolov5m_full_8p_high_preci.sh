@@ -26,6 +26,10 @@ source ${cur_path}/test/env_npu.sh
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
+#high_preci模式
+export high_preci=1
+
+#分布式训练环境变量
 export MASTER_ADDR=127.0.0.1
 export MASTER_PORT=29500
 export WORLD_SIZE=8
@@ -46,7 +50,6 @@ do
 
     if [ $(uname -m) = "aarch64" ]
 	then
-	    export WORKERS=24
 		let p_start=0+24*i
 	    let p_end=23+24*i
 	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \
@@ -55,6 +58,7 @@ do
 												   --hyp hyp.scratch-high.yaml \
 		                                           --batch-size $batch_size \
 												   --epochs 400 \
+												   --workers 24 \
 		                                           --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	else
 	    python3.7 train.py --data ./data/coco.yaml \
