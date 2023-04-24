@@ -1,13 +1,19 @@
 # YOLOv5-推理指导
 
 
+- [YOLOv5-推理指导](#yolov5-推理指导)
 - [概述](#概述)
 - [推理环境准备](#推理环境准备)
 - [快速上手](#快速上手)
   - [获取源码](#获取源码)
   - [准备数据集](#准备数据集)
   - [模型推理](#模型推理)
-- [模型推理性能&精度](#模型推理性能&精度)
+    - [1 模型转换](#1-模型转换)
+    - [2 开始推理验证](#2-开始推理验证)
+        - [\* 如果有多卡推理的需求，请跳过该步骤，om\_val.py该脚本不支持多卡推理](#-如果有多卡推理的需求请跳过该步骤om_valpy该脚本不支持多卡推理)
+  - [多卡推理](#多卡推理)
+- [模型推理性能\&精度](#模型推理性能精度)
+- [FAQ](#faq)
 
 ******
 
@@ -79,7 +85,6 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    pip3 install -r requirements.txt
    ```
-   
 
 ## 准备数据集
 - 该模型使用 [coco2017 val数据集](https://cocodataset.org/#download) 进行精度评估，在`yolov5`源码根目录下新建`coco`文件夹，数据集放到`coco`里，文件结构如下：
@@ -100,7 +105,6 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ……
    ./val2017/00000581781.jpg
    ```
-
 
 ## 模型推理
 模型推理提供两种方式，区别如下：  
@@ -195,6 +199,8 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 1. 安装`ais-infer`推理工具  
    `ais-infer`工具获取及使用方式请点击查看 [[ais_infer 推理工具使用文档](https://gitee.com/ascend/tools/tree/master/ais-bench_workload/tool/ais_infer)]
 
+##### * 如果有多卡推理的需求，请跳过该步骤，om_val.py该脚本不支持多卡推理
+
 2. 执行推理 & 精度验证  
    运行`om_val.py`推理OM模型，模型参数在[model.yaml](model.yaml)中设置，结果默认保存在`predictions.json`。
    ```
@@ -215,6 +221,41 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    python3 -m ais_bench --model=yolov5s_nms_bs4.om --loop=1000 --batchsize=4  # nms_op
    ```
 
+## 多卡推理
+
+1. 数据预处理，将原始数据转换为模型输入的数据
+   执行yolov5_preprocess.py脚本，完成预处理
+   ```
+   python3 yolov5_preprocess.py --data_path="./coco" --batch_size 4 
+   ```
+   - 命令参数说明：
+     -   `--data_path`：coco数据集的路径
+     -   `--batch_size`：与om模型的batch_size一致
+
+    执行完后，会在当前目录下生成./prep_data文件夹用于储存预处理完的二进制数据，并且生成path_list.npy用于储存图片的路径，生成shapes_list.npy用于储存图片原始shape
+
+2. 数据集推理
+   目前ais_bench已经支持多卡推理，若执行下述命令报错，请重新安装最新ais_bench
+   ```
+   python3 -m ais_bench --m yolov5s_bs4.om --input ./prep_data --output ./results --device 0,1
+   ```
+   - 命令参数说明：
+     -   `--m`：om模型的路径
+     -   `--input`：预处理生成的./prep_data的路径
+     -   `--output`：推理结果保存的地址，会在./results下生成以时间戳命名的文件夹
+     -   `--device`：现支持多卡推理
+
+3. 后处理和精度验证，将推理结果转换为字典并储存进json文件，用于计算精度
+   ```
+   python3 yolov5_postprocess.py --ground_truth_json "./coco/instances_val2017.json" --output "./result/2023_04_23-17_35_23" --onnx yolov5s.onnx --batch_size 4
+   ```
+   - 命令参数说明：
+     -   `--ground_truth_json`：om模型的路径
+     -   `--output`：推理结果保存的地址，在./results下生成以时间戳命名的文件夹
+     -   `--onnx`：为onnx模型路径
+     -   `--batch_size`：与om模型batch_size对齐
+    会生成yolov5s_predictions.json文件，以字典形式保存预测结果，如果有画框的需求，可以读取该文件中每一个数据生成的bbox。最后会调用接口自动计算精度
+
 
 # 模型推理性能&精度
 
@@ -230,7 +271,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
     | 6.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.8     |   666.238    |
     | 6.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   665.806    |
 
-2. 方式二 nms后处理算子（nms_op)
+2. 方式二 nms后处理算子（nms_op）
 
     | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
     |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
