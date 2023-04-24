@@ -44,7 +44,7 @@ def postprocess(opt, cfg):
             out = []
             # single img infer 3 output
             for output_num in range(len(outputs)):
-                out_filepath = f"{opt.output}/{i + 1}_{output_num}.bin"
+                out_filepath = f"{opt.output}/{i}_{output_num}.bin"
                 inference_result = np.fromfile(out_filepath, dtype=np.float16)
                 inference_result = inference_result.reshape(shapes[output_num])
 
@@ -94,13 +94,11 @@ def nms(box_out, conf_thres=0.4, iou_thres=0.5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='YOLOv5 offline model inference.')
-    parser.add_argument('--data_path', type=str, default="coco", help='root dir for val images and annotations')
     parser.add_argument('--ground_truth_json', type=str, default="coco/instances_val2017.json",
                         help='annotation file path')
     parser.add_argument('--onnx', type=str, default="yolov5s.onnx", help='om model path')
     parser.add_argument('--batch_size', type=int, default=1, help='batch size')
     parser.add_argument('--cfg_file', type=str, default='model.yaml', help='model parameters config file')
-    parser.add_argument('--img_info', type=str, default='./img_info', help='save the information of the images')
     parser.add_argument('--output', type=str, help='ais_bench inference output path')
     opt = parser.parse_args()
 
