@@ -17,6 +17,7 @@ import json
 import argparse
 import tqdm as tqdm
 import os
+import numpy as np
 
 try:
     from utils.datasets import create_dataloader
@@ -35,7 +36,7 @@ def main(opt, cfg):
         if not os.path.exists(opt.img_info):
             os.mkdir(opt.img_info)
         # load dataset
-        dataloader = BatchDataLoader(opt.data_path.batch_size = opt.batch_size)
+        dataloader = BatchDataLoader(opt.data_path, batch_size = opt.batch_size)
         img_info_list = []
         img_name_list = []
         for idx in tqdm(range(len(dataloader))):
@@ -57,7 +58,7 @@ def main(opt, cfg):
         i = 0
         for (img, targets, paths, shapes) in tqdm(dataloader):
             img = img.half()
-            imng /= 255.0  # 0 - 255 to 0.0 -1.0
+            img /= 255.0  # 0 - 255 to 0.0 -1.0
             nb, _, height, width = img.shape  # batch size, channels, height, width
             img = img.numpy()
             img.astype(np.float16).tofile("{}/{}.bin".format(opt.prep_data, i))
