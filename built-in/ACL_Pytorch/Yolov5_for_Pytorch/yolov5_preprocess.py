@@ -15,7 +15,7 @@
 import yaml
 import json
 import argparse
-import tqdm as tqdm
+from tqdm import tqdm
 import os
 import numpy as np
 
@@ -41,7 +41,7 @@ def main(opt, cfg):
     i = 0
     for (img, targets, paths, shapes) in tqdm(dataloader):
         img = img.half()
-        imng /= 255.0  # 0 - 255 to 0.0 -1.0
+        img /= 255.0  # 0 - 255 to 0.0 -1.0
         nb, _, height, width = img.shape  # batch size, channels, height, width
         img = img.numpy()
         img.astype(np.float16).tofile("{}/{}.bin".format(opt.prep_data, i))
@@ -50,7 +50,7 @@ def main(opt, cfg):
         i += 1
 
     np.save("path_list.npy", path_list)
-    np.save("shapes_list.npy", path_list)
+    np.save("shapes_list.npy", shapes_list)
 
 
 if __name__ == '__main__':
