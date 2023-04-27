@@ -112,6 +112,7 @@ def run(data,
         ):
     # Initialize/load model and set device
     training = model is not None
+    half &= device.type != 'cpu'  # half precision only supported on CUDA
     if training:  # called by train.py
         device = next(model.parameters()).device  # get model device
 
@@ -125,7 +126,7 @@ def run(data,
 
         # Load model
         check_suffix(weights, '.pt')
-        model = attempt_load(weights, map_location=device)  # load FP32 model
+        model = attempt_load(weights, map_location=device, FP32=half)  # load FP32 model
         model.to(device)
         gs = max(int(model.stride.max()), 32)  # grid size (max stride)
         imgsz = check_img_size(imgsz, s=gs)  # check image size
@@ -138,7 +139,6 @@ def run(data,
         data = check_dataset(data)  # check
 
     # Half
-    half &= device.type != 'cpu'  # half precision only supported on CUDA
     if half:
         model = amp.initialize(model, opt_level='O1')
 
