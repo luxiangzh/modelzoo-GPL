@@ -183,7 +183,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     if opt.adam:
         optimizer = Adam(g0, lr=hyp['lr0'], betas=(hyp['momentum'], 0.999))  # adjust beta1 to momentum
     else:
-        if os.environ["use_amp"] == "apex":
+        if opt.FP32:
+            optimizer = torch.optim.SGD(g0, lr=hyp['lr0'], momentum=hyp["momentum"], nesterov=True)
+        elif os.environ["use_amp"] == "apex":
             optimizer = apex.optimizers.NpuFusedSGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
         elif os.environ["use_amp"] == "native":
             optimizer = torch_npu.optim.NpuFusedSGD(g0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
@@ -195,8 +197,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     del g0, g1, g2
 
     if os.environ["use_amp"] == "apex":
-        model, optimizer = amp.initialize(model, optimizer, loss_scale=128, combine_grad=True, \
-                                          combine_ddp=True if npu and RANK != -1 else False)
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1" if not opt.FP32 else "O0",\
+                                          loss_scale=128, combine_grad=True if not opt.FP32 else False, \
+                                          combine_ddp=True if npu and RANK != -1 and not ope.FP32 else None)
     elif os.environ["use_amp"] == "native":
         scaler = torch.npu.amp.GradScaler(dynamic=False, init_scale=128)
     else:
@@ -276,7 +279,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         callbacks.run('on_pretrain_routine_end')
 
     # DDP mode
-    if not npu and RANK != -1:
+    if (not npu and RANK != -1) or opt.FP32:
         model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK, broadcast_buffers=False)
 
     # Model parameters
@@ -382,7 +385,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 optimizer.zero_grad()
                 if ema:
                     x = torch.tensor([1.]).to(device)
-                    if device.type == 'npu':
+                    if device.type == 'npu' and not opt.FP32:
                         params_fp32_fused = None
                         if os.environ["use_amp"] == "apex":
                             params_fp32_fused = optimizer.get_model_combined_params()
@@ -390,7 +393,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                             params_fp32_fused = optimizer.get_combined_params()
                         ema.update(model, x, params_fp32_fused[0])
                     else:
-                        ema.update(model, x)
+                        ema.update(model, x, FP32=opt.FP32)
                 last_opt_step = ni
             profile.end()
 
@@ -417,11 +420,19 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         # save every epoch
         if RANK in [-1, 0]:
             final_epoch = epoch + 1 == epochs
-            ckpt = {
-                    'epoch': epoch,
-                    'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
-                    'optimizer': None if final_epoch else optimizer.state_dict()
-            }
+            if not opt.FP32:
+                ckpt = {
+                        'epoch': epoch,
+                        'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
+                        'optimizer': None if final_epoch else optimizer.state_dict()
+                }
+            else:
+                ckpt = {
+                        'epoch': epoch,
+                        'model': ema.ema.module.state_dict() if hasattr(ema, 'module') else ema.ema.state_dict(),
+                        'optimizer': None if final_epoch else optimizer.state_dict()
+                }
+            else:
             torch.save(ckpt, 'yolov5.pt')
             print('ckpt saved...')
 
@@ -487,6 +498,9 @@ def parse_opt(known=False):
 
     # amp
     parser.add_argument('--native_amp', action='store_true', help='use torch amp')
+    
+    #FP32
+    parser.add_argument('--FP32', action='store_true', help='use FP32')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
 
