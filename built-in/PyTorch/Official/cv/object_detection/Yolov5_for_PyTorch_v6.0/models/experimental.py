@@ -10,6 +10,7 @@ import torch.nn as nn
 from models.common import Conv
 from utils.downloads import attempt_download
 
+from utils.general import check_yaml
 
 class CrossConv(nn.Module):
     # Cross Convolution Downsample
@@ -85,13 +86,19 @@ class Ensemble(nn.ModuleList):
         return y, None  # inference, train output
 
 
-def attempt_load(weights, map_location=None, inplace=True, fuse=True):
+def attempt_load(weights, map_location=None, inplace=True, fuse=True, FP32=False):
     from models.yolo import Detect, Model
 
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
+    if FP32:
+        cfg = check_yaml("yolov5s.yaml")
+        modelx = Model(cfg)
     for w in weights if isinstance(weights, list) else [weights]:
         ckpt = torch.load(attempt_download(w), map_location=map_location)  # load
+        if FP32:
+            modelx.load_state_dict(ckpt['model'])
+            ckpt['model'] = modelx
         if fuse:
             model.append(ckpt['ema' if ckpt.get('ema') else 'model'].float().fuse().eval())  # FP32 model
         else:
