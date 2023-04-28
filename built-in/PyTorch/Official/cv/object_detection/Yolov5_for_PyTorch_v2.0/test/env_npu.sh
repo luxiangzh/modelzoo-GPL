@@ -31,7 +31,7 @@ export ASCEND_GLOBAL_LOG_LEVEL=3
 export DYNAMIC_OP="ADD#MUL"
 
 
-path_lib=$(python3.7 -c """
+path_lib=$(python3 -c """
 import sys
 import re
 result=''
@@ -50,5 +50,4 @@ print(result)"""
 
 #echo ${path_lib}
 
-export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib/:${path_lib}:$LD_LIBRARY_PATH
 

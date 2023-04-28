@@ -60,6 +60,7 @@ ln -s /data/to/coco coco
 为了获得最好的图像处理性能，***请编译安装opencv-python而非直接安装***。编译安装步骤如下：
 
 ```
+# 以python3.7.5版本为例
 export GIT_SSL_NO_VERIFY=true
 git clone https://github.com/opencv/opencv.git
 cd opencv

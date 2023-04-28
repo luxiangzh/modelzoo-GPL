@@ -88,7 +88,7 @@ YOLO算法作为one-stage目标检测算法最典型的代表，其基于深度�
         |-- labels
             |-- train2017
             |-- val2017
-  ```	  
+  ```
   > **说明：** 
   > 该数据集的训练过程脚本只作为一种参考示例。
 2. 在源码包根目录下配置数据集路径。
@@ -108,6 +108,7 @@ YOLO算法作为one-stage目标检测算法最典型的代表，其基于深度�
    为了获得最好的图像处理性能，**请编译安装opencv-python而非直接安装**。编译安装步骤如下：
 
    ```
+   # 以python3.7.5版本为例
    export GIT_SSL_NO_VERIFY=true
    git clone https://github.com/opencv/opencv.git
    cd opencv
@@ -175,7 +176,7 @@ YOLO算法作为one-stage目标检测算法最典型的代表，其基于深度�
    --batch-size                        //训练批次大小，默认：32
    --epochs                            //重复训练次数，默认：300
    ```
-   
+
    训练完成后，权重文件保存在当前路径下，并输出模型训练精度和性能信息。
 
 
