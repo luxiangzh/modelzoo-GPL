@@ -43,7 +43,7 @@ then
     export RANK=$i
     export LOCAL_RANK=$i
     export WORLD_SIZE=8
-    taskset -c $p_start-$p_end python3.7 -u train.py \
+    taskset -c $p_start-$p_end python3 -u train.py \
       --data coco.yaml \
       --cfg yolov5s.yaml \
       --weights '' \
@@ -54,7 +54,7 @@ then
       --epochs 300 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_${ASCEND_DEVICE_ID}_full_8p.log 2>&1 &
 	done
 else
-    nohup python3.7 -u -m torch.distributed.launch --nproc_per_node=8 train.py \
+    nohup python3 -u -m torch.distributed.launch --nproc_per_node=8 train.py \
       --data coco.yaml \
       --cfg yolov5s.yaml \
       --weights '' \
@@ -72,7 +72,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3.7 val.py \
+python3 val.py \
     --weights yolov5s.pt \
     --data coco.yaml \
     --img 640 \

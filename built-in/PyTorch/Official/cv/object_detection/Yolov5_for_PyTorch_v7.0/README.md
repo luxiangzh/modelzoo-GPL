@@ -81,6 +81,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
    为了获得最好的图像处理性能，请编译安装opencv-python而非直接安装。编译安装步骤如下：
 
    ```
+    # 以python3.7.5版本为例
     export GIT_SSL_NO_VERIFY=true
     git clone https://github.com/opencv/opencv.git
     cd opencv
@@ -90,7 +91,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
     make -j$nproc
     make install
    ```
-  
+
 ## 准备数据集
 
 
@@ -167,16 +168,15 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
      --epochs传入训练周期数，默认300， --batch_size传入模型total batch size，可以以单卡batch_size=64做参考设置。
 
-     
    - 模型评估。
-
-       ```
+   
+    ```
        bash ./test/train_yolov5s_eval_1p.sh 
        ```
-
-   模型训练脚本参数说明如下。
-
-      ```
+   
+模型训练脚本参数说明如下。
+   
+   ```
       公共参数：
       --device                            //训练指定训练用卡
       --img-size                          //图像大小

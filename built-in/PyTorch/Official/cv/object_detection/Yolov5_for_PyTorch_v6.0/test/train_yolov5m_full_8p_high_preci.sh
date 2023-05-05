@@ -52,7 +52,7 @@ do
 	then
 		let p_start=0+24*i
 	    let p_end=23+24*i
-	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \
+	    taskset -c $p_start-$p_end python3 train.py --data ./data/coco.yaml \
 		                                           --cfg yolov5m.yaml \
 		                                           --weights '' \
 												   --hyp hyp.scratch-high.yaml \
@@ -61,7 +61,7 @@ do
 												   --workers 24 \
 		                                           --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	else
-	    python3.7 train.py --data ./data/coco.yaml \
+	    python3 train.py --data ./data/coco.yaml \
 		                --cfg yolov5m.yaml \
 		                --weights '' \
 						--hyp hyp.scratch-high.yaml \
@@ -76,7 +76,7 @@ wait
 
 
 #训练后进行eval显示精度
-python3.7 val.py --data ./data/coco.yaml --conf-thres 0.0005 --iou-thres 0.50 --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log 2>&1 &
+python3 val.py --data ./data/coco.yaml --conf-thres 0.0005 --iou-thres 0.50 --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log 2>&1 &
 
 wait
 
