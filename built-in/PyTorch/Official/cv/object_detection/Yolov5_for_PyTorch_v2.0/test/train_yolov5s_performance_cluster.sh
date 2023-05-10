@@ -53,7 +53,7 @@ fi
 sed -i 's#train: .*#train: '${data_path}'/train2017.txt#' ${cur_path}/data/coco.yaml
 sed -i 's#val: .*#val: '${data_path}'/val2017.txt#' ${cur_path}/data/coco.yaml
 sed -i 's#test: .*#test: '${data_path}'/test2017.txt#' ${cur_path}/data/coco.yaml
-sed -i 's#python3.7 test.py --data data/coco.yaml --coco_instance_path.*#python3.7 test.py --data data/coco.yaml --coco_instance_path '${data_path}'/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu 0 #' ${test_path_dir}/train_eval_1p.sh
+sed -i 's#python3 test.py --data data/coco.yaml --coco_instance_path.*#python3 test.py --data data/coco.yaml --coco_instance_path '${data_path}'/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size 32 --device npu --npu 0 #' ${test_path_dir}/train_eval_1p.sh
 
 
 model_path="${cur_path}/models/${model_name}.yaml"
@@ -88,7 +88,7 @@ then
     rank=$((i + node_rank * device_number))
     let p_start=0+24*i
     let p_end=23+24*i
-    taskset -c $p_start-$p_end $CMD python3.7 train_mp.py \
+    taskset -c $p_start-$p_end $CMD python3 train_mp.py \
             --data coco.yaml \
             --cfg $model_path \
             --addr ${master_addr} \
@@ -102,7 +102,7 @@ then
             --epochs 2 > $test_path_dir/output/$ASCEND_DEVICE_ID/train_$ASCEND_DEVICE_ID.log 2>&1 &
     done
 else
-    nohup python3.7 train.py \
+    nohup python3 train.py \
             --data coco.yaml \
             --cfg $model_path \
             --addr ${master_addr} \
