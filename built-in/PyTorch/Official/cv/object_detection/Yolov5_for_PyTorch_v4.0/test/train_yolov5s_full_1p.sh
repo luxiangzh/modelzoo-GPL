@@ -42,7 +42,7 @@ source ${cur_path}/test/env_npu.sh
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-python3.7 -u train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device 0 --local_rank $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
+python3 -u train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device 0 --local_rank $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
 
 wait
 
@@ -52,7 +52,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3.7 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5s.pt' --batch-size 32 --device $ASCEND_DEVICE_ID >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
+python3 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5s.pt' --batch-size 32 --device $ASCEND_DEVICE_ID >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
 
 wait
 

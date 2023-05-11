@@ -84,7 +84,7 @@ do
     then
         let p_start=0+24*i
         let p_end=23+24*i
-        taskset -c $p_start-$p_end python3.7 -u train.py \
+        taskset -c $p_start-$p_end python3 -u train.py \
               --data coco.yaml \
               --cfg yolov5s.yaml \
               --addr ${master_addr} \
@@ -97,7 +97,7 @@ do
               --epochs ${epochs} > $cur_path/test/output/${i}/train_${WORLD_SIZE}p_${i}.log 2>&1 &
     
     else
-        python3.7 -u train.py \
+        python3 -u train.py \
               --data coco.yaml \
               --addr ${master_addr} \
               --port ${master_port} \

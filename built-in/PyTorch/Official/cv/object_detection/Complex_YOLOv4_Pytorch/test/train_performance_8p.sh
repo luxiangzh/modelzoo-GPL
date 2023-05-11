@@ -60,7 +60,7 @@ fi
 
 cd src
 
-python3.7 -m torch.distributed.launch --nproc_per_node=${RANK_SIZE} train.py \
+python3 -m torch.distributed.launch --nproc_per_node=${RANK_SIZE} train.py \
      --dist-url 'tcp://127.0.0.1:29500' \
      --dist-backend 'hccl' \
      --multiprocessing-distributed \
