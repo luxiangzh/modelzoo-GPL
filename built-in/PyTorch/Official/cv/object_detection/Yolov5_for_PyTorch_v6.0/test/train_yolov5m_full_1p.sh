@@ -43,7 +43,7 @@ echo "start_time: ${start_time}"
 
 source ${cur_path}/test/env_npu.sh
 
-python3.7 -u train.py --data ./data/coco.yaml \
+python3 -u train.py --data ./data/coco.yaml \
                       --cfg yolov5m.yaml \
                      --weights '' \
                      --batch-size $batch_size \

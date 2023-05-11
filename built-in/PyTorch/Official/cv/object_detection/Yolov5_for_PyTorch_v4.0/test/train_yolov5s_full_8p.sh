@@ -44,10 +44,10 @@ then
 	export RANK=$i
 	let p_start=0+24*i
 	let p_end=23+24*i
-	taskset -c $p_start-$p_end $CMD python3.7 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --local_rank $i --device 8 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
+	taskset -c $p_start-$p_end $CMD python3 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --local_rank $i --device 8 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
 	done
 else
-    python3.7 -m torch.distributed.launch --nproc_per_node=8 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device 8 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
+    python3 -m torch.distributed.launch --nproc_per_node=8 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device 8 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
 fi
 
 wait
@@ -58,7 +58,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3.7 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5s.pt' --batch-size 32 --device 0 >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
+python3 test.py --data /data/coco.yaml --img-size 640 --weight 'yolov5s.pt' --batch-size 32 --device 0 >> ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_8p.log 2>&1 &
 
 wait
 
