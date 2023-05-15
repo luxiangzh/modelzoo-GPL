@@ -86,7 +86,7 @@ fi
 #训练开始时间，不需要修改
 start_time=$(date +%s)
 
-nohup python3.7 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --weights '' --batch-size ${batch_size} --img-size ${img_size} --local_rank ${device_id} >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
+nohup python3 train.py --data ${datasets}.yaml --cfg ${model_name}.yaml --weights '' --batch-size ${batch_size} --img-size ${img_size} --local_rank ${device_id} >${test_path_dir}/output/${ASCEND_DEVICE_ID}/train_${ASCEND_DEVICE_ID}.log 2>&1 &
 wait
 #训练结束时间，不需要修改
 end_time=$(date +%s)

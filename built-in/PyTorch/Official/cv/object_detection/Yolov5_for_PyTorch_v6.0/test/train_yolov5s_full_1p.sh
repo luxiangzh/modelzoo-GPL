@@ -43,7 +43,7 @@ echo "start_time: ${start_time}"
 
 source ${cur_path}/test/env_npu.sh
 
-python3.7 -u train.py --data ./data/coco.yaml \
+python3 -u train.py --data ./data/coco.yaml \
                       --cfg yolov5s.yaml \
                      --weights '' \
                      --batch-size $batch_size \
@@ -57,7 +57,7 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3.7 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device 0 --half > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_1p.log 2>&1 &
+python3 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device 0 --half > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_1p.log 2>&1 &
 wait
 
 #最后一个迭代FPS值

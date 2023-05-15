@@ -60,7 +60,7 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
    ├── aipp.cfg   放到yolov7下
    ├── atc.sh     放到yolov7下
    └── om_nms_acc.py  放到yolov7下
-   ```   
+   ```
 
 
 ## 准备数据集
@@ -171,7 +171,7 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
    
    }
    ```
-    
+   
 ### 3 开始推理验证
 
 1. 安装ais_bench推理工具  
