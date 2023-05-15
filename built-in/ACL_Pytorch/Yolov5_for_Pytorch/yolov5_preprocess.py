@@ -33,7 +33,7 @@ def main(opt, cfg):
         os.mkdir(opt.prep_data)
 
     if opt.nms_mode == "nms_op":
-        if not os.path.exists(opt.img_info)
+        if not os.path.exists(opt.img_info):
             os.mkdir(opt.img_info)
         # load dataset
         dataloader = BatchDataLoader(opt.data_path, batch_size=opt.batch_size)
