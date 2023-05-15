@@ -273,7 +273,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 
 2. 由于插入aipp算子后，模型输入会发生改变，需要调用yolov5_preprocess_aipp.py生成预处理数据集prep_data_aipp
    ```
-   python yolov5_preprocess_aipp.py --data_path "./coco"
+   python3 yolov5_preprocess_aipp.py --data_path "./coco"
    ```
    - 命令参数说明：
      -   `--data_path`：coco数据集所在路径。
