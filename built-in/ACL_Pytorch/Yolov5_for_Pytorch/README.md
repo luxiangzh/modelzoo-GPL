@@ -12,6 +12,7 @@
     - [2 开始推理验证](#2-开始推理验证)
         - [\* 如果有多卡推理的需求，请跳过该步骤，om\_val.py该脚本不支持多卡推理](#-如果有多卡推理的需求请跳过该步骤om_valpy该脚本不支持多卡推理)
   - [多卡推理](#多卡推理)
+  - [aipp](#aipp)
 - [模型推理性能\&精度](#模型推理性能精度)
 - [FAQ](#faq)
 
@@ -77,12 +78,18 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
     ├── model.yaml         放到yolov5下 
     ├── pth2onnx.sh        放到yolov5下
     ├── onnx2om.sh         放到yolov5下
+    ├── aipp.cfg           放到yolov5下
     ├── om_val.py          放到yolov5下
     └── requirements.txt   放到yolov5下
    ```   
 
 3. 安装依赖  
    ```
+   git clone https://gitee.com/ascend/auto-optimizer.git
+   cd auto-optimizer
+   pip install -r requirements.txt
+   python setup.py install
+   cd ..
    pip3 install -r requirements.txt
    ```
 
@@ -105,7 +112,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ……
    ./val2017/00000581781.jpg
    ```
-
+ 
 ## 模型推理
 模型推理提供两种方式，区别如下：  
 1. `nms`后处理脚本（`nms_script`）   
@@ -180,6 +187,9 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
         -   `--soc_version`：处理器型号
         -   `--log`：日志级别
         -   `--compression_optimize_conf`：模型量化配置，使用说明参考[该链接](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/600alpha003/infacldevg/atctool/atlasatc_16_0084.html)
+        -   `--enable_small_channel`：输入端aipp算子配置，使用说明参考[该链接](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/600alpha003/infacldevg/atctool/atlasatc_16_0081.html)
+        -   `--insert_op_conf`：输入端aipp算子配置，使用说明参考[该链接](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/600alpha003/infacldevg/atctool/atlasatc_16_0072.html)
+
 
    3.4 导出量化`OM`模型（可选）  
    （1）量化存在精度损失，要使用实际数据集进行校准以减少精度损失。提供 [generate_data.py](common/quantify/generate_data.py) 生成校准数据，[calib_img_list.txt](common/quantify/calib_img_list.txt) 中提供默认的校准数据，根据实际数据路径修改。运行脚本会新建`calib_data`文件夹，将生成的数据bin文件放到该文件夹下。  
@@ -193,7 +203,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    （3）部分网络层量化后损失较大，可在 [simple_config.cfg](common/atc_cfg/simple_config.cfg) 中配置不需要量化的层名称，默认为空列表。[skip_layers.cfg](common/atc_cfg/skip_layers.cfg) 中提供了参考写法，通常网络的首尾卷积层量化损失大些，其他版本可以用[Netron](https://github.com/lutzroeder/netron)打开模型，查找不需要量化的层名称。
 
-    
+
 ### 2 开始推理验证
 
 1. 安装`ais-infer`推理工具  
@@ -226,12 +236,11 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 1. 数据预处理，将原始数据转换为模型输入的数据
    执行yolov5_preprocess.py脚本，完成预处理
    ```
-   python3 yolov5_preprocess.py --data_path="./coco" --batch_size 4 
+   python3 yolov5_preprocess.py --data_path="./coco" --nms-mode nms_script
    ```
    - 命令参数说明：
      -   `--data_path`：coco数据集的路径
-     -   `--batch_size`：与om模型的batch_size一致
-
+     -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_script`
     执行完后，会在当前目录下生成./prep_data文件夹用于储存预处理完的二进制数据，并且生成path_list.npy用于储存图片的路径，生成shapes_list.npy用于储存图片原始shape
 
 2. 数据集推理
@@ -247,14 +256,50 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 
 3. 后处理和精度验证，将推理结果转换为字典并储存进json文件，用于计算精度
    ```
-   python3 yolov5_postprocess.py --ground_truth_json "./coco/instances_val2017.json" --output "./result/2023_04_23-17_35_23" --onnx yolov5s.onnx --batch_size 4
+   python3 yolov5_postprocess.py --nms_mode nms_script --ground_truth_json "./coco/instances_val2017.json" --output "./results/2023_04_23-17_35_23" --onnx yolov5s.onnx
    ```
    - 命令参数说明：
      -   `--ground_truth_json`：om模型的路径
-     -   `--output`：推理结果保存的地址，在./results下生成以时间戳命名的文件夹
+     -   `--output`：推理结果保存的路径，在./results下生成以时间戳命名的文件夹
      -   `--onnx`：为onnx模型路径
-     -   `--batch_size`：与om模型batch_size对齐
-    会生成yolov5s_predictions.json文件，以字典形式保存预测结果，如果有画框的需求，可以读取该文件中每一个数据生成的bbox。最后会调用接口自动计算精度
+     -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_script` 
+
+
+## aipp
+* 说明：由于op方式受限较多，故下文插入aipp算子只考虑script方式
+1. 在模型输入端插入aipp  
+   运行`onnx2om.sh`导出`OM`模型。
+   ```
+   bash onnx2om.sh --tag 6.1 --model yolov5s --nms_mode nms_script --bs 4 --soc Ascend310P3 --with_aipp True # nms_script
+   bash onnx2om.sh --tag 6.1 --model yolov5s_nms --nms_mode nms_op --bs 4 --soc Ascend310P3 --with_aipp True # nms_op
+   ```
+
+2. 由于插入aipp算子后，模型输入会发生改变，需要调用yolov5_preprocess_aipp.py生成预处理数据集prep_data_aipp
+   ```
+   python yolov5_preprocess_aipp.py --data_path "./coco"
+   ```
+   - 命令参数说明：
+     -   `--data_path`：coco数据集所在路径。
+
+3. 推理
+   ```
+   python3 -m ais_bench --m yolov5m_bs24_aipp.om --input ./prep_data_aipp --output ./results --device 0,1
+   ```
+   - 命令参数说明：
+     -   `--input`：二进制数据集路径
+     -   `--output`：推理结果保存目录
+     -   `--output_dirname`：推理结果保存子目录
+     -   `--device`：请下载最新ais_bech，目前已经支持多卡推理
+
+4. 数据后处理
+   ```
+   python3 yolov5_postprocess.py --ground_truth_json "./coco/instances_val2017.json" --output "./results/2023_04_23-17_35_23" --onnx yolov5s.onnx
+   ```
+   - 命令参数说明：
+     -   `--ground_truth_json`：om模型的路径
+     -   `--output`：推理结果保存的路径，在./results下生成以时间戳命名的文件夹
+     -   `--onnx`：为onnx模型路径
+
 
 
 # 模型推理性能&精度
