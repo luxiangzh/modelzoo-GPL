@@ -50,4 +50,4 @@ else
 fi
 
 cd ${cur_path}
-python3.7 test.py --data data/coco.yaml --coco_instance_path  ${data_path}/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size ${batch_size} --device npu --npu $ASCEND_DEVICE_ID
+python3 test.py --data data/coco.yaml --coco_instance_path  ${data_path}/annotations/instances_val2017.json --img-size 672 --weight 'yolov5_0.pt' --batch-size ${batch_size} --device npu --npu $ASCEND_DEVICE_ID

@@ -11,7 +11,7 @@ do
     then
     let a=0+RANK_ID*24
     let b=23+RANK_ID*24
-    nohup taskset -c $a-$b python3.7 ../train.py \
+    nohup taskset -c $a-$b python3 ../train.py \
           --data ../data/coco2017.data  \
           --cfg ../cfg/yolov3-tiny.cfg  \
           --weights '' \
@@ -19,7 +19,7 @@ do
           --batch-size 190 \
           --device-count 8 &
     else
-        python3.7 train.py \
+        python3 train.py \
             --weights '' \
             --device-type npu \
             --batch-size 190 \
