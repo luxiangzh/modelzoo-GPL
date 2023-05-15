@@ -291,7 +291,6 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
      -   `--output`：推理结果保存的路径，在./results下生成以时间戳命名的文件夹
      -   `--onnx`：为onnx模型路径
 
-    会生成yolov5s_predictions.json文件，以字典形式保存预测结果，如果有画框的需求，可以读取该文件中每一个数据生成的bbox。最后会调用接口自动计算精度
 
 
 # 模型推理性能&精度
