@@ -6,6 +6,7 @@ Network="yolov5s_ID4102_for_PyTorch_v6.0"
 cur_path=`pwd`
 model_name=yolov5s
 batch_size=512
+epochs=300
 
 for para in $*
 do
@@ -13,6 +14,8 @@ do
       	model_name=`echo ${para#*=}`
    elif [[ $para == --batch_size* ]];then
       	batch_size=`echo ${para#*=}`
+   elif [[ $para == --epochs* ]];then
+      	epochs=`echo ${para#*=}`
    fi
 done
 
@@ -25,6 +28,9 @@ source ${cur_path}/test/env_npu.sh
 #训练开始时间，不需要修改
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
+
+#high_preci模式
+export high_preci=1
 
 export MASTER_ADDR=127.0.0.1
 export MASTER_PORT=29500
@@ -50,13 +56,19 @@ do
 	    taskset -c $p_start-$p_end python3 train.py --data ./data/coco.yaml \
 		                                           --cfg yolov5s.yaml \
 		                                           --weights '' \
+												   --epochs $epochs \
 		                                           --batch-size $batch_size \
+												   --noscale \
+												   --hyps hyp.scratch-low.yaml \
 		                                           --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	else
 	    python3 train.py --data ./data/coco.yaml \
 		                --cfg yolov5s.yaml \
 		                --weights '' \
+						--epochs $epochs \
 		                --batch-size $batch_size \
+						--noscale \
+						--hyps hyp.scratch-low.yaml \
 		                --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	fi
 done
