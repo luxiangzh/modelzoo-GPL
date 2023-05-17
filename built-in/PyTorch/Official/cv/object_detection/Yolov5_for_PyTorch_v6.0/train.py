@@ -167,8 +167,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     # Optimizer
     nbs = 64  # nominal batch size
     accumulate = max(round(nbs / batch_size), 1)  # accumulate loss before optimizing
-    hyp['weight_decay'] *= batch_size * accumulate / nbs  # scale weight_decay
-    LOGGER.info(f"Scaled weight_decay = {hyp['weight_decay']}")
+    if not opt.noscale:
+        hyp['weight_decay'] *= batch_size * accumulate / nbs  # scale weight_decay
+        LOGGER.info(f"Scaled weight_decay = {hyp['weight_decay']}")
 
     g0, g1, g2 = [], [], []  # optimizer parameter groups
     for v in model.modules():
@@ -478,6 +479,7 @@ def parse_opt(known=False):
     parser.add_argument('--freeze', type=int, default=0, help='Number of layers to freeze. backbone=10, all=24')
     parser.add_argument('--save-period', type=int, default=-1, help='Save checkpoint every x epochs (disabled if < 1)')
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
+    parser.add_argument('--noscale', action='store_true', help='do not scale weight decay')
 
     # Weights & Biases arguments
     parser.add_argument('--entity', default=None, help='W&B: Entity')
