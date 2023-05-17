@@ -59,7 +59,7 @@ do
 												   --epochs $epochs \
 		                                           --batch-size $batch_size \
 												   --noscale \
-												   --hyps hyp.scratch-low.yaml \
+												   --hyp hyp.scratch-low.yaml \
 		                                           --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	else
 	    python3 train.py --data ./data/coco.yaml \
@@ -68,7 +68,7 @@ do
 						--epochs $epochs \
 		                --batch-size $batch_size \
 						--noscale \
-						--hyps hyp.scratch-low.yaml \
+						--hyp hyp.scratch-low.yaml \
 		                --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	fi
 done
