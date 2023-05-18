@@ -39,7 +39,7 @@ if [[ $nms_mode == nms_script ]] ; then
         atc --model=${model}.onnx --output=${model}_bs${bs}_aipp \
              --framework=5 --input_format=NCHW --soc_version=${soc} --log=error \
              --input_shape="images:${bs},3,640,640" \
-             --enable_small_channel=1 --insert_op_conf=aipp.cfg --output_type=fp16 \
+             --enable_small_channel=1 --insert_op_conf=aipp.cfg --output_type=FP16 \
              --optypelist_for_implmode="Sigmoid" --op_select_implmode=high_performance \
              --fusion_switch_file=common/atc_cfg/fusion.cfg ${quantify_cfg} || exit 1
     else
@@ -47,28 +47,28 @@ if [[ $nms_mode == nms_script ]] ; then
         atc --model=${model}.onnx --output=${model}_bs${bs} \
              --framework=5 --input_format=NCHW --soc_version=${soc} --log=error \
              --input_shape="images:${bs},3,640,640" \
-             --input_fp16_nodes="images" --output_type=fp16 \
+             --input_fp16_nodes="images" --output_type=FP16 \
              --optypelist_for_implmode="Sigmoid" --op_select_implmode=high_performance \
              --fusion_switch_file=common/atc_cfg/fusion.cfg ${quantify_cfg} || exit 1
     fi
 fi
 
 ##### 方式二 nms后处理算子
-if [[ $nms_mode == nms_script ]] ; then
+if [[ $nms_mode == nms_op ]] ; then
     if [[ $with_aipp == True ]] ; then
         echo "nms后处理算子 + aipp前处理"
         atc --model=${model}.onnx --output=${model}_bs${bs}_aipp \
              --framework=5 --input_format=NCHW --soc_version=${soc} --log=error \
-             --input_shape="images:${bs},3,640,640;img_info;${bs},4" \
-             --enable_small_channel=1 --insert_op_conf=aipp.cfg --output_type=fp16 \
+             --input_shape="images:${bs},3,640,640;img_info:${bs},4" \
+             --enable_small_channel=1 --insert_op_conf=aipp.cfg --output_type=FP16 \
              --optypelist_for_implmode="Sigmoid" --op_select_implmode=high_performance \
              --fusion_switch_file=common/atc_cfg/fusion.cfg ${quantify_cfg} || exit 1
     else
         echo "nms后处理算子"
         atc --model=${model}.onnx --output=${model}_bs${bs} \
              --framework=5 --input_format=NCHW --soc_version=${soc} --log=error \
-             --input_shape="images:${bs},3,640,640;img_info;${bs},4" \
-             --input_fp16_nodes="images;img_info" --output_type=fp16 \
+             --input_shape="images:${bs},3,640,640;img_info:${bs},4" \
+             --input_fp16_nodes="images;img_info" --output_type=FP16 \
              --optypelist_for_implmode="Sigmoid" --op_select_implmode=high_performance \
              --fusion_switch_file=common/atc_cfg/fusion.cfg ${quantify_cfg} || exit 1
     fi
