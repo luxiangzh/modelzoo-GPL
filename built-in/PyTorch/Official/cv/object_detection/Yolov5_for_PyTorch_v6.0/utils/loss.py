@@ -4,6 +4,8 @@ Loss functions
 """
 
 import torch
+if torch.__version__ >= '1.8':
+    import torch_npu
 import torch.nn as nn
 
 from utils.metrics import bbox_iou
@@ -171,7 +173,7 @@ class ComputeLoss:
             pxy = pxy.sigmoid() * 2. - 0.5
             pwh = (pwh.sigmoid() * 2) ** 2 * anchors_cat.T
             pbox = torch.cat((pxy, pwh), 0)  # predicted box
-            iou = torch.npu_ciou(pbox, tbox_cat, is_cross=False, trans=True)  # iou(prediction, target)
+            iou = torch_npu.npu_ciou(pbox, tbox_cat, is_cross=False, trans=True)  # iou(prediction, target)
             iou = iou * all_mask_cat + (1. - all_mask_cat)
             valid_mask = sum_mask_cat > 0
             lbox += ((1.0 - iou).reshape(self.nl, -1).sum(1)[valid_mask] / sum_mask_cat[valid_mask]).sum()  # iou loss
