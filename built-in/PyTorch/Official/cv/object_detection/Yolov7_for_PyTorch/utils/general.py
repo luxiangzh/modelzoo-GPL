@@ -48,6 +48,8 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
+if torch.__version__ >= '1.8':
+    import torch_npu
 import torchvision
 import yaml
 
@@ -754,7 +756,9 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
         boxes, scores = x[:, :4] + c, x[:, 4]  # boxes (offset by class), scores
 
-        i, valid = torch.npu_nms_v4(boxes, scores, max_det, torch.tensor(iou_thres).npu(), torch.tensor(conf_thres).npu()) #nms(boxes, scores, iou_thres)
+        i, valid = torch_npu.npu_nms_v4(boxes, scores, max_det, 
+                                        torch.tensor(iou_thres).npu(), 
+                                        torch.tensor(conf_thres).npu()) #nms(boxes, scores, iou_thres)
         i = i.long().cpu()
         valid = valid.cpu()
         i = i[:valid]            
