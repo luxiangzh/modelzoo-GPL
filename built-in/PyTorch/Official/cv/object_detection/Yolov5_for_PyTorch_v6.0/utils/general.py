@@ -25,6 +25,8 @@ import numpy as np
 import pandas as pd
 import pkg_resources as pkg
 import torch
+if torch.__version__ >= '1.8':
+    import torch_npu
 import torchvision
 import yaml
 
@@ -704,7 +706,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
         boxes, scores = x[:, :4] + c, x[:, 4]  # boxes (offset by class), scores
         if device.type == 'npu':
-            i, valid = torch.npu_nms_v4(boxes, scores, max_det, \
+            i, valid = torch_npu.npu_nms_v4(boxes, scores, max_det, \
                 torch.tensor(iou_thres).to(device), torch.tensor(conf_thres).to(device))  # NMS
             i = i.long().cpu()
             valid = valid.cpu()

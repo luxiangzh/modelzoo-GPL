@@ -20,6 +20,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+if torch.__version__ >= '1.8':
+    import torch_npu
 import torch.nn as nn
 import torchvision
 import yaml
@@ -495,7 +497,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             pxy = pxy.sigmoid() * 2. - 0.5
             pwh = (pwh.sigmoid() * 2) ** 2 * (anchors[i].T)
             pbox = torch.cat((pxy, pwh), 0)  # predicted box
-            giou = torch.npu_giou(pbox, tbox[i], trans=True, is_cross=False).squeeze()
+            giou = torch_npu.npu_giou(pbox, tbox[i], trans=True, is_cross=False).squeeze()
             giou = giou * (allmask) + (1. - allmask)
             lbox += (1.0 - giou).sum() / (sum_mask) # giou loss
             # Obj
