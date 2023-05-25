@@ -85,10 +85,11 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 
 3. 安装依赖  
    ```
-   git clone https://gitee.com/ascend/auto-optimizer.git
-   cd auto-optimizer
-   pip install -r requirements.txt
-   python setup.py install
+   git clone https://gitee.com/ascend/msadvisor.git
+   cd msadvisor/auto-optimizer
+   python3 -m pip install --upgrade pip
+   python3 -m pip install wheel
+   python3 -m pip install .
    cd ..
    pip3 install -r requirements.txt
    ```
@@ -116,9 +117,12 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 ## 模型推理
 模型推理提供两种方式，区别如下：  
 1. `nms`后处理脚本（`nms_script`）   
-    直接用官网`export.py`导出`onnx`模型，模型结构和官网一致，推理流程也和官方一致，NMS后处理采用脚本实现。  
+    直接用官网`export.py`导出`onnx`模型，模型结构和官网一致，推理流程也和官方一致，NMS后处理采用脚本实现。
+    * 注意：如果使用的是nms_script方式，需要修改model.yaml文件，将其中的配置conf_thres:0.4和iou_thres:0.5修改为conf_thres:0.001和iou_thres:0.6，后续该方式下精度测试也是采用修改后的配置。
+ 
 2. `nms`后处理算子（`nms_op`）  
-    为提升模型端到端推理性能，我们对上一步导出的`onnx`模型做了修改，增加后处理算子，将`NMS`后处理的计算集成到模型中。后处理算子存在阈值约束，要求`conf>0.1`。  
+    * 注意：为提升模型端到端推理性能，我们对上一步导出的`onnx`模型做了修改，增加后处理算子，将`NMS`后处理的计算集成到模型中。后处理算子存在阈值约束，要求 
+    `conf>0.1`，由于其硬性要求，所以model.yaml文件默认设置conf_thres:0.4。使用nms_op方式，不需要修改model.yaml文件。
 
 ### 1 模型转换  
 将模型权重文件`.pth`转换为`.onnx`文件，再使用`ATC`工具将`.onnx`文件转为离线推理模型`.om`文件。
@@ -228,6 +232,32 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    python3 -m ais_bench --model=yolov5s_nms_bs4.om --loop=1000 --batchsize=4  # nms_op
    ```
 
+# 模型推理性能&精度
+
+调用ACL接口推理计算，性能&精度参考下列数据。
+1. 方式一 nms后处理脚本（nms_script）
+
+    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
+    |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
+    | 2.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   998.004   |
+    | 3.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   772.670    |
+    | 4.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   884.088    |
+    | 5.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.5     |   881.139    |
+    | 6.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.9     |   737.037    |
+    | 6.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.9     |   739.736    |
+
+2. 方式二 nms后处理算子（nms_op）
+
+    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
+    |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
+    | 2.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.9     |   948.276    |
+    | 3.1   | Ascend310P3 |     8      | coco val2017 | conf=0.4 iou=0.5   |     42.3     |   728.035    |
+    | 4.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.5     |   862.770    |
+    | 5.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.7     |   860.746    |
+    | 6.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     41.2     |   876.578    |
+    | 6.1   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     43.4     |   881.867    |
+
+
 ## 多卡推理
 
 1. 数据预处理，将原始数据转换为模型输入的数据
@@ -296,34 +326,6 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
      -   `--ground_truth_json`：om模型的路径
      -   `--output`：推理结果保存的路径，在./results下生成以时间戳命名的文件夹
      -   `--onnx`：为onnx模型路径
-
-
-
-# 模型推理性能&精度
-
-调用ACL接口推理计算，性能&精度参考下列数据。
-1. 方式一 nms后处理脚本（nms_script）
-
-    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
-    |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
-    | 2.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   1079.271   |
-    | 3.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   853.275    |
-    | 4.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   951.630    |
-    | 5.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.5     |   955.388    |
-    | 6.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.8     |   666.238    |
-    | 6.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   665.806    |
-
-2. 方式二 nms后处理算子（nms_op）
-
-    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
-    |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
-    | 2.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.9     |   948.276    |
-    | 3.1   | Ascend310P3 |     8      | coco val2017 | conf=0.4 iou=0.5   |     42.3     |   728.035    |
-    | 4.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.5     |   862.770    |
-    | 5.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.7     |   860.746    |
-    | 6.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     41.2     |   876.578    |
-    | 6.1   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     43.4     |   881.867    |
-
 
 # FAQ
 常见问题可参考 [FAQ](FAQ.md)
