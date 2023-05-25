@@ -94,7 +94,7 @@ def postprocess(opt, cfg):
                 boxout = box_out[idx][:num_det * 6].reshape(6, -1).transpose().astype(np.float32)  # 6xN -> Nx6
                 # append to COCO-JSON dictionary
                 image_id = int(img_name[i][idx].split('.')[0])
-                save_coco_json(pred, pred_results, image_id, coco80_to_coco91_class())
+                save_coco_json(boxout, pred_results, image_id, coco80_to_coco91_class())
 
     pred_json_file = f"{opt.onnx.split('.')[0]}_predictions.json"
 
