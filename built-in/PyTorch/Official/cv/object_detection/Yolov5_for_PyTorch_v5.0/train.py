@@ -7,7 +7,7 @@
 # can be found in the PATENTS file in the same directory.
 
 import torch
-if torch.__version__ >= '1.8.1':
+if torch.__version__ >= '1.8':
     import torch_npu
 import argparse
 import logging
@@ -159,7 +159,7 @@ def train(hyp, opt, device, tb_writer=None):
     del pg0, pg1, pg2
 
     if device.type == 'npu':
-        model, optimizer = amp.initialize(model, optimizer, opt_level='O1', loss_scale=128, combine_grad=True)
+        model, optimizer = amp.initialize(model, optimizer, opt_level='O1', loss_scale=128, combine_grad=True if rank != -1 else None, combine_ddp=True if rank != -1 else None)
     # Scheduler https://arxiv.org/pdf/1812.01187.pdf
     # https://pytorch.org/docs/stable/_modules/torch/optim/lr_scheduler.html#OneCycleLR
     if opt.linear_lr:
@@ -245,7 +245,7 @@ def train(hyp, opt, device, tb_writer=None):
             model.half().float()  # pre-reduce anchor precision
 
     # DDP mode
-    if npu and rank != -1:
+    if not npu and rank != -1:  # using combine_ddp when the device is npu
         model = DDP(model, device_ids=[opt.local_rank], output_device=opt.local_rank,
                     # nn.MultiheadAttention incompatibility with DDP https://github.com/pytorch/pytorch/issues/26698
                     find_unused_parameters=any(isinstance(layer, nn.MultiheadAttention) for layer in model.modules()),
@@ -333,7 +333,7 @@ def train(hyp, opt, device, tb_writer=None):
             # Forward
             profile.start()
             pred = model(imgs)  # forward
-            loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
+            loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
             if rank != -1:
                 loss *= opt.world_size  # gradient averaged between devices in DDP mode
             if opt.quad:
@@ -437,7 +437,7 @@ if __name__ == '__main__':
     parser.add_argument('--adam', action='store_true', help='use torch.optim.Adam() optimizer')
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
-    parser.add_argument('--workers', type=int, default=12, help='maximum number of dataloader workers')
+    parser.add_argument('--workers', type=int, default=24, help='maximum number of dataloader workers')
     parser.add_argument('--project', default='runs/train', help='save to project/name')
     parser.add_argument('--entity', default=None, help='W&B entity')
     parser.add_argument('--name', default='exp', help='save to project/name')
