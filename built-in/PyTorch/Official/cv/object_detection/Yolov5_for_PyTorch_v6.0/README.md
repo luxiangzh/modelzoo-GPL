@@ -167,6 +167,18 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      bash test/train_yolov5m_performance_cluster.sh --data_path=数据集路径 --nnodes=机器数量 --node_rank=机器序号(0,1,2...) --master_addr=主机服务器地址 --master_port=主机服务器端口号
      ```
      ps:脚本默认为8卡，若使用自定义卡数，继续在上面命令后添加 --device_number=每台机器使用卡数 --head_rank=起始卡号，例如分别为4、0时，代表使用0-3卡训练。
+  
+   - 纯FP32计算
+
+     启动单卡训练
+     ```
+     bash test/train_yolov5s_fp32_performance_1p.sh  # yolov5s 1p_fp32_performance
+     ```
+     启动多卡训练
+     ```
+     bash test/train_yolov5s_fp32_performance_8p.sh  # yolov5s 8p_fp32_performance
+     bash test/train_yolov5s_fp32_full_8p.sh  # yolov5s 8p_fp32_accuracy
+     ```
 
    --data_path参数填写数据集路径，需写到数据集的一级目录。
 
@@ -185,6 +197,8 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
    --artifact_alias                    //数据集版本
    --save-period                       //权重保存
    --native_amp                        //使用torch amp进行混合精度训练，如不配置默认使用apex
+   --FP32                              //使用纯FP32方式计算，如不配置默认使用混合精度计算
+   --half                              //eval执行脚本中参数，如配置默认使用混合精度计算
    ```
    
    训练完成后，权重文件保存在当前路径下，并输出模型训练精度和性能信息。
@@ -209,13 +223,13 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
 **表 4**  yolov5s训练结果展示表
 
-| NAME     | mAP0.5~0.95 |  FPS | AMP_Type | Torch_Version | Architecture |
-| :-----:  | :---:  | :------: | :-----:  | :-----:  | :-----: |
-| 1p-NPU | - | 265 | O1 | 1.8 | |
-| 8p-NPU   | 35.4 | 2044.5 |       O1 |    1.8 | Arm |
-| 1p-NPU  | - | 317 | O1 | 1.8 | 非Arm |
-| 8p-NPU  | - | 1163.6 | O1 | 1.8 | 非Arm |
-
+| NAME     | mAP0.5~0.95 |  FPS | AMP_Type | Torch_Version | Architecture | Device_Type |
+| :-----:  | :---:  | :------: | :-----:  | :-----:  | :-----: | :-----: |
+| 1p-NPU | - | 265 | O1 | 1.8 | | - |
+| 8p-NPU   | 35.4 | 2044.5 |       O1 |    1.8 | Arm | - |
+| 1p-NPU  | - | 317 | O1 | 1.8 | 非Arm | - |
+| 8p-NPU  | - | 1163.6 | O1 | 1.8 | 非Arm | - |
+| 8p-NPU  | 35.5 | 1507.7 | FP32 | 1.8 | Arm | 910B1 |
 
 # 版本说明
 

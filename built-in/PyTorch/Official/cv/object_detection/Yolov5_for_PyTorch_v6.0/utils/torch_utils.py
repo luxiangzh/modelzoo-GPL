@@ -330,20 +330,20 @@ class ModelEMA:
 
         self.is_fused = False
 
-    def update(self, model, x, model_params_fused=None):
+    def update(self, model, device, model_params_fused=None):
         # Update EMA parameters
         with torch.no_grad():
             self.updates += 1
             d = self.decay(self.updates)
 
-            if x.device.type == 'npu':
+            if device.type == 'npu':
                 if os.environ["use_amp"] == "apex":
                     from apex.contrib.combine_tensors import combine_npu
-                elif os.environ["use_amp"] == "native":
+                elif os.environ["use_amp"] in ["native", "false"]:
                     from torch_npu.utils import npu_combine_tensors as combine_npu
 
                 d_inv = 1. - d
-                d = torch.tensor([d], device=x.device)
+                d = torch.tensor([d], device=device)
 
                 if not self.is_fused:
 
