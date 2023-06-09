@@ -40,8 +40,6 @@ def main(opt, cfg):
     shapes_list = []
     i = 0
     for (img, targets, paths, shapes) in tqdm(dataloader):
-        img = img.half()
-        img /= 255.0  # 0 - 255 to 0.0 -1.0
         nb, _, height, width = img.shape  # batch size, channels, height, width
         img = img.numpy()
 
