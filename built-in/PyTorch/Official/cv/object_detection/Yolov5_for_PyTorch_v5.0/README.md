@@ -102,3 +102,6 @@ python export_onnx.py --weights ./xxx.pt --img-size 640 --batch-size 1
 |  8p-NPU  |  34.1  | 1781.91 |      1.8      |      arm      |
 |  1p-NPU  |  - | 219.36 |      1.8      |      非arm      |
 |  8p-NPU  | -  | 1335.43 |      1.8      |      非arm      |
+
+# 15.公网地址说明
+代码涉及公网地址参考 public_address_statement.md

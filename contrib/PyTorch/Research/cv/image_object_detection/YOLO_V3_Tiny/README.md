@@ -102,3 +102,7 @@ bash train_full_8p.sh   # test目录下
 cd test
 bash test.sh   # test目录下 
 ```
+# 9.公网地址说明
+```
+代码涉及公网地址参考 public_address_statement.md
+```

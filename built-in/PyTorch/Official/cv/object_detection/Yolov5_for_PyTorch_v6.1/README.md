@@ -106,3 +106,6 @@ bash test/train_yolov5s_eval_1p.sh
 | NAME     | Accuracy |  FPS | Torch_Version |
 | :-----:  | :------: | :-----:  | :-----:  |
 | 8p-NPU  | 34.11 | 1538 | 1.11 |
+
+# 公网地址说明
+代码涉及公网地址参考 public_address_statement.md
