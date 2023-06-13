@@ -17,7 +17,7 @@
 | 开源代码引入 | https://github.com/ultralytics/yolov3/ |Yolov3_ultralytics_for_PyTorch/data/VisDrone.yaml| https://github.com/ultralytics/yolov5/releases/download/v1.0/VisDrone2019-DET-test-dev.zip | 下载数据集 |
 | 开源代码引入 | https://github.com/ultralytics/yolov3/ |Yolov3_ultralytics_for_PyTorch/data/VisDrone.yaml| https://github.com/ultralytics/yolov5/releases/download/v1.0/VisDrone2019-DET-test-challenge.zip | 下载数据集 |
 | 开源代码引入 | https://github.com/ultralytics/yolov3/ |Yolov3_ultralytics_for_PyTorch/data/voc.yaml| https://github.com/ultralytics/yolov5/releases/download/v1.0/ | 下载数据集 |
-| 二次开发引入 | 不涉及                                             |Yolov3_ultralytics_for_PyTorch/Dockerfile| https://ultralytics.com/assets/Arial.ttf/root/.config/Ultralytics/ | 下载配置 |
+| 开源代码引入 | https://github.com/ultralytics/yolov3/ |Yolov3_ultralytics_for_PyTorch/Dockerfile| https://ultralytics.com/assets/Arial.ttf/root/.config/Ultralytics/ | 下载配置 |
 | 开源代码引入 | https://github.com/ultralytics/yolov3/ |Yolov3_ultralytics_for_PyTorch/hubconf.py| https://github.com/ultralytics/yolov5/issues/36 | 下载配置 |
 | 开源代码引入 | https://github.com/ultralytics/yolov3/ |Yolov3_ultralytics_for_PyTorch/hubconf.py| https://ultralytics.com/images/zidane.jpg | 下载图片 |
 | 开源代码引入 | https://github.com/ultralytics/yolov3/ |Yolov3_ultralytics_for_PyTorch/utils/downloads.py| https://api.github.com/repos/{repo}/releases/latest | 下载配置 |

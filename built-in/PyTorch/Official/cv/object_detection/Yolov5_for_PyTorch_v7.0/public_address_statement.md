@@ -25,14 +25,14 @@
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/export.py                               | https://packages.cloud.google.com/apt/doc/apt-key.gpg | 下载配置 |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/hubconf.py                              | https://github.com/ultralytics/yolov5/issues/36 | 下载配置 |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/aws/userdata.sh                   | https://github.com/ultralytics/yolov5 | 下载数据集 |
-| 二次开发引入 | 不涉及                                  | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile                 | https://ultralytics.com/assets/Arial.ttf https://ultralytics.com/assets/Arial.Unicode.ttf | 下载配置 |
-| 二次开发引入 | 不涉及                                  | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile                 | https://download.pytorch.org/whl/cu113 | 下载配置 |
-| 二次开发引入 | 不涉及                                  | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile                 | https://github.com/ultralytics/yolov5 | 下载数据集 |
-| 二次开发引入 | 不涉及                                  | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-arm64           | https://ultralytics.com/assets/Arial.Unicode.ttf | 下载配置 |
-| 二次开发引入 | 不涉及                                  | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-arm64           | https://github.com/ultralytics/yolov5 | 下载数据集 |
-| 二次开发引入 | 不涉及                                  | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-cpu             | https://ultralytics.com/assets/Arial.Unicode.ttf | 下载配置 |
-| 二次开发引入 | 不涉及                                  | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-cpu             | https://download.pytorch.org/whl/cpu | 下载第三方库 |
-| 二次开发引入 | 不涉及                                  | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-cpu             | https://github.com/ultralytics/yolov5 | 下载数据集 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile                 | https://ultralytics.com/assets/Arial.ttf https://ultralytics.com/assets/Arial.Unicode.ttf | 下载配置 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile                 | https://download.pytorch.org/whl/cu113 | 下载配置 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile                 | https://github.com/ultralytics/yolov5 | 下载数据集 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-arm64           | https://ultralytics.com/assets/Arial.Unicode.ttf | 下载配置 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-arm64           | https://github.com/ultralytics/yolov5 | 下载数据集 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-cpu             | https://ultralytics.com/assets/Arial.Unicode.ttf | 下载配置 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-cpu             | https://download.pytorch.org/whl/cpu | 下载第三方库 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/docker/Dockerfile-cpu             | https://github.com/ultralytics/yolov5 | 下载数据集 |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/downloads.py                      | https://ultralytics.com/images/bus.jpg | 下载图片 |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/downloads.py                      | https://api.github.com/repos/{repository}/releases/{version} | 下载权重 |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ | Yolov5_for_PyTorch_v7.0/utils/downloads.py                      | https://drive.google.com/drive/folders/1EFQTEUeXWSFww0luse2jB9M1QNZQGwNl | 下载配置 |

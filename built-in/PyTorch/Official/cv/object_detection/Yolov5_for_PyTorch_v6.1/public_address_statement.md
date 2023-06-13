@@ -18,8 +18,8 @@
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ |Yolov5_for_PyTorch_v6.1/data/VisDrone.yaml| https://github.com/ultralytics/yolov5/releases/download/v1.0/VisDrone2019-DET-test-dev.zip | 下载数据集 |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ |Yolov5_for_PyTorch_v6.1/data/VisDrone.yaml| https://github.com/ultralytics/yolov5/releases/download/v1.0/VisDrone2019-DET-test-challenge.zip | 下载数据集 |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ |Yolov5_for_PyTorch_v6.1/data/VOC.yaml| https://github.com/ultralytics/yolov5/releases/download/v1.0/ | 下载数据集 |
-| 二次开发引入 | 不涉及                                  |Yolov5_for_PyTorch_v6.1/Dockerfile| https://download.pytorch.org/whl/cu113/torch_stable.html | 下载第三方库 |
-| 二次开发引入 | 不涉及                                  |Yolov5_for_PyTorch_v6.1/Dockerfile| https://ultralytics.com/assets/Arial.ttf | 下载配置  |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ |Yolov5_for_PyTorch_v6.1/Dockerfile| https://download.pytorch.org/whl/cu113/torch_stable.html | 下载第三方库 |
+| 开源代码引入 | https://github.com/ultralytics/yolov5/ |Yolov5_for_PyTorch_v6.1/Dockerfile| https://ultralytics.com/assets/Arial.ttf | 下载配置  |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ |Yolov5_for_PyTorch_v6.1/export.py| https://packages.cloud.google.com/apt/doc/apt-key.gpg | 下载配置  |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ |Yolov5_for_PyTorch_v6.1/hubconf.py| https://github.com/ultralytics/yolov5/issues/36 | 下载配置  |
 | 开源代码引入 | https://github.com/ultralytics/yolov5/ |Yolov5_for_PyTorch_v6.1/utils/aws/userdata.sh| https://github.com/ultralytics/yolov5 | 下载数据集 |
