@@ -270,19 +270,14 @@ YOLOv5版本不断迭代更新，不同版本的模型结构有所差异。比�
   
   | yolov5版本	 | Conv模块激活函数 |
   |:---------:|:----------:|
-  | 2.0	      | LeakyRelu  |
-  | 3.0	      | LeakyRelu  |
-  | 3.1	      |   hswish   |
-  | 4.0	      |    SiLU    |
-  | 5.0	      |    SiLU    |
   | 6.0	      |    SiLU    |
-  | 6.1	      |    SiLU    |
+
 
 YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv5l 和 YOLOv5x，四个模型的网络结构基本一致，只是其中的模块数量与卷积核个数不一致。YOLOv5s模型最小，其它的模型都在此基础上对网络进行加深与加宽。
 - 版本说明（目前已适配以下版本）：
   ```
   url=https://github.com/ultralytics/yolov5
-  tag=v2.0/v3.1/v4.0/v5.0/v6.0/v6.1
+  tag=v6.0
   model_name=yolov5
   ```
 
@@ -296,7 +291,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 | 固件与驱动                                               | 22.0.4 | [Pytorch框架推理环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/pies)                                               |
 | CANN                                                    | 6.0.0  | [推理应用开发学习文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/600alpha003/infacldevg/aclpythondevg/aclpythondevg_0000.html) |
 | Python                                                  | 3.7.5  | -                                                                                                                                           |
-| PyTorch                                                 | 1.10.1 | -                                                                                                                                           |
+| PyTorch                                                 | 1.11.0 | -                                                                                                                                           |
 | 说明：Atlas 300I Duo 推理卡请以CANN版本选择实际固件与驱动版本。 | \      | \                                                                                                                                           |
 
 
@@ -308,7 +303,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    git clone https://github.com/ultralytics/yolov5.git
    cd yolov5
-   git checkout v2.0/v3.1/v4.0/v5.0/v6.0/v6.1  # 切换到所用版本
+   git checkout v6.0  # 切换到所用版本
    ```
 
 2. 获取`OM`推理代码  
@@ -319,7 +314,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
       ├── util               模型/数据接口
       ├── quantify           量化接口
       ├── atc_cfg            atc转模型配置文件
-      └── patch              v2.0/v3.1/v4.0/v5.0/v6.0/v6.1 兼容性修改
+      └── patch              v6.0 兼容性修改
     ├── model.yaml         放到yolov5下 
     ├── pth2onnx.sh        放到yolov5下
     ├── onnx2om.sh         放到yolov5下
@@ -378,17 +373,17 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    wget https://github.com/ultralytics/yolov5/releases/download/v${tag}/${model}.pt
    ```
    - 命令参数说明：
-     -   `${tag}`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`
+     -   `${tag}`：模型版本，可选`[6.0]`
      -   `${model}`：模型大小，可选`yolov5[n/s/m/l]`,当前未适配X
 
 2. 导出`ONNX`模型  
    运行`bash pth2onnx.sh`导出动态shape的`ONNX`模型，模型参数在[model.yaml](model.yaml)中设置。
    ```
-   bash pth2onnx.sh --tag 6.1 --model yolov5s --nms_mode nms_script  # nms_script
-   bash pth2onnx.sh --tag 6.1 --model yolov5s --nms_mode nms_op  # nms_op
+   bash pth2onnx.sh --tag 6.0 --model yolov5s --nms_mode nms_script  # nms_script
+   bash pth2onnx.sh --tag 6.0 --model yolov5s --nms_mode nms_op  # nms_op
    ```
    - 命令参数说明：
-     -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`, 默认`6.1`。
+     -   `--tag`：模型版本，可选`[6.0]`, 默认`6.0`。
      -   `--model`：模型大小，可选`yolov5[n/s/m/l]`, 默认`yolov5s`。
      -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_op`。`nms_op`方式下，pth导出onnx模型过程中会增加NMS后处理算子，后处理算子的参数`class_num`、`conf_thres`和`iou_thres`在[model.yaml](model.yaml)中设置。
 
@@ -404,16 +399,16 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    3.2 执行命令查看芯片名称（`${soc_version}`）
    ```
    npu-smi info
-   # 该设备芯片名为Ascend310P3 （自行替换）
+   # 该设备芯片名为Ascend910A （自行替换）
    回显如下：
    +-------------------+-----------------+------------------------------------------------------+
    | NPU     Name      | Health          | Power(W)     Temp(C)           Hugepages-Usage(page) |
    | Chip    Device    | Bus-Id          | AICore(%)    Memory-Usage(MB)                        |
    +===================+=================+======================================================+
-   | 0       310P3     | OK              | 15.8         42                0    / 0              |
+   | 0       910A     | OK              | 15.8         42                0    / 0              |
    | 0       0         | 0000:82:00.0    | 0            1074 / 21534                            |
    +===================+=================+======================================================+
-   | 1       310P3     | OK              | 15.4         43                0    / 0              |
+   | 1       910A     | OK              | 15.4         43                0    / 0              |
    | 0       1         | 0000:89:00.0    | 0            1070 / 21534                            |
    +===================+=================+======================================================+
    ```
@@ -421,8 +416,8 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    3.3 导出非量化`OM`模型  
    运行`onnx2om.sh`导出`OM`模型。
    ```
-   bash onnx2om.sh --tag 6.1 --model yolov5s --nms_mode nms_script --bs 4 --soc Ascend310P3  # nms_script
-   bash onnx2om.sh --tag 6.1 --model yolov5s_nms --nms_mode nms_op --bs 4 --soc Ascend310P3  # nms_op
+   bash onnx2om.sh --tag 6.0 --model yolov5s --nms_mode nms_script --bs 4 --soc Ascend910A  # nms_script
+   bash onnx2om.sh --tag 6.0 --model yolov5s_nms --nms_mode nms_op --bs 4 --soc Ascend910A  # nms_op
    ```
       - `atc`命令参数说明（参数见`onnx2om.sh`）：
         -   `--model`：ONNX模型文件
@@ -444,8 +439,8 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    （2）导出`OM`模型时设置`--quantify`参数，使能模型量化，量化对性能的提升视模型而定，实际效果不同。 
    ```
-   bash onnx2om.sh --tag 6.1 --model yolov5s --nms_mode nms_script --bs 4 --soc Ascend310P3 --quantify True  # nms_script
-   bash onnx2om.sh --tag 6.1 --model yolov5s_nms --nms_mode nms_op --bs 4 --soc Ascend310P3 --quantify True  # nms_op
+   bash onnx2om.sh --tag 6.0 --model yolov5s --nms_mode nms_script --bs 4 --soc Ascend310P3 --quantify True  # nms_script
+   bash onnx2om.sh --tag 6.0 --model yolov5s_nms --nms_mode nms_op --bs 4 --soc Ascend310P3 --quantify True  # nms_op
    ```
    （3）部分网络层量化后损失较大，可在 [simple_config.cfg](common/atc_cfg/simple_config.cfg) 中配置不需要量化的层名称，默认为空列表。[skip_layers.cfg](common/atc_cfg/skip_layers.cfg) 中提供了参考写法，通常网络的首尾卷积层量化损失大些，其他版本可以用[Netron](https://github.com/lutzroeder/netron)打开模型，查找不需要量化的层名称。
 
@@ -460,11 +455,11 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 2. 执行推理 & 精度验证  
    运行`om_val.py`推理OM模型，模型参数在[model.yaml](model.yaml)中设置，结果默认保存在`predictions.json`。
    ```
-   python3 om_val.py --tag 6.1 --model=yolov5s_bs4.om --nms_mode nms_script --batch_size=4  # nms_script
-   python3 om_val.py --tag 6.1 --model=yolov5s_nms_bs4.om --nms_mode nms_op --batch_size=4  # nms_op
+   python3 om_val.py --tag 6.0 --model=yolov5s_bs4.om --nms_mode nms_script --batch_size=4  # nms_script
+   python3 om_val.py --tag 6.0 --model=yolov5s_nms_bs4.om --nms_mode nms_op --batch_size=4  # nms_op
    ```
    - 命令参数说明：
-     -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`, 默认`6.1`。
+     -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`, 默认`6.0`。
      -   `--model`：模型大小，可选`yolov5[n/s/m/l]`, 默认`yolov5s`。
      -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_op`。
      -   `--batch_size`: 模型推理batch大小，默认`4`。
@@ -484,24 +479,8 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 
     | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
     |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
-    | 2.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   998.004   |
-    | 3.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   772.670    |
-    | 4.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   884.088    |
-    | 5.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.5     |   881.139    |
-    | 6.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.9     |   737.037    |
-    | 6.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.9     |   739.736    |
-
-2. 方式二 nms后处理算子（nms_op）
-
-    | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
-    |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
-    | 2.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.9     |   948.276    |
-    | 3.1   | Ascend310P3 |     8      | coco val2017 | conf=0.4 iou=0.5   |     42.3     |   728.035    |
-    | 4.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.5     |   862.770    |
-    | 5.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.7     |   860.746    |
-    | 6.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     41.2     |   876.578    |
-    | 6.1   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     43.4     |   881.867    |
-
+    | 6.0   | Ascend910A |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.9     |   737.037    |
+  
 
 ## 多卡推理
 
@@ -536,41 +515,6 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
      -   `--onnx`：为onnx模型路径
      -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_script` 
 
-
-## aipp
-* 说明：由于op方式受限较多，故下文插入aipp算子只考虑script方式
-1. 在模型输入端插入aipp  
-   运行`onnx2om.sh`导出`OM`模型。
-   ```
-   bash onnx2om.sh --tag 6.1 --model yolov5s --nms_mode nms_script --bs 4 --soc Ascend310P3 --with_aipp True # nms_script
-   bash onnx2om.sh --tag 6.1 --model yolov5s_nms --nms_mode nms_op --bs 4 --soc Ascend310P3 --with_aipp True # nms_op
-   ```
-
-2. 由于插入aipp算子后，模型输入会发生改变，需要调用yolov5_preprocess_aipp.py生成预处理数据集prep_data_aipp
-   ```
-   python3 yolov5_preprocess_aipp.py --data_path "./coco"
-   ```
-   - 命令参数说明：
-     -   `--data_path`：coco数据集所在路径。
-
-3. 推理
-   ```
-   python3 -m ais_bench --m yolov5m_bs24_aipp.om --input ./prep_data_aipp --output ./results --device 0,1
-   ```
-   - 命令参数说明：
-     -   `--input`：二进制数据集路径
-     -   `--output`：推理结果保存目录
-     -   `--output_dirname`：推理结果保存子目录
-     -   `--device`：请下载最新ais_bech，目前已经支持多卡推理
-
-4. 数据后处理
-   ```
-   python3 yolov5_postprocess.py --ground_truth_json "./coco/instances_val2017.json" --output "./results/2023_04_23-17_35_23" --onnx yolov5s.onnx
-   ```
-   - 命令参数说明：
-     -   `--ground_truth_json`：om模型的路径
-     -   `--output`：推理结果保存的路径，在./results下生成以时间戳命名的文件夹
-     -   `--onnx`：为onnx模型路径
 
 # FAQ
 常见问题可参考 [FAQ](FAQ.md)
