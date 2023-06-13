@@ -141,6 +141,9 @@ ln -s /path/to/coco2017 ./coco
 
 # 版本说明
 
+# 公网地址说明
+代码涉及公网地址参考 public_address_statement.md
+
 ## 变更
 
 2022.8.23：首次发布。

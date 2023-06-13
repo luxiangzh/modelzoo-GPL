@@ -140,3 +140,6 @@ python detect.py --source file.jpg --weights 'yolov5l.pt' --device npu --data co
 |   NAME   | Accuracy |  FPS   | Torch_Version | CPU  |
 | :------: | :---: | :----: | :-----------: | :--: |
 |  8p-NPU  |   48.2   | 665.6 |      1.8      | arm  |
+
+# 14. 公网地址说明
+代码涉及公网地址参考 public_address_statement.md
