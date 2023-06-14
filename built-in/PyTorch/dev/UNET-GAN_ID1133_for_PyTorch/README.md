@@ -83,3 +83,7 @@ maintained nor monitored in any way.
 
 ## Contact
 If you have questions or need help, feel free to write an email to edgarschoenfeld@live.de.
+
+
+## Statement
+For details about the public address of the code in this repository, you can get from the file public_address_statement.md

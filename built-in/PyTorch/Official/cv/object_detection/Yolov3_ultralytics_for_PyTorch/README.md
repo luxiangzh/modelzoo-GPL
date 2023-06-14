@@ -226,6 +226,8 @@ YOLOv3是在 COCO 数据集上预训练的对象检测架构和模型系列，�
 | 1p-NPU |   -   | 154.24  |   2    |    O1    |      1.8      | coco2017 | yolov3-tiny | 640*640  | ARM  |
 | 8p-NPU | 0.385 | 1264.64 |  300   |    O1    |      1.8      | coco2017 | yolov3-tiny | 640*640  | ARM  |
 
+# 公网地址说明
+代码涉及公网地址参考 public_address_statement.md
 
 # 版本说明
 

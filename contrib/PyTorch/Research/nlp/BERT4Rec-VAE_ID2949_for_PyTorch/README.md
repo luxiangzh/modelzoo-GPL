@@ -42,6 +42,9 @@ Train BERT4Rec on ML-1m and run test set inference after training
    ```bash
    printf '1\ny\n' | python main.py --template train_bert
    ```
+# 公网地址说明
+
+代码涉及公网地址参考 public_address_statement.md
 
 
 
