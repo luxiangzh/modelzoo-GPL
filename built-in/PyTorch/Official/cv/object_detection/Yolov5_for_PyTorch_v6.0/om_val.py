@@ -37,7 +37,8 @@ def main(opt, cfg):
     elif opt.nms_mode == "nms_script":
         # load dataset
         single_cls = False if opt.tag >= 6.0 else opt
-        dataloader = create_dataloader(f"{opt.data_path}/val2017.txt", opt.img_size, opt.batch_size, max(cfg["stride"]), single_cls, pad=0.5)[0]
+        print(opt.data_path, flush=True)
+        dataloader = create_dataloader(f"{opt.data_path}/val2017.txt", opt.img_size, opt.batch_size, max(cfg["stride"]), single_cls, pad=0.5, pin_memory=False)[0]
 
         # inference & nms
         pred_results = forward_nms_script(model, dataloader, cfg)
@@ -59,9 +60,9 @@ def main(opt, cfg):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='YOLOv5 offline model inference.')
-    parser.add_argument('--data_path', type=str, default="coco", help='root dir for val images and annotations')
-    parser.add_argument('--ground_truth_json', type=str, default="coco/instances_val2017.json",
-                        help='annotation file path')
+    parser.add_argument('--data_path', type=str, default="./datasets/coco", help='root dir for val images and annotations')
+    parser.add_argument('--ground_truth_json', type=str, \
+        default="./datasets/coco/annotations/instances_val2017.json", help='annotation file path')
     parser.add_argument('--tag', type=float, default=6.1, help='yolov5 tags')
     parser.add_argument('--model', type=str, default="yolov5s.om", help='om model path')
     parser.add_argument('--nms_mode', type=str, default="nms_op", help='nms compute mode [nms_op/nms_script]')
