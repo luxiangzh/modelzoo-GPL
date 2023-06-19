@@ -297,16 +297,8 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 
 # 快速上手
 
-## 获取源码
+## 安装依赖
 
-1. 获取`Pytorch`源码  
-   ```
-   git clone https://github.com/ultralytics/yolov5.git
-   cd yolov5
-   git checkout v6.0  # 切换到所用版本
-   ```
-
-2. 安装依赖  
    ```
    git clone https://gitee.com/ascend/msadvisor.git
    cd msadvisor/auto-optimizer

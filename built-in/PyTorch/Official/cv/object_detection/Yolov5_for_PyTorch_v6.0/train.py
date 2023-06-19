@@ -416,6 +416,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
         # save every epoch
         if RANK in [-1, 0]:
+            ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'names', 'stride', 'class_weights'])
             final_epoch = epoch + 1 == epochs
             ckpt = {
                     'epoch': epoch,
