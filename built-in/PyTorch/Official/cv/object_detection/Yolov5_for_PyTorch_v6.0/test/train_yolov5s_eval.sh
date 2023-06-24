@@ -52,7 +52,8 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #最后一个迭代FPS值
-FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
+FPS=`grep -a 'Time' ${test_path_dir}/output/${ASCEND_DEVICE_ID}/test_${ASCEND_DEVICE_ID}.log | tail -n 10 | awk '{print$2}' | awk '{sum+=$1} END {print ('$batch_size')/(sum/NR)}'`
+FPS=${FPS#* }  # 去除前面的空格字符
 
 acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_eval_1p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
 
