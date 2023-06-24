@@ -179,6 +179,13 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      bash test/train_yolov5s_fp32_performance_8p.sh  # yolov5s 8p_fp32_performance
      bash test/train_yolov5s_fp32_full_8p.sh  # yolov5s 8p_fp32_accuracy
      ```
+     
+   - 在线推理
+     启动在线推理。
+     ```
+     bash ./test/train_yolov5s_eval.sh #在线推理
+     ```
+     
 
    --data_path参数填写数据集路径，需写到数据集的一级目录。
 
@@ -429,3 +436,11 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
     | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
     |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
     | 6.0   | Ascend910A |     4      | coco val2017 |  conf=0.0005 iou=0.5  |     64.2     |   828.48    |
+    
+    
+# FAQ
+1、如遇到问题：    
+   <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:777)>
+   解决方案：
+   import ssl
+   ssl._create_default_https_context = ssl._create_unverified_context
