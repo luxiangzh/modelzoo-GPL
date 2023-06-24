@@ -104,7 +104,7 @@ def seed_worker(worker_id):
     random.seed(worker_seed)
 
 def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=None, augment=False, cache=False, pad=0.0,
-                      rect=False, rank=-1, workers=8, image_weights=False, quad=False, prefix=''):
+                      rect=False, rank=-1, workers=8, pin_memory=True, image_weights=False, quad=False, prefix=''):
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
         dataset = LoadImagesAndLabels(path, imgsz, batch_size,
@@ -135,7 +135,7 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
                         batch_size=batch_size,
                         num_workers=nw,
                         sampler=sampler,
-                        pin_memory=True,
+                        pin_memory=pin_memory,
                         drop_last=True,
                         worker_init_fn=seed_worker if high_preci else None,
                         generator=generator if high_preci else None,
