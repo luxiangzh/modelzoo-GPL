@@ -49,6 +49,7 @@ from utils import google_utils
 from utils.datasets import *
 from utils.utils import *
 import torch.multiprocessing as mp
+import constant
 try:
     from torch_npu.utils.profiler import Profile
 except:
@@ -456,7 +457,7 @@ def main():
     # NPU DDP mode
     parser.add_argument('--world-size', default=1, type=int, help='number of nodes for distributed training')
     parser.add_argument('--device-num', default=1, type=int, help='multi NPU parameter, GPU or CPU do not modify')
-    parser.add_argument('--addr', default='90.90.176.102', type=str, help='DDP master node IP')
+    parser.add_argument('--addr', default=constant.IP_ADDRESS, type=str, help='DDP master node IP')
     parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
                         help='url used to set up distributed training')
     opt = parser.parse_args()
