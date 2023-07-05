@@ -139,7 +139,7 @@ def run(data,
 
     # Half
     half &= device.type != 'cpu'  # half precision only supported on CUDA
-    if half:
+    if half and not os.getenv('ALLOW_HF32'):
         model = amp.initialize(model, opt_level='O1')
 
     # Configure
@@ -169,7 +169,7 @@ def run(data,
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
         t1 = time_sync()
         img = img.to(device, non_blocking=True)
-        img = img.half() if half else img.float()  # uint8 to fp16/32
+        img = img.half() if half and not os.getenv('ALLOW_HF32') else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         targets = targets.to(device)
         nb, _, height, width = img.shape  # batch size, channels, height, width
@@ -359,6 +359,7 @@ def main(opt):
 if __name__ == "__main__":
     # Disable Jit compile
     torch.npu.set_compile_mode(jit_compile=False)
-
+    if os.getenv('ALLOW_HF32'):
+        torch.npu.config.allow_internal_format = False
     opt = parse_opt()
     main(opt)
