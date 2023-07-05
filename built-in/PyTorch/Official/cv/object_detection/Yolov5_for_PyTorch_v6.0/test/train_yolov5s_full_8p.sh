@@ -16,6 +16,9 @@ do
       	batch_size=`echo ${para#*=}`
    elif [[ $para == --epochs* ]];then
       	epochs=`echo ${para#*=}`
+   elif [[ $para == --hf32 ]];then
+      	hf32=`echo ${para#*=}`
+        export ALLOW_HF32=True
    fi
 done
 
