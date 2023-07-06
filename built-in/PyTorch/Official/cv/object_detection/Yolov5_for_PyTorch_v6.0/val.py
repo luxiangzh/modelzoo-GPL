@@ -9,6 +9,7 @@ Usage:
 import argparse
 import json
 import os
+import time
 import sys
 from pathlib import Path
 from threading import Thread
@@ -177,6 +178,7 @@ def run(data,
         dt[0] += t2 - t1
 
         # Run model
+        start = time.time()
         out, train_out = model(img, augment=augment)  # inference and training outputs
         dt[1] += time_sync() - t2
 
@@ -230,6 +232,9 @@ def run(data,
             if save_json:
                 save_one_json(predn, jdict, path, class_map)  # append to COCO-JSON dictionary
             callbacks.run('on_val_image_end', pred, predn, path, names, img[si])
+        end = time.time()
+        cost = end - start
+        print("Time:", cost)
 
     # Compute statistics
     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
