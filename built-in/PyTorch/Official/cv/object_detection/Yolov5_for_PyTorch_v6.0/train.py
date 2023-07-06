@@ -365,7 +365,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 loss *= 4.
 
             # Backward
-            if opt.FP32:
+            if opt.FP32 or os.getenv('ALLOW_HF32'):
                 loss.backward()
             elif os.environ["use_amp"] == "apex":
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -495,7 +495,7 @@ def parse_opt(known=False):
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
 
-    if opt.FP32:
+    if opt.FP32 or os.getenv('ALLOW_HF32'):
         os.environ['use_amp'] = 'false'
     elif opt.native_amp:
         os.environ['use_amp'] = 'native'
@@ -650,7 +650,7 @@ if __name__ == "__main__":
     torch.npu.set_compile_mode(jit_compile=True)
     seed_everything()
     opt = parse_opt()
-    if opt.FP32:
+    if opt.FP32 or os.getenv('ALLOW_HF32'):
         # FP32情况下使能ND，非必要不使用私有格式
         torch.npu.config.allow_internal_format = False
     main(opt)
