@@ -179,6 +179,17 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      bash test/train_yolov5s_fp32_performance_8p.sh  # yolov5s 8p_fp32_performance
      bash test/train_yolov5s_fp32_full_8p.sh  # yolov5s 8p_fp32_accuracy
      ```
+
+   - 纯HF32计算
+
+     启动单卡训练
+     ```
+     bash test/train_yolov5s_performance_1p.sh --hf32   # yolov5s 1p_hf32_performance
+     ```
+     启动多卡训练
+     ```
+     bash test/train_yolov5s_performance_8p.sh --hf32  # yolov5s 8p_hf32_performance
+     bash test/train_yolov5s_full_8p.sh --hf32     # yolov5s 8p_hf32_accuracy
      
    - 在线推理
      启动在线推理。
@@ -188,6 +199,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      
 
    --data_path参数填写数据集路径，需写到数据集的一级目录。
+
    --hf32使能开启HF32模式
 
    模型训练脚本参数说明如下。
