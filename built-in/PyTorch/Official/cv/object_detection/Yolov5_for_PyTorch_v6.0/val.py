@@ -364,7 +364,8 @@ def main(opt):
 if __name__ == "__main__":
     # Disable Jit compile
     torch.npu.set_compile_mode(jit_compile=False)
-    if os.getenv('ALLOW_HF32'):
-        torch.npu.config.allow_internal_format = False
+    if os.getenv('ALLOW_HF32', False):
+        torch.npu.conv.allow_hf32 = True
+        torch.npu.matmul.allow_hf32 = True
     opt = parse_opt()
     main(opt)
