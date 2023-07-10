@@ -650,7 +650,7 @@ if __name__ == "__main__":
     torch.npu.set_compile_mode(jit_compile=True)
     seed_everything()
     opt = parse_opt()
-    if opt.FP32 or os.getenv('ALLOW_HF32'):
-        # FP32情况下使能ND，非必要不使用私有格式
-        torch.npu.config.allow_internal_format = False
+    if os.getenv('ALLOW_HF32', False):
+        torch.npu.conv.allow_hf32 = True
+        torch.npu.matmul.allow_hf32 = True
     main(opt)
