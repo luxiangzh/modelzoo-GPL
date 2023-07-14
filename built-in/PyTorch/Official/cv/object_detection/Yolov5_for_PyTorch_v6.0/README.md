@@ -168,28 +168,6 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      ```
      ps:脚本默认为8卡，若使用自定义卡数，继续在上面命令后添加 --device_number=每台机器使用卡数 --head_rank=起始卡号，例如分别为4、0时，代表使用0-3卡训练。
   
-   - 纯FP32计算
-
-     启动单卡训练
-     ```
-     bash test/train_yolov5s_fp32_performance_1p.sh  # yolov5s 1p_fp32_performance
-     ```
-     启动多卡训练
-     ```
-     bash test/train_yolov5s_fp32_performance_8p.sh  # yolov5s 8p_fp32_performance
-     bash test/train_yolov5s_fp32_full_8p.sh  # yolov5s 8p_fp32_accuracy
-     ```
-
-   - 纯HF32计算
-
-     启动单卡训练
-     ```
-     bash test/train_yolov5s_performance_1p.sh --hf32   # yolov5s 1p_hf32_performance
-     ```
-     启动多卡训练
-     ```
-     bash test/train_yolov5s_performance_8p.sh --hf32  # yolov5s 8p_hf32_performance
-     bash test/train_yolov5s_full_8p.sh --hf32     # yolov5s 8p_hf32_accuracy
      
    - 在线推理
      启动在线推理。
@@ -200,7 +178,6 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
    --data_path参数填写数据集路径，需写到数据集的一级目录。
 
-   --hf32使能开启HF32模式
 
    模型训练脚本参数说明如下。
 
@@ -217,7 +194,6 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
    --artifact_alias                    //数据集版本
    --save-period                       //权重保存
    --native_amp                        //使用torch amp进行混合精度训练，如不配置默认使用apex
-   --FP32                              //使用纯FP32方式计算，如不配置默认使用混合精度计算
    --half                              //eval执行脚本中参数，如配置默认使用混合精度计算
    ```
    
