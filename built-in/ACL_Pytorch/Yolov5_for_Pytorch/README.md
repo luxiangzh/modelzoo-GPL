@@ -75,7 +75,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
       ├── util                          模型/数据接口
       ├── quantify                      量化接口
       ├── atc_cfg                       atc转模型配置文件
-      └── patch                         v2.0/v3.1/v4.0/v5.0/v6.0/v6.1 兼容性修改
+      └── patch                         v2.0/v3.1/v4.0/v5.0/v6.0/v6.1/v6.2 兼容性修改
     ├── model.yaml                    放到yolov5下 
     ├── pth2onnx.sh                   放到yolov5下
     ├── onnx2om.sh                    放到yolov5下
