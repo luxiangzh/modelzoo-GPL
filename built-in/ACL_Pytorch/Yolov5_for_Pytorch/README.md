@@ -249,7 +249,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
     | 5.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.5     |   881.139    |
     | 6.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.9     |   737.037    |
     | 6.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.9     |   739.736    |
-    | 6.2   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   789.77     |
+    | 6.2   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.6     |   789.77     |
 
 2. 方式二 nms后处理算子（nms_op）
 
