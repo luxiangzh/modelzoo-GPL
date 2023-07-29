@@ -32,12 +32,13 @@ YOLOv5版本不断迭代更新，不同版本的模型结构有所差异。比�
   | 5.0	      |    SiLU    |
   | 6.0	      |    SiLU    |
   | 6.1	      |    SiLU    |
+  | 6.2	      |    SiLU    |
 
 YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv5l 和 YOLOv5x，四个模型的网络结构基本一致，只是其中的模块数量与卷积核个数不一致。YOLOv5s模型最小，其它的模型都在此基础上对网络进行加深与加宽。
 - 版本说明（目前已适配以下版本）：
   ```
   url=https://github.com/ultralytics/yolov5
-  tag=v2.0/v3.1/v4.0/v5.0/v6.0/v6.1
+  tag=v2.0/v3.1/v4.0/v5.0/v6.0/v6.1/v6.2
   model_name=yolov5
   ```
 
@@ -63,24 +64,27 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ```
    git clone https://github.com/ultralytics/yolov5.git
    cd yolov5
-   git checkout v2.0/v3.1/v4.0/v5.0/v6.0/v6.1  # 切换到所用版本
+   git checkout v2.0/v3.1/v4.0/v5.0/v6.0/v6.1/v6.2  # 切换到所用版本
    ```
 
 2. 获取`OM`推理代码  
    将推理部署代码放到`yolov5`源码相应目录下。
    ```
     Yolov5_for_Pytorch
-    └── common             放到yolov5下
-      ├── util               模型/数据接口
-      ├── quantify           量化接口
-      ├── atc_cfg            atc转模型配置文件
-      └── patch              v2.0/v3.1/v4.0/v5.0/v6.0/v6.1 兼容性修改
-    ├── model.yaml         放到yolov5下 
-    ├── pth2onnx.sh        放到yolov5下
-    ├── onnx2om.sh         放到yolov5下
-    ├── aipp.cfg           放到yolov5下
-    ├── om_val.py          放到yolov5下
-    └── requirements.txt   放到yolov5下
+    └── common                        放到yolov5下
+      ├── util                          模型/数据接口
+      ├── quantify                      量化接口
+      ├── atc_cfg                       atc转模型配置文件
+      └── patch                         v2.0/v3.1/v4.0/v5.0/v6.0/v6.1/v6.2 兼容性修改
+    ├── model.yaml                    放到yolov5下 
+    ├── pth2onnx.sh                   放到yolov5下
+    ├── onnx2om.sh                    放到yolov5下
+    ├── aipp.cfg                      放到yolov5下
+    ├── om_val.py                     放到yolov5下
+    ├── yolov5_preprocess_aipp.py     放到yolov5下
+    ├── yolov5_preprocess.py          放到yolov5下
+    ├── yolov5_postprocess.py         放到yolov5下
+    └── requirements.txt              放到yolov5下
    ```   
 
 3. 安装依赖  
@@ -90,7 +94,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    python3 -m pip install --upgrade pip
    python3 -m pip install wheel
    python3 -m pip install .
-   cd ..
+   cd ../..
    pip3 install -r requirements.txt
    ```
 
@@ -133,7 +137,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    wget https://github.com/ultralytics/yolov5/releases/download/v${tag}/${model}.pt
    ```
    - 命令参数说明：
-     -   `${tag}`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`
+     -   `${tag}`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1/6.2]`
      -   `${model}`：模型大小，可选`yolov5[n/s/m/l]`,当前未适配X
 
 2. 导出`ONNX`模型  
@@ -143,9 +147,9 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    bash pth2onnx.sh --tag 6.1 --model yolov5s --nms_mode nms_op  # nms_op
    ```
    - 命令参数说明：
-     -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`, 默认`6.1`。
-     -   `--model`：模型大小，可选`yolov5[n/s/m/l]`, 默认`yolov5s`。
-     -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_op`。`nms_op`方式下，pth导出onnx模型过程中会增加NMS后处理算子，后处理算子的参数`class_num`、`conf_thres`和`iou_thres`在[model.yaml](model.yaml)中设置。
+     -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1/6.2]`。
+     -   `--model`：模型大小，可选`yolov5[n/s/m/l]`。
+     -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`。`nms_op`方式下，pth导出onnx模型过程中会增加NMS后处理算子，后处理算子的参数`class_num`、`conf_thres`和`iou_thres`在[model.yaml](model.yaml)中设置。
 
 
 3. 使用`ATC`工具将`ONNX`模型转`OM`模型  
@@ -219,9 +223,9 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    python3 om_val.py --tag 6.1 --model=yolov5s_nms_bs4.om --nms_mode nms_op --batch_size=4  # nms_op
    ```
    - 命令参数说明：
-     -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1]`, 默认`6.1`。
-     -   `--model`：模型大小，可选`yolov5[n/s/m/l]`, 默认`yolov5s`。
-     -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`, 默认`nms_op`。
+     -   `--tag`：模型版本，可选`[2.0/3.1/4.0/5.0/6.0/6.1/6.2]`。
+     -   `--model`：模型大小，可选`yolov5[n/s/m/l]`。
+     -   `--nms_mode`：模型推理方式，可选`[nms_op/nms_script]`。
      -   `--batch_size`: 模型推理batch大小，默认`4`。
      -   `--cfg_file`：模型推理参数设置，默认读取文件[model.yaml](model.yaml)。
 
@@ -245,6 +249,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
     | 5.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.5     |   881.139    |
     | 6.0   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     55.9     |   737.037    |
     | 6.1   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.9     |   739.736    |
+    | 6.2   | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     56.6     |   789.77     |
 
 2. 方式二 nms后处理算子（nms_op）
 
@@ -256,6 +261,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
     | 5.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     40.7     |   860.746    |
     | 6.0   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     41.2     |   876.578    |
     | 6.1   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     43.4     |   881.867    |
+    | 6.2   | Ascend310P3 |     8      | coco val2017 |  conf=0.4 iou=0.5  |     43.4     |   780.09     |
 
 
 ## 多卡推理
