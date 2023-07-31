@@ -18,7 +18,11 @@ import argparse
 from ais_bench.infer.interface import InferSession, MemorySummary
 from ais_bench.infer.summary import summary
 
-from utils.datasets import create_dataloader
+try:
+    from utils.datasets import create_dataloader
+except:
+    from utils.dataloaders import create_dataloader
+
 from common.util.dataset import BatchDataLoader, evaluate
 from common.util.model import forward_nms_op, forward_nms_script
 
