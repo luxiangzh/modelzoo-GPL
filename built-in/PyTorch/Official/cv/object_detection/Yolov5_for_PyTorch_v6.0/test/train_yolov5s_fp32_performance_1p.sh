@@ -67,7 +67,7 @@ else
      sed -i "s|./datasets/coco|$data_path|g" ./data/coco.yaml
 fi
 
-python3.7 -u train.py --data ./data/coco.yaml \
+python3 -u train.py --data ./data/coco.yaml \
                       --cfg yolov5s.yaml \
                      --weights '' \
                      --batch-size $batch_size \
