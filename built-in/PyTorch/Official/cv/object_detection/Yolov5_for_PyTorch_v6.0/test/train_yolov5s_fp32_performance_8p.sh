@@ -78,7 +78,7 @@ do
 	then
 		let p_start=0+24*i
 	    let p_end=23+24*i
-	    taskset -c $p_start-$p_end python3.7 train.py --data ./data/coco.yaml \
+	    taskset -c $p_start-$p_end python3 train.py --data ./data/coco.yaml \
 		                                           --cfg yolov5s.yaml \
 		                                           --weights '' \
 		                                           --batch-size $batch_size \
@@ -86,7 +86,7 @@ do
                                                            --FP32 \
 		                                           --local_rank $i > $cur_path/test/output/${i}/train_${i}.log 2>&1 &
 	else
-	    python3.7 train.py --data ./data/coco.yaml \
+	    python3 train.py --data ./data/coco.yaml \
 		                --cfg yolov5s.yaml \
 		                --weights '' \
 		                --batch-size $batch_size \
