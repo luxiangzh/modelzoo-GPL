@@ -131,6 +131,7 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
     sampler = torch.utils.data.distributed.DistributedSampler(dataset) if rank != -1 else None
     loader = InfiniteDataLoader if high_preci else torch.utils.data.DataLoader 
     # Use torch.utils.data.DataLoader() if dataset.properties will update during training else InfiniteDataLoader()
+    kwargs = {"pin_memory_device": "npu"} if torch.__version__ >= "2.0" else {}
     dataloader = loader(dataset,
                         batch_size=batch_size,
                         num_workers=nw,
@@ -139,7 +140,8 @@ def create_dataloader(path, imgsz, batch_size, stride, single_cls=False, hyp=Non
                         drop_last=True,
                         worker_init_fn=seed_worker if high_preci else None,
                         generator=generator if high_preci else None,
-                        collate_fn=LoadImagesAndLabels.collate_fn4 if quad else LoadImagesAndLabels.collate_fn)
+                        collate_fn=LoadImagesAndLabels.collate_fn4 if quad else LoadImagesAndLabels.collate_fn,
+                        **kwargs)
     return dataloader, dataset
 
 
