@@ -15,9 +15,6 @@ do
       	batch_size=`echo ${para#*=}`
    elif [[ $para == --data_path* ]];then
        data_path=`echo ${para#*=}`
-   elif [[ $para == --hf32 ]];then
-      	hf32=`echo ${para#*=}`
-        export ALLOW_HF32=True
    fi
 done
 
