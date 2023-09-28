@@ -19,6 +19,7 @@ import torch
 import torch_aie
 from torch_aie import _enums
 
+
 def export_torch_aie(model_path, batch_size, save_path="./"):
     trace_model = torch.jit.load(model_path)
     trace_model.eval()
@@ -34,6 +35,7 @@ def export_torch_aie(model_path, batch_size, save_path="./"):
     torchaie_model.save(os.path.join(save_path, saved_name))
     print("torch aie yolov5 compiled done. saved model is ", os.path.join(save_path, saved_name))
 
+
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--torch-script-path', type=str, default='yolov5s.torchscript', help='trace model path')
@@ -41,6 +43,7 @@ def parse_opt():
     parser.add_argument('--save-path', type=str, default='./', help='compiled model path')
     opt_args = parser.parse_args()
     return opt_args
+
 
 def main(opt_args):
     export_torch_aie(opt_args.torch_script_path, opt_args.batch_size, opt_args.save_path)
