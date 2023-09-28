@@ -5,7 +5,10 @@ Network="yolov5s_ID4102_for_PyTorch_v6.0"
 
 cur_path=`pwd`
 model_name=yolov5s
-batch_size=256
+batch_size=512
+epochs=300
+
+export ALLOW_HF32=True
 
 for para in $*
 do
@@ -13,6 +16,8 @@ do
       	model_name=`echo ${para#*=}`
    elif [[ $para == --batch_size* ]];then
       	batch_size=`echo ${para#*=}`
+   elif [[ $para == --epochs* ]];then
+      	epochs=`echo ${para#*=}`
    fi
 done
 
@@ -26,11 +31,14 @@ source ${cur_path}/test/env_npu.sh
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
+#high_preci模式
+export high_preci=1
+
 export MASTER_ADDR=127.0.0.1
 export MASTER_PORT=29500
-export WORLD_SIZE=4
+export WORLD_SIZE=8
 
-for i in $(seq 0 3)
+for i in $(seq 0 7)
 do
     if [ -d ${cur_path}/test/output/${i} ];
 	then
@@ -50,14 +58,20 @@ do
 	    taskset -c $p_start-$p_end python3 train.py --data ./data/coco.yaml \
 		                                           --cfg yolov5s.yaml \
 		                                           --weights '' \
+												   --epochs $epochs \
 		                                           --batch-size $batch_size \
-		                                           --local_rank $i > $cur_path/test/output/${i}/train_4p_${i}.log 2>&1 &
+												   --noscale \
+												   --hyp hyp.hf32.yaml \
+		                                           --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	else
 	    python3 train.py --data ./data/coco.yaml \
 		                --cfg yolov5s.yaml \
 		                --weights '' \
+						--epochs $epochs \
 		                --batch-size $batch_size \
-		                --local_rank $i > $cur_path/test/output/${i}/train_4p_${i}.log 2>&1 &
+						--noscale \
+						--hyp hyp.hf32.yaml \
+		                --local_rank $i > $cur_path/test/output/${i}/train_8p_${i}.log 2>&1 &
 	fi
 done
 
@@ -69,15 +83,15 @@ echo "end_time: ${end_time}"
 e2e_time=$(( $end_time - $start_time ))
 
 #训练后进行eval显示精度
-python3 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device 0 --half > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_4p.log 2>&1 &
+python3 val.py --data ./data/coco.yaml --img-size 640 --weight 'yolov5.pt' --batch-size 128 --device 0 --half > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log 2>&1 &
 
 wait
 
 #最后一个迭代FPS值
-FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_4p_0.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
+FPS=`grep -a 'FPS:'  ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_8p_0.log|awk 'END {print}'| awk -F "[" '{print $5}'| awk -F "]" '{print $1}'| awk -F ":" '{print $2}'`
 
 #取acc值
-acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_4p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
+acc=`grep -a 'IoU=0.50:0.95' ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_acc_8p.log|grep 'Average Precision'|awk 'NR==1'| awk -F " " '{print $13}'`
 
 #打印，不需要修改
 echo "Final Performance images/sec : $FPS"
@@ -101,5 +115,6 @@ echo "BatchSize = ${BatchSize}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${Cas
 echo "DeviceType = ${DeviceType}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "CaseName = ${CaseName}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "ActualFPS = ${FPS}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
+echo "TrainAccuracy = ${acc}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "TrainingTime = ${TrainingTime}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
 echo "E2ETrainingTime = ${e2e_time}" >> $cur_path/test/output/$ASCEND_DEVICE_ID/${CaseName}.log
