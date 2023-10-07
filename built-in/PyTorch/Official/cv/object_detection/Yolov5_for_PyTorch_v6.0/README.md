@@ -159,6 +159,29 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      bash test/train_yolov5m_full_8p_high_preci.sh  # yolov5m 8p_high_precision 
      ```
 
+   - 纯FP32计算
+
+     启动单卡训练
+     ```
+     bash test/train_yolov5s_fp32_performance_1p.sh  # yolov5s 1p_fp32_performance
+     ```
+     启动多卡训练
+     ```
+     bash test/train_yolov5s_fp32_performance_8p.sh  # yolov5s 8p_fp32_performance
+     bash test/train_yolov5s_fp32_full_8p.sh  # yolov5s 8p_fp32_accuracy
+     ```
+
+   - 纯HF32计算
+
+     启动单卡训练
+     ```
+     bash test/train_yolov5s_fp32_performance_1p.sh --hf32   # yolov5s 1p_hf32_performance
+     ```
+     启动多卡训练
+     ```
+     bash test/train_yolov5s_fp32_performance_8p.sh --hf32  # yolov5s 8p_hf32_performance
+     bash test/train_yolov5s_fp32_full_8p.sh --hf32     # yolov5s 8p_hf32_accuracy
+
    - NPU 多机多卡训练指令
    
      启动多机多卡训练。
@@ -226,6 +249,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 | 1p-NPU  | - | 317 | O1 | 1.8 | 非Arm | - |
 | 8p-NPU  | - | 1163.6 | O1 | 1.8 | 非Arm | - |
 | 8p-NPU  | 35.5 | 1507.7 | FP32 | 1.8 | Arm | 910B1 |
+| 8p-NPU  | 35.5 | 1669.5 | HF32 | 1.11 | Arm | 910B3 |
 
 # 版本说明
 
