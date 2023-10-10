@@ -237,7 +237,10 @@ def train(hyp, opt, device, tb_writer=None):
     logger.info('Optimizer groups: %g .bias, %g conv.weight, %g other' % (len(pg2), len(pg1), len(pg0)))
     del pg0, pg1, pg2
 
-    model, optimizer = apex.amp.initialize(model, optimizer, loss_scale=1024, combine_grad=True)
+    if hasattr(torch.npu.utils, 'is_support_inf_nan') and torch.npu.utils.is_support_inf_nan():
+        model, optimizer = apex.amp.initialize(model, optimizer, loss_scale='dynamic', combine_grad=True)
+    else:
+        model, optimizer = apex.amp.initialize(model, optimizer, loss_scale=1024, combine_grad=True)
 
     if rank in [-1, 0]:
         print(model)
