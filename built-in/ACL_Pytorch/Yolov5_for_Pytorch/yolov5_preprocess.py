@@ -51,7 +51,7 @@ def main(opt, cfg):
 
     elif opt.nms_mode == "nms_script":
         # load dataset
-        single_cls = False if opt.tag >= 6.0 else opt.single_cls
+        single_cls = False if opt.tag >= 6.0 else opt
         dataloader = create_dataloader(f"{opt.data_path}/val2017.txt", opt.img_size, opt.batch_size,
                                        max(cfg["stride"]), single_cls, pad=0.5)[0]
         path_list = []
