@@ -44,6 +44,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
   | :--------: | :----------------------------------------------------------: |
   | PyTorch 1.5 | pillow==8.4.0 |
   | PyTorch 1.8 | pillow==9.1.0 |
+  | PyTorch 1.11 | pillow==9.1.0 |
   
 - 环境准备指导。
 
@@ -56,6 +57,8 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
   pip install -r 1.5_requirements.txt  # PyTorch1.5版本
   
   pip install -r 1.8_requirements.txt  # PyTorch1.8版本
+
+  pip install -r 1.11_requirements.txt  # PyTorch1.11版本
   ```
   > **说明：** 
   >只需执行一条对应的PyTorch版本依赖安装命令。
