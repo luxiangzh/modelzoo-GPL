@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ import json
 import argparse
 import torch
 import torch_aie
-# from ais_bench.infer.interface import InferSession, MemorySummary
-# from ais_bench.infer.summary import summary
 
 try:
     from utils.datasets import create_dataloader
@@ -31,7 +29,6 @@ from common.util.model import forward_nms_script
 
 def main(opt, cfg):
     # load model
-    # model = InferSession(opt.device_id, opt.model)
     torch_aie.set_device(opt.device_id)
     model = torch.jit.load(opt.model)
     model.eval()
@@ -43,18 +40,18 @@ def main(opt, cfg):
     # inference & nms
     pred_results, infer_time = forward_nms_script(model, dataloader, cfg, opt)
 
-    pred_json_file = f"{opt.model.split('.')[0]}_{opt.tag}_predictions.json"
+    pred_json_file = f"{os.path.basename(opt.model).split('.')[0]}_{opt.tag}_predictions.json"
     print(f'saving results to {pred_json_file}')
     with open(pred_json_file, 'w') as f:
         json.dump(pred_results, f)
-
-    # evaluate mAP
-    evaluate(opt.ground_truth_json, pred_json_file)
 
     # calculate infer throughput
     avg_inf_time = sum(infer_time[3:]) / len(infer_time[3:])
     throughput = opt.batch_size / avg_inf_time
     print("The throughput of the torch_aie yolov5 is ", throughput)
+
+    # evaluate mAP
+    evaluate(opt.ground_truth_json, pred_json_file)
 
 
 if __name__ == '__main__':

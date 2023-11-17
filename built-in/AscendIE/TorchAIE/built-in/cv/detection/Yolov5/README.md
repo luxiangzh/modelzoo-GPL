@@ -1,142 +1,83 @@
-
-# YOLOV5模型-推理指导
-
-- [概述](#ZH-CN_TOPIC_0000001172161501)
-
-   - [输入输出数据](#ZH-CN_TOPIC_0000001126281702)
-
-- [推理环境准备](#ZH-CN_TOPIC_0000001126281702)
-
-- [快速上手](#ZH-CN_TOPIC_0000001126281700)
-
-  - [获取源码](#section4622531142816)
-  - [准备数据集](#section183221994411)
-  - [模型推理](#section741711594517)
-
-- [模型推理精度](#ZH-CN_TOPIC_0000001172201573)
-
-  ******
+# YOLOv5-推理指导
 
 
-# 概述<a name="ZH-CN_TOPIC_0000001172161501"></a>
+- [YOLOv5-推理指导](#yolov5-推理指导)
+- [概述](#概述)
+- [推理环境准备](#推理环境准备)
+- [快速上手](#快速上手)
+  - [获取源码](#获取源码)
+  - [准备数据集](#准备数据集)
+  - [模型推理](#模型推理)
+    - [1 模型编译](#1-模型编译)
+    - [2 执行推理](#2-执行推理)
+- [模型推理性能\&精度](#模型推理性能精度)
+- [FAQ](#faq)
 
-YOLO是一个经典的目标检测网络，将目标检测作为回归问题求解。本文旨在提供基于推理引擎的Yolov5参考样例，使用了coco2017数据集，并测试了昇腾310P芯片上的推理精度供参考，模型性能仍在持续优化中。
+******
 
 
-- 参考实现：
+# 概述
+YOLO系列网络模型是最为经典的one-stage算法，也是目前工业领域使用最多的目标检测网络，YOLOv5网络模型是YOLO系列的最新版本，在继承了原有YOLO网络模型优点的基础上，具有更优的检测精度和更快的推理速度。  
+YOLOv5版本不断迭代更新，不同版本的模型结构有所差异。比如Conv模块各版本差异示例如下:  
+  
+  | yolov5版本	 | Conv模块激活函数 |
+  |:---------:|:----------:|
+  | 2.0	      | LeakyRelu  |
+  | 3.0	      | LeakyRelu  |
+  | 3.1	      |   hswish   |
+  | 4.0	      |    SiLU    |
+  | 5.0	      |    SiLU    |
+  | 6.0	      |    SiLU    |
+  | 6.1	      |    SiLU    |
+  | 6.2	      |    SiLU    |
+  | 7.0	      |    SiLU    |
 
-  ```shell
-  url=https://github.com/ultralytics/yolov5/tree/v6.1
-  branch=master
-  commit_id=3752807c0b8af03d42de478fbcbf338ec4546a6c
+YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv5l 和 YOLOv5x，四个模型的网络结构基本一致，只是其中的模块数量与卷积核个数不一致。YOLOv5s模型最小，其它的模型都在此基础上对网络进行加深与加宽。
+- 版本说明（目前已适配以下版本）：
+  ```
+  url=https://github.com/ultralytics/yolov5
+  tag=v2.0//v5.0/v6.0/v6.1
+  model_name=yolov5
   ```
 
-## 输入输出数据<a name="section540883920406"></a>
 
-- 输入数据
-
-  | 输入数据 | 数据类型 | 大小                      | 数据排布格式 |
-  | -------- | -------- | ------------------------- | ------------ |
-  | images   | RGB_FP32 | batchsize x 3 x 640 x 640 | NCHW         |
-
-
-# 推理环境准备<a name="ZH-CN_TOPIC_0000001126281702"></a>
-
-- 该模型需要以下依赖
-
+# 推理环境准备
+- 该模型需要以下插件与驱动  
   **表 1**  版本配套表
 
-| 配套                    | 版本              | 
-|-----------------------|-----------------| 
-| CANN                  | 6.3.RC2.alph002 | -                                                       |
-| Python                | 3.9         |                                                           
-| PyTorch               | 2.0.1           |
-| torchVison            | 0.15.2          |-
-| Ascend-cann-torch-aie | 6.3.T200           
-| Ascend-cann-aie       | 6.3.T200        
-| 芯片类型                  | Ascend310P3     | -                                                         |
+| 配套                                                     | 版本     | 环境准备指导                                                                                                                                      |
+| ------------------------------------------------------- |--------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| 固件与驱动                                               | 23.0.RC1  | [Pytorch框架推理环境准备](https://www.hiascend.com/document/detail/zh/ModelZoo/pytorchframework/pies)                                               |
+| CANN                                                    | 7.0.RC1.alpha003  | |
+| Python                                                  | 3.9.0  | -                                                                                                                                           |
+| PyTorch                                                 | 2.0.1 | -                                                                                                                                           |
+| TorchVision | 0.15.2      |            -                                                                                                                                 |
 
-# 快速上手<a name="ZH-CN_TOPIC_0000001126281700"></a>
-## 安装CANN包
 
- ```
- chmod +x Ascend-cann-toolkit_6.3.RC2.alpha002_linux-aarch64.run 
-./Ascend-cann-toolkit_6.3.RC2.alpha002_linux-aarch64.run --install
- ```
+# 快速上手
 
-## 安装Ascend-cann-aie
-1. 安装
-```
-chmod +x ./Ascend-cann-aie_${version}_linux-${arch}.run
-./Ascend-cann-aie_${version}_linux-${arch}.run --check
-# 默认路径安装
-./Ascend-cann-aie_${version}_linux-${arch}.run --install
-# 指定路径安装
-./Ascend-cann-aie_${version}_linux-${arch}.run --install-path=${AieInstallPath}
-```
-2. 设置环境变量
-```
-cd ${AieInstallPath}
-source set_env.sh
-```
-## 安装Ascend-cann-torch-aie
-1. 安装
- ```
-# 安装依赖
-conda create -n py39_pt2.0 python=3.9.0 -c pytorch -y
-conda install decorator -y
-pip install attrs
-pip install scipy
-pip install synr==0.5.0
-pip install tornado
-pip install psutil
-pip install cloudpickle
-wget https://download.pytorch.org/whl/cpu/torch-2.0.1%2Bcpu-cp39-cp39-linux_x86_64.whl
-pip install torch-2.0.1+cpu-cp39-cp39-linux_x86_64.whl
+## 获取源码
 
-# 解压
-tar -xvf Ascend-cann-torch-aie-${version}-linux-${arch}.tar.gz
-cd Ascend-cann-torch-aie-${version}-linux-${arch}
+1. 获取ModelZoo-GPL代码  
 
-# C++运行模式
-chmod +x Ascend-cann-torch-aie_${version}_linux-${arch}.run
-# 默认路径安装
-./Ascend-cann-torch-aie_${version}_linux-${arch}.run --install
-# 指定路径安装
-./Ascend-cann-torch-aie_${version}_linux-${arch}.run --install-path=${TorchAIEInstallPath}
+   ```
+   cd ..
+   git clone https://gitee.com/ascend/modelzoo-GPL.git
+   cd /modelzoo-GPL/built-in/AscendIE/TorchAIE/built-in/cv/detection/Yolov5
+   ``` 
+2. 获取`YoloV5`源码  
+   ```
+   git clone https://github.com/ultralytics/yolov5.git
+   cd yolov5
+   git checkout v2.0/v5.0/v6.0/v6.1  # 切换到所用版本
+   # 将推理部署代码拷贝到yolov5源码相应目录下。
+   cp -r ../common ./
+   cp ../aie_compile.py ./
+   cp ../aie_val.py ./
+   cp ../model.ymal ./
+   ``` 
 
-# python运行模式
-pip install torch_aie-${version}-cp{pyVersion}-linux_x86_64.whl
- ```
- > 说明：如果用户环境是[libtorch1.11](https://download.pytorch.org/libtorch/cu113/libtorch-shared-with-deps-1.11.0%2Bcu113.zip)，需要使用配套的torch 1.11-cpu生成yolov5的torchscript，再配套使用torch-aie-torch1.11的包。
-
-2. 设置环境变量
-```
-cd ${TorchAIEInstallPath}
-source set_env.sh
-```
-
-3. 卸载torch aie
-```
-pip uninstall torch-aie
-cd ${TorchAIEInstallPath}/latest/scripts
-bash uninstall.sh
-```
-
-# 快速上手<a name="ZH-CN_TOPIC_0000001126281700"></a>
-
-## 获取源码<a name="section4622531142816"></a>
-
-1. 获取源码。
-
-    ```
-    git clone https://github.com/ultralytics/yolov5.git
-    cd yolov5
-    git checkout v6.1  # 切换到v6.1版本
-    ```
-
-2. 安装依赖。
-
+3. 安装依赖  
    ```
    pip install numpy==1.23
    pip install tqdm
@@ -145,102 +86,121 @@ bash uninstall.sh
    pip install requests
    pip install pyyaml
    pip install Pillow==9.5
-   wget https://download.pytorch.org/whl/cpu/torchvision-0.15.2%2Bcpu-cp39-cp39-linux_x86_64.whl
-   pip install torchvision-0.15.2+cpu-cp39-cp39-linux_x86_64.whl
    pip install matplotlib
    pip install seaborn
    pip install pycocotools
    ```
 
-## 准备数据集<a name="section183221994411"></a>
-
-本模型需要coco2017数据集，labels下载[地址](https://github.com/ultralytics/yolov5/releases/download/v1.0/coco2017labels.zip)，验证集下载[地址](https://images.cocodataset.org/zips/val2017.zip)
-
-
-   数据集结构如下
+## 准备数据集
+- 该模型使用 [coco2017 val数据集](https://cocodataset.org/#download) 进行精度评估，在`yolov5`源码根目录下新建`coco`文件夹，数据集放到`coco`里，文件结构如下：
    ```
-    coco
-     |-- LICENSE
-     |-- README.txt
-     |-- annotations
-     |   `-- instances_val2017.json
-     |-- images
-     |   |-- train2017
-     |   |-- val2017
-     |-- labels
-     |   |-- train2017
-     |   `-- val2017
-     |-- test-dev2017.txt
-     |-- train2017.txt
-     |-- val2017.cache
-     `-- val2017.txt
+   coco
+   ├── val2017
+      ├── 00000000139.jpg
+      ├── 00000000285.jpg
+      ……
+      └── 00000581781.jpg
+   ├── annotations
+      ├── instances_val2017.json
+   └── val2017.txt
+   ```
+   `val2017.txt`中保存`.jpg`的相对路径，请自行生成该`txt`文件，文件内容实例如下：
+   ```
+   ./val2017/00000000139.jpg
+   ./val2017/00000000285.jpg
+   ……
+   ./val2017/00000581781.jpg
+   ```
+ 
+## 模型推理
+
+### 1 模型编译  
+将模型`.pth`文件首先导出为torchscript模型，然后通过torch_aie进行编译，使其可以运行在昇腾npu上。
+
+1. 获取权重文件  
+   在[链接](https://github.com/ultralytics/yolov5/tags)中找到所需版本下载，也可以使用下述命令下载。
+   ```
+   wget https://github.com/ultralytics/yolov5/releases/download/v${tag}/${model}.pt
+   ```
+- 命令参数说明：
+   -   `${tag}`：模型版本，可选`[2.0/5.0/6.0/6.1]`
+   -   `${model}`：模型大小，可选`yolov5[s/m]`
+
+2. 导出`torchscript`模型  
+   运行yolov5原本代码中的`export.py`脚本，导出`torchscript`模型。
+   ```
+   # 对于v2.0和v5.0，可参考如下命令
+   python ./models/export.py --weights=yolov5s.pt
+   # 对于v6.0和v6.1，可参考如下命令
+   python export.py --weights=yolov5s.pt --include=torchscript
+   # 为了方便区分不同版本，建议重命名模型，以v6.0为例
+   mv yolov5s.torchscript.pt yolov5s_v6.torchscript.pt
    ```
 
-将数据集放在yolov5源码上一级路径的datasets下
-```
-cd yolov5
-cd ..
-mkdir datasets
-mv coco datasets
-```
-
-
-## 模型推理<a name="section741711594517"></a>
-1. 获取权重文件。
-```
-# YOLOv5s
-wget https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5s.pt
-# YOLOv5m
-wget https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5m.pt
-```
-2. 生成trace模型
-    ```
-    cd yolov5
-    # 生成yolov5s.torchscript
-    python export.py
-    # 生成yolov5m.torchscript
-    python export.py --weights yolov5m.pt
-    ```
-
-3. 保存编译优化模型
-
-    ```
-    python export_torch_aie.py --torch-script-path ${PWD}/yolov5s.torchscript --batch-size 1
-    python export_torch_aie.py --torch-script-path ${PWD}/yolov5m.torchscript --batch-size 1
-     ```
-
-
-2. 执行推理脚本
+3. 编译模型    
+   运行`aie_compile.py`编译上一步导出的torchscript模型。模型参数在[model.yaml](model.yaml)中设置。
    ```
-   cd yolov5
-   cp ../val.diff ./  # 下载本仓的 val.diff 放到获取的yolov5路径里
-   patch -p1 < val.diff
-
-   # 执行推理
-   batch_size=1  # 设置batch_size
-   python val.py --weights yolov5sb${batch_size}_torch_aie.torchscript --data coco.yaml --img 640 --conf 0.001 --iou 0.65 --batch-size ${batch_size} --use-ascendIE
+   python aie_compile.py --ts_model=yolov5s_v6.torchscript.pt --batch_size=4
    ```
-   
-3.  运行C++样例
-    ```
-    # 请根据实际运行环境修改run.sh和build.sh中torch和torchAIE的路径
-    bash build.sh
-    bash run.sh
-    ```
-    执行结束后，会在当前路径生成C++编译优化后模型yolov5[s\m]b${batch_size}_torch_aie.torchscript。如果输出"compare pass!"，则表示和CPU上的推理结果一致。
+- 命令参数说明（参数见`aie_compile.py`）：
+   -   `--ts_model`：torchscrip模型的路径
+   -   `--batch_size`：批大小
+
+   以上述命令为例，编译完成后将会生成yolov5s_v6_bs4_aie.pt文件
 
 
+### 2 执行推理
+   1. 在coco2017数据集上验证  
+   运行`aie_val.py`脚本，在coco2017上输出模型的mAP和吞吐量。
+   ```
+   # 以前述步骤所示命令为前提，推理执行命令参考如下
+   python aie_val.py --data_path=./coco --ground_truth_json=./coco/annotations/instances_val2017.json --tag=6.0 --model=./yolov5s_v6_bs4_aie.pt --batch_size=4   
+   ```
+   - 命令参数说明（参数见`aie_val.py`）：
+      -   `--data_path`：coco数据集所在路径
+      -   `--ground_truth_json`：数据集的真实标注
+      -   `--tag`：yolov5版本
+      -   `--model`：编译好的yolov5模型路径
+      -   `--batch_size`：批大小
 
-# 模型推理性能&精度<a name="ZH-CN_TOPIC_0000001172201573"></a>
-yolov5s模型精度如表2
 
-| 芯片型号 | Batch Size   | 数据集 | mAP<sup>val<br>50 | mAP<sup>val<br>50-95|
-| --------- | ---------------- | ---------- | ---------- | --------------- |
-|    Ascend310P3       |       1    |   coco2017         |     56.7%       |   37.4%              |
+# 模型推理性能&精度
 
+结果torch_aie编译后的yolov5s在coco2017数据集上的性能&精度参考下列数据。
+1. v2.0版本
 
-yolov5m模型精度如表3
+    |   芯片型号   | Batch大小 |    数据集    |         阈值       | 精度 (mAP@0.5) | 吞吐量 |
+    |:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
+   | Ascend310P3 |     1      | coco val2017 |  conf=0.001 iou=0.6  |     54.7     |   756.98   |
+    | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   764.13    |
+   | Ascend310P3 |     8      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   714.36    |
+   | Ascend310P3 |     16      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   668.26    |
+   | Ascend310P3 |     32      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   657.42    |
+  
 
-| 芯片型号 | Batch Size   | 数据集 | mAP<sup>val<br>50 | mAP<sup>val<br>50-95 |
-| --------- | ---------------- | ---------- | ---------- | --------------- |
-|    Ascend310P3       |       1    |   coco2017         |     63.9%      |   45.1%             |
+1. v5.0版本
+
+    |   芯片型号   | Batch大小 |    数据集    |         阈值       | 精度 (mAP@0.5) | 吞吐量 |
+    |:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
+   | Ascend310P3 |     1      | coco val2017 |  conf=0.001 iou=0.6  |     55.5     |   663.33   |
+    | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   721.00    |
+   | Ascend310P3 |     8      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   690.75    |
+   | Ascend310P3 |     16      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   647.78    |
+   | Ascend310P3 |     32      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   641.35    |
+
+1. v6.0版本
+
+    |   芯片型号   | Batch大小 |    数据集    |         阈值       | 精度 (mAP@0.5) | 吞吐量 |
+    |:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
+   | Ascend310P3 |     1      | coco val2017 |  conf=0.001 iou=0.6  |     55.9     |   673.61   |
+    | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   837.38    |
+   | Ascend310P3 |     8      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   714.51    |
+   | Ascend310P3 |     16      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   675.95    |
+   | Ascend310P3 |     32      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   648.12    |
+
+# FAQ
+常见问题1：AttributeError: ‘Upsample‘ object has no attribute ‘recompute_scale_factor‘
+解决：这是由于旧版本的yolov5项目依赖于较低版本的pytorch，因此在较新的pytorch2.0.1中若遇到这个问题，可以参考进行 https://blog.csdn.net/weixin_44577224/article/details/130183964 修复。
+
+常见问题2：_pickle.UnpicklingError: STACK_GLOBAL requires str
+解决：删除coco数据集目录下的.cache文件再重新执行脚本即可。

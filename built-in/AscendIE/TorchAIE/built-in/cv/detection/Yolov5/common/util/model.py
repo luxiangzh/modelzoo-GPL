@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ import torch
 import torch_aie
 from tqdm import tqdm
 import time
-# import numpy as np
 
 from pathlib import Path
 from common.util.dataset import coco80_to_coco91_class, correct_bbox, save_coco_json
@@ -58,11 +57,13 @@ def forward_nms_script(model, dataloader, cfg, opt):
                 anchors = torch.tensor(cfg['anchors'])
                 stride = torch.tensor(cfg['stride'])
                 cls_num = cfg['class_num']
+                result[i] = result[i].to("cpu")
                 if padding == True:
                     result[i] = result[i][:nb]
                 correct_bbox(result[i], anchors[i], stride[i], cls_num, out)
             box_out = torch.cat(out, 1)
         else:  # only use the first output node, which shape is (bs, -1, no)
+            result[0].to("cpu")
             if padding == True:
                 result[0] = result[0][:nb]
             box_out = result[0].clone().detach()
@@ -84,8 +85,8 @@ def forward_nms_script(model, dataloader, cfg, opt):
 
 def nms(box_out, conf_thres=0.4, iou_thres=0.5):
     try:
-        boxout = non_max_suppression(box_out, conf_thres=conf_thres, iou_thres=iou_thres, multi_label=True)
+        boxout = non_max_suppression(box_out.to("cpu"), conf_thres=conf_thres, iou_thres=iou_thres, multi_label=True)
     except:
-        boxout = non_max_suppression(box_out, conf_thres=conf_thres, iou_thres=iou_thres)
+        boxout = non_max_suppression(box_out.to("cpu"), conf_thres=conf_thres, iou_thres=iou_thres)
 
     return boxout
