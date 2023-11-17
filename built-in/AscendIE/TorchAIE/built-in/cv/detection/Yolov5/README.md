@@ -36,7 +36,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 - 版本说明（目前已适配以下版本）：
   ```
   url=https://github.com/ultralytics/yolov5
-  tag=v2.0//v5.0/v6.0/v6.1
+  tag=v2.0/v5.0/v6.0/v6.1
   model_name=yolov5
   ```
 
