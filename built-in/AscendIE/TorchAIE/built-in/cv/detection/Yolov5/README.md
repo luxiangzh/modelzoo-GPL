@@ -70,11 +70,13 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    git clone https://github.com/ultralytics/yolov5.git
    cd yolov5
    git checkout v2.0/v5.0/v6.0/v6.1  # 切换到所用版本
-   # 将推理部署代码拷贝到yolov5源码相应目录下。
+   # 将推理部署代码拷贝到yolov5源码相应目录下
    cp -r ../common ./
    cp ../aie_compile.py ./
    cp ../aie_val.py ./
    cp ../model.ymal ./
+   # 根据版本应用对应的补丁
+   git apply ./common/patches/v${tags}.patch
    ``` 
 
 3. 安装依赖  
@@ -178,7 +180,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    | Ascend310P3 |     32      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   657.42    |
   
 
-1. v5.0版本
+2. v5.0版本
 
     |   芯片型号   | Batch大小 |    数据集    |         阈值       | 精度 (mAP@0.5) | 吞吐量 |
     |:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
@@ -188,7 +190,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    | Ascend310P3 |     16      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   647.78    |
    | Ascend310P3 |     32      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   641.35    |
 
-1. v6.0版本
+3. v6.0版本
 
     |   芯片型号   | Batch大小 |    数据集    |         阈值       | 精度 (mAP@0.5) | 吞吐量 |
     |:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
@@ -197,6 +199,16 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    | Ascend310P3 |     8      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   714.51    |
    | Ascend310P3 |     16      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   675.95    |
    | Ascend310P3 |     32      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   648.12    |
+
+4. v6.1版本
+
+    |   芯片型号   | Batch大小 |    数据集    |         阈值       | 精度 (mAP@0.5) | 吞吐量 |
+    |:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
+   | Ascend310P3 |     1      | coco val2017 |  conf=0.001 iou=0.6  |     56.5     |   556.38   |
+    | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   538.30    |
+   | Ascend310P3 |     8      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   533.93    |
+
+
 
 # FAQ
 常见问题1：AttributeError: ‘Upsample‘ object has no attribute ‘recompute_scale_factor‘
