@@ -5,7 +5,7 @@ Network="yolov5s_ID4102_for_PyTorch_v6.0"
 
 cur_path=`pwd`
 model_name=yolov5s
-batch_size=128
+batch_size=64
 
 for para in $*
 do
