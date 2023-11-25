@@ -74,7 +74,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    cp -r ../common ./
    cp ../aie_compile.py ./
    cp ../aie_val.py ./
-   cp ../model.ymal ./
+   cp ../model.yaml ./
    # 根据版本应用对应的补丁
    git apply ./common/patches/v${tags}.patch
    ``` 
