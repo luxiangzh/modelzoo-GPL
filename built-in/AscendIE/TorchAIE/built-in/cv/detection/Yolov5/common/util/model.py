@@ -16,6 +16,7 @@ import torch
 import torch_aie
 from tqdm import tqdm
 import time
+import numpy as np
 
 from pathlib import Path
 from common.util.dataset import coco80_to_coco91_class, correct_bbox, save_coco_json
@@ -38,7 +39,8 @@ def forward_nms_script(model, dataloader, cfg, opt):
 
         padding = False
         if nb != opt.batch_size:
-            img = torch.nn.functional.pad(img, ((0, batch_size - nb), (0,0), (0,0),(0,0)), 'constant', constant_values=0)
+            img = np.pad(img.numpy(), ((0, opt.batch_size - nb), (0,0), (0,0),(0,0)), 'constant', constant_values=0)
+            img = torch.from_numpy(img)
             padding = True
         
         img_npu = img.to("npu:0")
