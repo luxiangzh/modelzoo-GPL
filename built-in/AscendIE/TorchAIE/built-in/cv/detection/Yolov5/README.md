@@ -74,7 +74,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    cp -r ../common ./
    cp ../aie_compile.py ./
    cp ../aie_val.py ./
-   cp ../model.ymal ./
+   cp ../model.yaml ./
    # 根据版本应用对应的补丁
    git apply ./common/patches/v${tags}.patch
    ``` 
@@ -173,7 +173,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
 
     |   芯片型号   | Batch大小 |    数据集    |         阈值       | 精度 (mAP@0.5) | 吞吐量 |
     |:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
-   | Ascend310P3 |     1      | coco val2017 |  conf=0.001 iou=0.6  |     54.7     |   756.98   |
+   | Ascend310P3 |     1      | coco val2017 |  conf=0.001 iou=0.6  |     55.3     |   756.98   |
     | Ascend310P3 |     4      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   764.13    |
    | Ascend310P3 |     8      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   714.36    |
    | Ascend310P3 |     16      | coco val2017 |  conf=0.001 iou=0.6  |     -     |   668.26    |
