@@ -429,6 +429,7 @@ def main():
     parser.add_argument('--single-cls', action='store_true', help='train as single-class dataset')
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
+    parser.add_argument('--global_rank', type=int, default=1, help='do evaluation per eval_freq training iteration')
     parser.add_argument('--npu', default=-1, type=int, help='NPU id to use.')
     parser.add_argument('--eval-freq', default=1, type=int, help='do evaluation per eval_freq training iteration.')
 
@@ -486,7 +487,7 @@ def main_worker(opt):
         assert opt.batch_size % opt.world_size == 0, "Batch size is not a multiple of the number of devices given!"
         opt.batch_size = opt.total_batch_size // opt.world_size
     elif opt.local_rank != -1 and device.type == 'npu':
-        dist.init_process_group(backend='hccl', world_size=opt.world_size, rank=opt.local_rank)
+        dist.init_process_group(backend='hccl', world_size=opt.world_size, rank=opt.global_rank)
         assert opt.batch_size % opt.world_size == 0, "Batch size is not a multiple of the number of devices given!"
         opt.batch_size = opt.total_batch_size // opt.world_size
     print(opt)
