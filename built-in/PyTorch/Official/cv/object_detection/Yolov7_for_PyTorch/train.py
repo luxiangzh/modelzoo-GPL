@@ -487,7 +487,7 @@ def train(hyp, opt, device, tb_writer=None):
             ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'gr', 'names', 'stride', 'class_weights'])
             final_epoch = epoch + 1 == epochs
             # Calculate mAP
-            if not opt.notest and (((epoch+1) % 50) == 0 or (epoch >= (epochs-30) and ((epoch+1) % 5) == 0) or final_epoch):
+            if not opt.notest and (((epoch+1) % 50) == 0 or (epoch >= (epochs-30) and ((epoch+1) % 50) == 0) or final_epoch):
                 save_json = opt.data.endswith('coco.yaml')
                 results, maps, times = test.test(data_dict,
                                                  batch_size=batch_size,
