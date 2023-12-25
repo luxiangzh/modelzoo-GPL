@@ -28,7 +28,7 @@ export COMBINED_ENABLE=1
 export HCCL_WHITELIST_DISABLE=1
 #HCCL默认超时时间120s较少，当前设置为3600s
 export HCCL_CONNECT_TIMEOUT=3600
-export HCCL_EXEC_TIMEOUT=1200
+export HCCL_EXEC_TIMEOUT=3600
 export HCCL_IF_IP=$(hostname -I |awk '{print $1}')
 
 ulimit -SHn 512000

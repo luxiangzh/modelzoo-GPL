@@ -94,7 +94,8 @@ then
             --addr ${master_addr} \
             --weights '' \
             --batch-size $batch_size \
-            --local_rank ${rank} \
+            --local_rank $i \
+            --global_rank ${rank} \
             --npu $i \
             --device npu \
             --world-size ${nnodes} \
