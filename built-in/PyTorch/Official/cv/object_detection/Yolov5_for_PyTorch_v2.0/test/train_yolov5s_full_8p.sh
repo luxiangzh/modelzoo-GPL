@@ -80,6 +80,7 @@ then
 		    --weights '' \
 		    --batch-size $batch_size \
 		    --local_rank $i \
+		    --global_rank $i \
 		    --device npu \
 		    --device-num 8 > $test_path_dir/output/$ASCEND_DEVICE_ID/train_$ASCEND_DEVICE_ID.log 2>&1 &
 	done
