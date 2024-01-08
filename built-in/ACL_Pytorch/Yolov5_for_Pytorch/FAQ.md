@@ -17,14 +17,14 @@ http://3ms.huawei.com/km/blogs/details/13533061
 
 3. 更改common/util/model.py下的代码
 
-更改前：
+更改前:
 
-    ![](./faqimgs/2.PNG)
-    ![](./faqimgs/3.PNG)
+![](./faqimgs/2.PNG)
+![](./faqimgs/3.PNG)
 
-更改后: 
+更改后:
 
-    ![](./faqimgs/4.PNG)
+![](./faqimgs/4.PNG)
 
 p.s. 建议将原函数注释，复制一份重写，方便随时替换
 
