@@ -16,11 +16,16 @@
 http://3ms.huawei.com/km/blogs/details/13533061
 
 3. 更改common/util/model.py下的代码
-	更改前：
+
+更改前：
+
     ![](./faqimgs/2.PNG)
     ![](./faqimgs/3.PNG)
-	更改后：
+
+更改后: 
+
     ![](./faqimgs/4.PNG)
+
 p.s. 建议将原函数注释，复制一份重写，方便随时替换
 
 4. 修改model.yaml
@@ -55,14 +60,7 @@ https://blog.csdn.net/weixin_44358914/article/details/120247850
 ## 模型量化失败
 AMCT报错（由于量化为具体客户需求，一般情况不需要量化，量化会使模型精度下降，性能提高）
 ![](./faqimgs/9.PNG)
-只要是ATC报错信息显示的是E21001，那么原因就是文件没有找到，但并不是报错信息里提到的
-```
-Failed to open file [common/atc_cfg/fusion.cfg]
-```
-而是AMCT报错信息中显示的
-```
-calib_data/images_bs16.bin is quantizeConfigs is invalid!
-```
+
 详细解决步骤为：首先运行common/quantify/gen_calib_data.py
 ```
 python common/quantify/gen_calib_data.py
