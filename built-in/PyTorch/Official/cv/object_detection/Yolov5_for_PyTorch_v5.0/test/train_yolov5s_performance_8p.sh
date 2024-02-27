@@ -70,10 +70,10 @@ then
     export RANK=$i
     let p_start=0+24*i
     let p_end=23+24*i
-    taskset -c $p_start-$p_end $CMD python3 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --local_rank $i --device npu --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log 2>&1 &
+    taskset -c $p_start-$p_end $CMD python3 train.py --data ./data/coco.yaml --cfg ./models/yolov5s.yaml --weights '' --batch-size $batch_size --local_rank $i --device npu --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log 2>&1 &
     done
 else
-    python3 -m torch.distributed.launch --nproc_per_node=8 train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device npu --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log 2>&1 &
+    python3 -m torch.distributed.launch --nproc_per_node=8 train.py --data ./data/coco.yaml --cfg ./models/yolov5s.yaml --weights '' --batch-size $batch_size --device npu --epochs 1 > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_perf_8p.log 2>&1 &
 fi
 
 wait
