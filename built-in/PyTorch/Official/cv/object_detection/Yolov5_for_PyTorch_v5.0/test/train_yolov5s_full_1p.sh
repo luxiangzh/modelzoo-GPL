@@ -42,7 +42,7 @@ source ${cur_path}/test/env_npu.sh
 start_time=$(date +%s)
 echo "start_time: ${start_time}"
 
-python3 -u train.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --batch-size $batch_size --device 0 --local_rank $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
+python3 -u train.py --data ./data/coco.yaml --cfg ./models/yolov5s.yaml --weights '' --batch-size $batch_size --device 0 --local_rank $ASCEND_DEVICE_ID > ${cur_path}/test/output/$ASCEND_DEVICE_ID/train_full_1p.log 2>&1 &
 
 wait
 
