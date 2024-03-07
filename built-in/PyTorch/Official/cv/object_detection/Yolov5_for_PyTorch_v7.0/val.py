@@ -249,23 +249,18 @@ def run(
             nb, _, height, width = im.shape  # batch size, channels, height, width
 
         # Inference
-        # fangxiaolong
-        # import pdb 
-        # pdb.set_trace()
         with dt[1]:
             preds, train_out = model(im) if compute_loss else (model(im, augment=augment), None)
 
         # Loss
         if compute_loss:
 
-            # train_out 有[128, 3, 68, 84, 6]，[128, 3, 34, 42, 6]，[128, 3, 17, 21, 6]
             # from [bs, 3, _, _, 6] to [bs, 3, 6, _, _]
             train_out[0]=train_out[0].transpose(3,4).transpose(2,3)
             train_out[1]=train_out[1].transpose(3,4).transpose(2,3)
             train_out[2]=train_out[2].transpose(3,4).transpose(2,3)
             #print(train_out[0].shape,train_out[1].shape,train_out[2].shape)
             loss += compute_loss(train_out, targets)[1]  # box, obj, cls
-            #print(loss)
 
         # NMS
         targets = targets.T
