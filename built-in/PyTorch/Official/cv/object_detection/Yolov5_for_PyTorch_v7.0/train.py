@@ -468,7 +468,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 # Save last, best and delete
                 torch.save(ckpt, w/f'Epoch-{epoch}-yolov5s.pt')
                 if final_epoch:
-                    torch.save(ckpt, w/'yolov5s.pt')
+                    torch.save(ckpt, 'yolov5s.pt')
                 del ckpt
 
     #     callbacks.run('on_train_end', last, best, epoch, results)
