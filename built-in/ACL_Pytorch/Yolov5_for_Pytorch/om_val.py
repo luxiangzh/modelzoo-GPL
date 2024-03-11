@@ -25,6 +25,7 @@ except:
 
 from common.util.dataset import BatchDataLoader, evaluate
 from common.util.model import forward_nms_op, forward_nms_script
+import aclruntime
 
 
 def main(opt, cfg):
@@ -46,11 +47,13 @@ def main(opt, cfg):
         # inference & nms
         pred_results = forward_nms_script(model, dataloader, cfg)
 
-    s = model.sumary()
+    s = model.summary()
     summary.npu_compute_time_list = s.exec_time_list
     summary.h2d_latency_list = MemorySummary.get_H2D_time_list()
     summary.d2h_latency_list = MemorySummary.get_D2H_time_list()
     summary.report(opt.batch_size, output_prefix=None, display_all_summary=False)
+    model.free_resource()
+    aclruntime.InferenceSession.finalize()
 
     pred_json_file = f"{opt.model.split('.')[0]}_{opt.tag}_predictions.json"
     print(f'saving results to {pred_json_file}')
