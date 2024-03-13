@@ -46,10 +46,10 @@ def main(opt, cfg):
         # inference & nms
         pred_results = forward_nms_script(model, dataloader, cfg)
 
-    s = model.sumary()
+    s = model.summary()
     summary.npu_compute_time_list = s.exec_time_list
-    summary.h2d_latency_list = MemorySummary.get_H2D_time_list()
-    summary.d2h_latency_list = MemorySummary.get_D2H_time_list()
+    summary.h2d_latency_list = MemorySummary.get_h2d_time_list()
+    summary.d2h_latency_list = MemorySummary.get_d2h_time_list()
     summary.report(opt.batch_size, output_prefix=None, display_all_summary=False)
 
     pred_json_file = f"{opt.model.split('.')[0]}_{opt.tag}_predictions.json"
