@@ -312,7 +312,7 @@ def train(hyp, opt, device, tb_writer=None):
     if rank in [-1, 0]:
         testloader = create_dataloader(test_path, imgsz_test, batch_size, gs, opt,  # testloader
                                        hyp=hyp, cache=opt.cache_images and not opt.notest, rect=True, rank=-1,
-                                       world_size=opt.world_size, workers=opt.workers,
+                                       world_size=opt.world_size, workers=0,
                                        pad=0.5, prefix=colorstr('val: '))[0]
 
         if not opt.resume:
@@ -489,6 +489,7 @@ def train(hyp, opt, device, tb_writer=None):
             # Calculate mAP
             if not opt.notest and (((epoch+1) % 50) == 0 or (epoch >= (epochs-30) and ((epoch+1) % 5) == 0) or final_epoch):
                 save_json = opt.data.endswith('coco.yaml')
+                logger.info("start evaluation")
                 results, maps, times = test.test(data_dict,
                                                  batch_size=batch_size,
                                                  imgsz=imgsz_test,
@@ -501,6 +502,7 @@ def train(hyp, opt, device, tb_writer=None):
                                                  plots=plots and final_epoch,
                                                  is_coco=is_coco,
                                                  v5_metric=opt.v5_metric)
+                logger.info("end evaluation")
 
             # Write
             with open(results_file, 'a') as f:
