@@ -137,8 +137,9 @@ def test(data,
     jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
     if half:
         model = amp.initialize(model, opt_level='O1', loss_scale=1024, combine_grad=True)
-    
+    print("start to evaluate")
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
+        print(f"start to evaluate batch: {batch_i}")
         img = img.to('npu', non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -249,7 +250,8 @@ def test(data,
             Thread(target=plot_images, args=(img, targets, paths, f, names), daemon=True).start()
             f = save_dir / f'test_batch{batch_i}_pred.jpg'  # predictions
             Thread(target=plot_images, args=(img, output_to_target(out), paths, f, names), daemon=True).start()
-
+        print(f"end to evaluate batch: {batch_i}")
+    print("end to evaluate")
     # Compute statistics
     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
     if len(stats) and stats[0].any():
