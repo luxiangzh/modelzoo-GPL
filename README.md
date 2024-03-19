@@ -1,35 +1,36 @@
-# 欢迎使用Ascend ModelZoo-GPL
+# ModelZoo-GPL
 
-为方便更多开发者使用Ascend ModelZoo，我们将持续增加典型网络和相关预训练模型。如果您有任何需求，请在[Gitee](https://gitee.com/ascend/modelzoo-GPL/issues)或[ModelZoo](https://bbs.huaweicloud.com/forum-726-1.html)提交issue，我们会及时处理。
+# 简介
+
+ModelZoo-GPL，昇腾旗下的开源AI模型平台，涵盖计算机视觉、自然语言处理、语音、推荐、多模态、大语言模型等方向的AI模型及其基于昇腾机器实操案例。平台的每个模型都有详细的使用指导，为方便更多开发者使用ModelZoo-GPL，我们将持续增加典型网络和相关预训练模型。如果您有任何需求，请在[Gitee](https://gitee.com/ascend/modelzoo-GPL/issues)或[ModelZoo](https://bbs.huaweicloud.com/forum-726-1.html)提交issue，我们会及时处理。
+
+# 目录
+
+## PyTorch
+
+|  一级目录  |  二级目录  |  说明  |
+| ---------- | ----------- | ----------- |
+| [built-in](https://gitee.com/ascend/modelzoo-GPL/tree/master/built-in) | [ACL_Pytorch](https://gitee.com/ascend/modelzoo-GPL/tree/master/built-in/ACL_Pytorch) <br> [AscendIE](https://gitee.com/ascend/modelzoo-GPL/tree/master/built-in/AscendIE) <br> [PyTorch](https://gitee.com/ascend/modelzoo-GPL/tree/master/built-in/PyTorch)| 基于昇腾芯片的推理模型参考 <br> 基于昇腾芯片的推理引擎模型参考 <br> 基于昇腾芯片的训练模型参考 |
+| [contrib](https://gitee.com/ascend/modelzoo-GPL/tree/master/contrib) | [PyTorch](https://gitee.com/ascend/modelzoo-GPL/tree/master/contrib/PyTorch/) | 基于昇腾芯片的生态贡献训练模型参考 |
 
 
-## 声明
+# 声明
 
 本仓仅适用于GPL类许可证下的模型，请访问[modelzoo](https://gitee.com/ascend/modelzoo)获取其他的模型。
 
 
-## 如何贡献
+# 如何贡献
 
 在开始贡献之前，请先阅读[notice](https://gitee.com/ascend/modelzoo/blob/master/contrib/CONTRIBUTING.md)。谢谢！
-
-
-## 目录
-
-### PyTorch
-
-| 目录                                                         | 说明                       |
-| ------------------------------------------------------------ | -------------------------- |
-| [built-in](https://gitee.com/ascend/modelzoo-GPL/tree/master/built-in) | 规范模型 |
-| [contrib](https://gitee.com/ascend/modelzoo-GPL/tree/master/contrib) | 生态贡献模型 |
 					
   
-## 安全声明
+# 安全声明
 
-### 运行用户建议
+## 运行用户建议
 
 出于安全性及权限最小化角度考虑，不建议使用root等管理员类型账户使用。
 
-### 文件权限控制
+## 文件权限控制
 
 1. 建议用户在主机（包括宿主机）及容器中设置运行系统umask值为0027及以上，保障新增文件夹默认最高权限为750，新增文件默认最高权限为640。
 2. 建议用户对个人数据、商业资产、源文件、训练过程中保存的各类文件等敏感内容做好权限管控，管控权限可参考表1进行设置。
@@ -57,17 +58,16 @@
     | 加解密接口、加解密脚本            |   500（r-x------）        |
 
 
-### 运行安全声明
+## 运行安全声明
 
-1. 建议用户结合运行环境资源状况编写对应训练脚本。若训练脚本与资源状况不匹配，如数据集加载内存大小超出内存容量限制、训练脚本在本地生成数据超过磁盘空间大小等情况，可能引发错误并导致进程意外退出。
+建议用户结合运行环境资源状况编写对应训练脚本。若训练脚本与资源状况不匹配，如数据集加载内存大小超出内存容量限制、训练脚本在本地生成数据超过磁盘空间大小等情况，可能引发错误并导致进程意外退出。
 
-
-### 公网地址声明
+## 公网地址声明
 
 详见各模型目录下的public_address_statement.md
 
 
-## 免责声明
+# 免责声明
 
 ### 致ModelZoo-GPL使用者
 1. ModelZoo-GPL提供的模型仅供您用于非商业目的。
