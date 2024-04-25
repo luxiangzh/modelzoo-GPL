@@ -42,8 +42,6 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
   | Torch_Version      | 三方库依赖版本                                 |
   | :--------: | :----------------------------------------------------------: |
-  | PyTorch 1.5 | pillow==8.4.0 |
-  | PyTorch 1.8 | pillow==9.1.0 |
   | PyTorch 1.11 | pillow==9.1.0 |
   
 - 环境准备指导。
@@ -54,14 +52,10 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
   在模型源码包根目录下执行命令，安装模型对应PyTorch版本需要的依赖。
   ```
-  pip install -r 1.5_requirements.txt  # PyTorch1.5版本
-  
-  pip install -r 1.8_requirements.txt  # PyTorch1.8版本
-
   pip install -r 1.11_requirements.txt  # PyTorch1.11版本
   ```
   > **说明：** 
-  >只需执行一条对应的PyTorch版本依赖安装命令。
+>只需执行一条对应的PyTorch版本依赖安装命令。
 
 ## 准备数据集
 
@@ -193,16 +187,15 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      bash test/train_yolov5m_performance_cluster.sh --data_path=数据集路径 --nnodes=机器数量 --node_rank=机器序号(0,1,2...) --master_addr=主机服务器地址 --master_port=主机服务器端口号
      ```
      ps:脚本默认为8卡，若使用自定义卡数，继续在上面命令后添加 --device_number=每台机器使用卡数 --head_rank=起始卡号，例如分别为4、0时，代表使用0-3卡训练。
-  
-     
+    
    - 在线推理
      启动在线推理。
      ```
      bash ./test/train_yolov5s_eval.sh #在线推理
      ```
      
-
-   --data_path参数填写数据集路径，需写到数据集的一级目录。
+   
+--data_path参数填写数据集路径，需写到数据集的一级目录。
 
 
    模型训练脚本参数说明如下。
@@ -222,7 +215,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
    --native_amp                        //使用torch amp进行混合精度训练，如不配置默认使用apex
    --half                              //eval执行脚本中参数，如配置默认使用混合精度计算
    ```
-   
+
    训练完成后，权重文件保存在当前路径下，并输出模型训练精度和性能信息。
 
 # 训练结果展示
@@ -293,7 +286,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 # 概述
 YOLO系列网络模型是最为经典的one-stage算法，也是目前工业领域使用最多的目标检测网络，YOLOv5网络模型是YOLO系列的最新版本，在继承了原有YOLO网络模型优点的基础上，具有更优的检测精度和更快的推理速度。  
 YOLOv5版本不断迭代更新，不同版本的模型结构有所差异。比如Conv模块各版本差异示例如下:  
-  
+
   | yolov5版本	 | Conv模块激活函数 |
   |:---------:|:----------:|
   | 6.0	      |    SiLU    |
@@ -354,7 +347,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    ……
    ./val2017/00000581781.jpg
    ```
- 
+
 ## 模型推理
 模型推理提供后处理脚本方式：  
 直接用官网`export.py`导出`onnx`模型，模型结构和官网一致，推理流程也和官方一致，NMS后处理采用脚本实现。
@@ -369,7 +362,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    运行`bash pth2onnx.sh`导出动态shape的`ONNX`模型，模型参数在[model.yaml](model.yaml)中设置。
    ```
    bash pth2onnx.sh --tag 6.0 --model yolov5 --nms_mode nms_script  # nms_script
-
+   
    ```
    - 命令参数说明：
      -   `--tag`：模型版本，可选`[6.0]`, 默认`6.0`。
@@ -452,8 +445,9 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
     | 模型tag |   芯片型号   | 最优Batch |    数据集    |         阈值       | 精度 (mAP@0.5) | OM模型性能 (fps) |
     |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
     | 6.0   | Ascend910A |     4      | coco val2017 |  conf=0.0005 iou=0.5  |     64.2     |   828.48    |
-    
-    
+
+
+​    
 # FAQ
 1、如遇到问题：    
    <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:777)>
