@@ -52,10 +52,6 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
   在模型源码包根目录下执行命令，安装模型对应PyTorch版本需要的依赖。
   ```
-  pip install -r 1.5_requirements.txt  # PyTorch1.5版本
-  
-  pip install -r 1.8_requirements.txt  # PyTorch1.8版本
-  
   pip install -r 1.11_requirements.txt  # PyTorch1.11版本
   ```
   > **说明：** 
@@ -191,7 +187,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      bash test/train_yolov5m_performance_cluster.sh --data_path=数据集路径 --nnodes=机器数量 --node_rank=机器序号(0,1,2...) --master_addr=主机服务器地址 --master_port=主机服务器端口号
      ```
      ps:脚本默认为8卡，若使用自定义卡数，继续在上面命令后添加 --device_number=每台机器使用卡数 --head_rank=起始卡号，例如分别为4、0时，代表使用0-3卡训练。
-    
+   
    - 在线推理
      启动在线推理。
      ```
@@ -199,6 +195,7 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
      ```
      
    
+
 --data_path参数填写数据集路径，需写到数据集的一级目录。
 
 
