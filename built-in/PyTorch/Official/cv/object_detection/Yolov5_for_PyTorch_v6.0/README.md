@@ -42,8 +42,6 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
   | Torch_Version      | 三方库依赖版本                                 |
   | :--------: | :----------------------------------------------------------: |
-  | PyTorch 1.5 | pillow==8.4.0 |
-  | PyTorch 1.8 | pillow==9.1.0 |
   | PyTorch 1.11 | pillow==9.1.0 |
   
 - 环境准备指导。
@@ -54,10 +52,6 @@ YOLO是一个经典的物体检测网络，将物体检测作为回归问题求�
 
   在模型源码包根目录下执行命令，安装模型对应PyTorch版本需要的依赖。
   ```
-  pip install -r 1.5_requirements.txt  # PyTorch1.5版本
-  
-  pip install -r 1.8_requirements.txt  # PyTorch1.8版本
-
   pip install -r 1.11_requirements.txt  # PyTorch1.11版本
   ```
   > **说明：** 
@@ -453,7 +447,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
     |:------:|:----------:|:-------------:|:------------------:|:------------:|:------------:|:--------------:|
     | 6.0   | Ascend910A |     4      | coco val2017 |  conf=0.0005 iou=0.5  |     64.2     |   828.48    |
     
-    
+​    
 # FAQ
 1、如遇到问题：    
    <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:777)>
