@@ -7,6 +7,7 @@
   - [获取源码](#获取源码)
   - [准备数据集](#准备数据集)
   - [模型推理](#模型推理)
+- [vNPU训练模型](#vnpu训练模型)
 - [模型推理性能&精度](#模型推理性能&精度)
 
 ******
@@ -189,6 +190,57 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
    python3.7.5 -m ais_bench --model=yolov7x_bs8.om --output=output --batchsize=8 --device=0 --loop=1000 
    ```
 
+
+# vNPU训练模型
+
+## 切分vNPU
+- 执行以下命令设置虚拟化实例功能容器模式
+   ```shell
+   npu-smi set -t vnpu-mode -d 0
+   ```
+- 创建vNPU。
+
+  命令格式：npu-smi set -t create-vnpu -i id -c chip_id -f vnpu_config [-v vnpu_id] [-g vgroup_id]
+  
+  参数说明
+  ```
+   参数：
+   --id                              //设备id
+   --chip_id                         //芯片id
+   --vnpu_config                     //算力切分模板名称
+   --vnpu_id                         //指定需要创建的vNPU的id
+   --vgroup_id                       //虚拟资源组vGroup的id，取值范围0~3。
+   ```
+
+  vNPU内存不足会导致训练模型精度性能下降或无法拉起训练，切分模板选择vir12_3c_32g
+  ```shell
+  npu-smi set -t create-vnpu -i 0 -c 0 -f vir12_3c_32g -v 100
+  ```
+  
+## 原生docker挂载vNPU
+- 挂载vNPU，并声明shm内存（避免容器内存不足无法拉起训练）
+   ```shell
+   docker run -it \
+  --device=/dev/vdavinci100:/dev/davinci100 \          # 挂载切分好的vNPU
+  --device=/dev/davinci_manager \
+  --device=/dev/devmm_svm \
+  --device=/dev/hisi_hdc \
+  --shm-size=720g \                                    # 增大shm-size（默认为64M）
+  -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi \
+  -v /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi \
+  -v /home:/home \
+  -v /usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/common \
+  -v /usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64/driver \
+  -v /etc/ascend_install.info:/etc/ascend_install.info \
+  -v /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info \
+  docker_image_id  /bin/bash                           # docker_image_id 替换为实际容器镜像id
+   ```
+
+- 初次启动容器，需要重新配置环境及相关依赖。
+
+- 在搭载vNPU的容器内重新开始训练
+
+
 # 模型推理性能&精度
 
 调用ACL接口推理计算，性能&精度参考下列数据。
@@ -202,3 +254,13 @@ YOLOv7是yolo系列目标检测网络，在5 FPS到160 FPS范围内的速度和�
 | bs32 | 0.525 | 123.214 | 82.898 | 1.49    |
 | bs64 | 0.525 | 115.592 | 73.922 | 1.56    |
 | 最优bs | 0.525 | 147.187 | 92.083 | 1.60    |
+
+vNPU训练结果展示表
+|  NAME      | Acc@1 |  FPS  | Epochs | Torch_Version | batch_size |
+|:------:    |:-----:|:-----:|:------:|:-------------:|:----------:|
+| 1p-NPU-ARM | 0.068| 79.599 |   3   |       2.1      |     32     | 
+| 1p-vNPU-ARM| 0.071 | 65.696 |  3    |        2.1      |     32     |
+| 1p-NPU-X86 |   0.076   |  59.030  |   3   |        2.1      |     32     |
+| 1p-vNPU-X86|   0.072   |  51.105  |   3   |        2.1      |     32     |  
+
+同等超参下（batch_size=32, learning_rate=0.1），vNPU能满足精度要求
