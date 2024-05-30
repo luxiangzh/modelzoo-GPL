@@ -11,9 +11,11 @@ import json
 import os
 import time
 import sys
+from torch import Tensor
 from pathlib import Path
 from threading import Thread
 
+import torch.nn.functional as F
 import numpy as np
 import torch
 if torch.__version__ >= '1.8':
@@ -37,6 +39,10 @@ from utils.plots import output_to_target, plot_images, plot_val_study
 from utils.torch_utils import select_device, time_sync
 from utils.callbacks import Callbacks
 
+if torch.__version__>'1.8':
+    def forward(self, input: Tensor) -> Tensor:
+        return F.interpolate(input, self.size, self.scale_factor, self.mode, self.align_corners)
+    torch.nn.modules.Upsample.forward = forward
 
 def save_one_txt(predn, save_conf, shape, file):
     # Save one txt result
