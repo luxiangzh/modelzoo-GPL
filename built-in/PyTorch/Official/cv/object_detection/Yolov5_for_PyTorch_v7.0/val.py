@@ -136,7 +136,7 @@ def process_batch(detections, labels, iouv):
 def run(
         data,
         weights=None,  # model.pt path(s)
-        batch_size=32,  # batch size
+        batch_size=128,  # batch size
         imgsz=640,  # inference size (pixels)
         conf_thres=0.001,  # confidence threshold
         iou_thres=0.6,  # NMS IoU threshold
@@ -167,7 +167,8 @@ def run(
     training = model is not None
     if training:  # called by train.py
         device, pt, jit, engine = next(model.parameters()).device, True, False, False  # get model device, PyTorch model
-        half &= device.type != 'cpu'  # half precision only supported on CUDA
+        #half &= device.type != 'cpu'  # half precision only supported on CUDA
+        half=True
         model.half() if half else model.float()
     else:  # called directly
         # device = select_device(device, batch_size=batch_size)
@@ -253,6 +254,12 @@ def run(
 
         # Loss
         if compute_loss:
+
+            # from [bs, 3, _, _, 6] to [bs, 3, 6, _, _]
+            train_out[0]=train_out[0].transpose(3,4).transpose(2,3)
+            train_out[1]=train_out[1].transpose(3,4).transpose(2,3)
+            train_out[2]=train_out[2].transpose(3,4).transpose(2,3)
+            #print(train_out[0].shape,train_out[1].shape,train_out[2].shape)
             loss += compute_loss(train_out, targets)[1]  # box, obj, cls
 
         # NMS

@@ -376,6 +376,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             # Forward
             profile.start()
             pred = model(imgs)  # forward
+            
             loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
             if RANK != -1:
                 loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
@@ -423,14 +424,39 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             # end batch ------------------------------------------------------------------------------------------------
         
         # Scheduler
-        # lr = [x['lr'] for x in optimizer.param_groups]  # for loggers
+        lr = [x['lr'] for x in optimizer.param_groups]  # for loggers
         if RANK in {-1, 0}:
             torch.npu.synchronize()
         scheduler.step()
 
         if RANK in {-1, 0}:
+            callbacks.run('on_train_epoch_end', epoch=epoch)
+            ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'names', 'stride', 'class_weights'])
+            
             final_epoch = (epoch + 1 == epochs) or stopper.possible_stop
-            saved_epoch = epoch % 50 == 0
+            saved_epoch = epoch % 1 == 0
+            
+            if not noval or final_epoch:  # Calculate mAP
+                results, maps, _ = validate.run(data_dict,
+                                                batch_size=batch_size // WORLD_SIZE * 2,
+                                                imgsz=imgsz,
+                                                half=amp,
+                                                model=ema.ema.module if hasattr(ema, 'module') else ema.ema,
+                                                single_cls=single_cls,
+                                                dataloader=val_loader,
+                                                save_dir=save_dir,
+                                                plots=False,
+                                                callbacks=callbacks,
+                                                compute_loss=compute_loss)
+
+            # Update best mAP
+            fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
+            stop = stopper(epoch=epoch, fitness=fi)  # early stop check
+            if fi > best_fitness:
+                best_fitness = fi
+            log_vals = list(mloss) + list(results) + lr
+            callbacks.run('on_fit_epoch_end', log_vals, epoch, best_fitness, fi)
+            
             # Save model
             if final_epoch or saved_epoch:  # if save
                 # Save model
@@ -440,7 +466,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                         'optimizer': optimizer.state_dict()}
 
                 # Save last, best and delete
-                torch.save(ckpt, 'Epoch-%s-yolov5s.pt' % epoch)
+                torch.save(ckpt, w/f'Epoch-{epoch}-yolov5s.pt')
                 if final_epoch:
                     torch.save(ckpt, 'yolov5s.pt')
                 del ckpt
@@ -477,7 +503,9 @@ def parse_opt(known=False):
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
     parser.add_argument('--workers', type=int, default=12, help='max dataloader workers (per RANK in DDP mode)')
     parser.add_argument('--project', default=ROOT / 'runs/train', help='save to project/name')
+    #parser.add_argument('--project', default=ROOT / '', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
+    #parser.add_argument('--name', default='', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--quad', action='store_true', help='quad dataloader')
     parser.add_argument('--cos-lr', action='store_true', help='cosine LR scheduler')
@@ -669,5 +697,6 @@ def run(**kwargs):
 
 
 if __name__ == "__main__":
+    torch_npu.npu.set_compile_mode(jit_compile=False)
     opt = parse_opt()
     main(opt)
