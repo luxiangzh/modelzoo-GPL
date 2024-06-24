@@ -57,7 +57,7 @@ def main(opt, cfg):
     print(f'saving results to {pred_json_file}')
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     mode = stat.S_IWUSR | stat.S_IRUSR
-    with os.fdopen(os.open(file, flags, mode), 'w') as f:
+    with os.fdopen(os.open(pred_json_file, flags, mode), 'w') as f:
         json.dump(pred_results, f)
 
     # evaluate mAP

@@ -78,7 +78,7 @@ def check_git_status():
             raise ValueError('skipping check (not a git repository)')
         if isdocker():
             raise ValueError('skipping check (Docker image)')
-        if check_online():
+        if not check_online():
             raise ValueError('skipping check (offline)')
 
         cmd = 'git fetch && git config --get remote.origin.url'

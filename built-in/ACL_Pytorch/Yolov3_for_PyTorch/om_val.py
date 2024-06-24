@@ -68,9 +68,6 @@ if __name__ == '__main__':
     parser.add_argument('--single-cls', action='store_true', help='treat as single-class dataset')
     opt = parser.parse_args()
 
-    flags = os.O_WRONLY | os.O_EXCL
-    mode = stat.S_IWUSR | stat.S_IRUSR
-    with os.fdopen(os.open(opt.cfg_file, flags, mode)) as f:
     flags = os.O_RDONLY  
     mode = stat.S_IWUSR | stat.S_IRUSR
     with os.fdopen(os.open(opt.cfg_file, flags, mode), 'r') as f:

@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import stat
 import shutil
 from pathlib import Path
 
@@ -137,7 +138,8 @@ def test(data,
                 for *xyxy, conf, cls in x:
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                     flags = os.O_WRONLY | os.O_EXCL
-                    with os.fdopen(str(out / Path(paths[si]).stem) + '.txt','a') as f:
+                    mode = stat.S_IWUSR | stat.S_IRUSR
+                    with os.fdopen(os.open(str(out / Path(paths[si]).stem) + '.txt', flags, mode), 'a') as f:
                         f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
 
             # Clip boxes to image bounds

@@ -848,7 +848,6 @@ def coco_single_class_labels(path='../coco/labels/train2014/', label_class=43):
             flags = os.O_WRONLY | os.O_EXCL
             mode = stat.S_IWUSR | stat.S_IRUSR
             with os.fdopen(os.open('new/images.txt', flags, mode), 'a') as f:  # add image to dataset list
-            with open('new/images.txt', 'a') as f:
                 f.write(img_file + '\n')
             with os.fdopen(os.open('new/labels/' + Path(file).name, flags, mode), 'a') as f:  # write label
                 for l in labels[i]:

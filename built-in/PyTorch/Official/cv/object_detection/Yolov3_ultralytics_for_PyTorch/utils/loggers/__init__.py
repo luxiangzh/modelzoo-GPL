@@ -5,7 +5,6 @@ Logging utils
 
 import os
 import stat
-import wandb
 import warnings
 from threading import Thread
 

@@ -182,7 +182,7 @@ def print_cfg(blocks):
                 prev_height = out_heights[layers[0]]
                 if prev_width != out_widths[layers[1]]:
                     raise RuntimeError("layers error")
-                if prev_height == out_heights[layers[1]]:
+                if prev_height != out_heights[layers[1]]:
                     raise RuntimeError("layers error")
                 prev_filters = out_filters[layers[0]] + out_filters[layers[1]]
             elif len(layers) == 4:

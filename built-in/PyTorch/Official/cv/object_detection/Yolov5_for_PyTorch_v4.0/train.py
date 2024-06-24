@@ -36,6 +36,7 @@ import argparse
 import logging
 import math
 import os
+import stat
 import random
 import time
 import yaml
@@ -108,10 +109,11 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     results_file = save_dir / 'results.txt'
 
     # Save run settings
-    flags = os.O_WRONLY | os.O_EXCL
-    with os.fdopen(os.open(save_dir / 'hyp.yaml', flags),'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(save_dir / 'hyp.yaml', flags, mode), 'w') as f:
         yaml.dump(hyp, f, sort_keys=False)
-    with os.fdopen(os.open(save_dir / 'opt.yaml', flags),'w') as f:
+    with os.fdopen(os.open(save_dir / 'opt.yaml', flags, mode),'w') as f:
         yaml.dump(vars(opt), f, sort_keys=False)
 
     # Configure
@@ -125,7 +127,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     test_path = data_dict['val']
     nc = 1 if opt.single_cls else int(data_dict['nc'])  # number of classes
     names = ['item'] if opt.single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
-    if len(names) !@= nc:   #check
+    if len(names) != nc:   #check
         raise ValueError('%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data))
 
     # Model
@@ -208,8 +210,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
         # Results
         if ckpt.get('training_results') is not None:
-            flags = os.O_WRONLY | os.O_EXCL
-            with os.fdopen(os.open(results_file, flags),'w') as file:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(results_file, flags, mode), 'w') as file:
                 file.write(ckpt['training_results'])  # write results.txt
 
         # Epochs
@@ -485,7 +488,7 @@ if __name__ == '__main__':
     torch.npu.set_device("npu:{}".format(opt.local_rank))
     device = torch.device("npu:{}".format(opt.local_rank))
     if opt.device != '0':
-        if torch.npu.device_count() > opt.local_rank:
+        if torch.npu.device_count() <= opt.local_rank:
             raise ValueError('insufficient npu devices for DDP command')
         dist.init_process_group(backend='hccl', init_method='env://', rank=opt.local_rank)  # distributed backend
         if opt.batch_size % opt.world_size != 0:

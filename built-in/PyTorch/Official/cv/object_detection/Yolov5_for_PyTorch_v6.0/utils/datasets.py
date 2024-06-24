@@ -448,7 +448,7 @@ class LoadImagesAndLabels(Dataset):
             cache, exists = np.load(cache_path, allow_pickle=True).item(), True  # load dict
             if cache['version'] != self.cache_version:
                 raise ValueError("cache version is not same")
-            if cache['hash'] == get_hash(self.label_files + self.img_files):
+            if cache['hash'] != get_hash(self.label_files + self.img_files):
                 raise ValueError("hash is not same")
         except:
             logging.info("cache file not exists, start to cache labels")

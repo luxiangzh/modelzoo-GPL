@@ -86,7 +86,7 @@ YOLOv5每个版本主要有4个开源模型，分别为YOLOv5s、YOLOv5m、YOLOv
    pip install opencv-python
    pip install pandas==2.0.2
    pip install requests
-   pip install pyyaml>=5.3.1
+   pip install pyyaml
    pip install Pillow==9.5
    pip install matplotlib
    pip install seaborn
