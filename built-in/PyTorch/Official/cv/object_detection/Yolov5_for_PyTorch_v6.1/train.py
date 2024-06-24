@@ -22,6 +22,7 @@ import argparse
 import logging
 import math
 import os
+import stat
 import random
 import sys
 import time
@@ -116,9 +117,11 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
     # Save run settings
     if not evolve:
-        with open(save_dir / 'hyp.yaml', 'w') as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(save_dir / 'hyp.yaml', flags, mode), 'w') as f:
             yaml.safe_dump(hyp, f, sort_keys=False)
-        with open(save_dir / 'opt.yaml', 'w') as f:
+        with os.fdopen(os.open(save_dir / 'opt.yaml', flags, mode), 'w') as f:
             yaml.safe_dump(vars(opt), f, sort_keys=False)
 
     # Loggers
@@ -143,7 +146,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     train_path, val_path = data_dict['train'], data_dict['val']
     nc = 1 if single_cls else int(data_dict['nc'])  # number of classes
     names = ['item'] if single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
-    assert len(names) == nc, f'{len(names)} names found for nc={nc} dataset in {data}'  # check
+    if len(names) != nc:   # check
+        raise ValueError(f'{len(names)} names found for nc={nc} dataset in {data}')
     is_coco = isinstance(val_path, str) and val_path.endswith('coco/val2017.txt')  # COCO dataset
 
     # Model
@@ -235,7 +239,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         # Epochs
         start_epoch = ckpt['epoch'] + 1
         if resume:
-            assert start_epoch > 0, f'{weights} training to {epochs} epochs is finished, nothing to resume.'
+            if start_epoch <= 0:
+                raise ValueError(f'{weights} training to {epochs} epochs is finished, nothing to resume.')
         if epochs < start_epoch:
             LOGGER.info(f"{weights} has been trained for {ckpt['epoch']} epochs. Fine-tuning for {epochs} more epochs.")
             epochs += ckpt['epoch']  # finetune additional epochs
@@ -261,7 +266,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                                               prefix=colorstr('train: '), shuffle=True)
     mlc = int(np.concatenate(dataset.labels, 0)[:, 0].max())  # max label class
     nb = len(train_loader)  # number of batches
-    assert mlc < nc, f'Label class {mlc} exceeds nc={nc} in {data}. Possible class labels are 0-{nc - 1}'
+    if mlc >= nc:
+        raise ValueError(f'Label class {mlc} exceeds nc={nc} in {data}. Possible class labels are 0-{nc - 1}')
 
     # Process 0
     if RANK in [-1, 0]:
@@ -499,7 +505,8 @@ def main(opt, callbacks=Callbacks()):
     # Resume
     if opt.resume and not check_wandb_resume(opt) and not opt.evolve:  # resume an interrupted run
         ckpt = opt.resume if isinstance(opt.resume, str) else get_latest_run()  # specified or most recent path
-        assert os.path.isfile(ckpt), 'ERROR: --resume checkpoint does not exist'
+        if not os.path.isfile(ckpt):
+            raise FileNotFoundError('ERROR: --resume checkpoint does not exist')
         with open(Path(ckpt).parent.parent / 'opt.yaml', errors='ignore') as f:
             opt = argparse.Namespace(**yaml.safe_load(f))  # replace
         opt.cfg, opt.weights, opt.resume = '', ckpt, True  # reinstate
@@ -507,7 +514,8 @@ def main(opt, callbacks=Callbacks()):
     else:
         opt.data, opt.cfg, opt.hyp, opt.weights, opt.project = \
             check_file(opt.data), check_yaml(opt.cfg), check_yaml(opt.hyp), str(opt.weights), str(opt.project)  # checks
-        assert len(opt.cfg) or len(opt.weights), 'either --cfg or --weights must be specified'
+        if not (len(opt.cfg) or len(opt.weights)):
+            raise ValueError('either --cfg or --weights must be specified')
         if opt.evolve:
             if opt.project == str(ROOT / 'runs/train'):  # if default project name, rename to runs/evolve
                 opt.project = str(ROOT / 'runs/evolve')
@@ -518,11 +526,16 @@ def main(opt, callbacks=Callbacks()):
     # device = select_device(opt.device, opt.local_rank, batch_size=opt.batch_size)
     if opt.device_num > 1:
         msg = 'is not compatible with YOLOv5 Multi-GPU DDP training'
-        assert not opt.image_weights, f'--image-weights {msg}'
-        assert not opt.evolve, f'--evolve {msg}'
-        assert opt.batch_size != -1, f'AutoBatch with --batch-size -1 {msg}, please pass a valid --batch-size'
-        assert opt.batch_size % WORLD_SIZE == 0, f'--batch-size {opt.batch_size} must be multiple of WORLD_SIZE'
-        assert torch.npu.device_count() > LOCAL_RANK, 'insufficient npu devices for DDP command'
+        if opt.image_weights:
+            raise ValueError(f'--image-weights {msg}')
+        if opt.evolve:
+            raise ValueError(f'--evolve {msg}')
+        if opt.batch_size == -1:
+            raise ValueError(f'AutoBatch with --batch-size -1 {msg}, please pass a valid --batch-size')
+        if opt.batch_size % WORLD_SIZE != 0:
+            raise ValueError(f'--batch-size {opt.batch_size} must be multiple of WORLD_SIZE')
+        if torch.npu.device_count() <= LOCAL_RANK:
+            raise ValueError('insufficient npu devices for DDP command')
         torch.npu.set_device(LOCAL_RANK)
         device = torch.device('npu', LOCAL_RANK)
         # dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo")

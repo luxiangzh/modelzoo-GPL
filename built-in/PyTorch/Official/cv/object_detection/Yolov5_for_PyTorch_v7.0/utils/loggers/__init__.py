@@ -4,6 +4,7 @@ Logging utils
 """
 
 import os
+import stat
 import warnings
 from pathlib import Path
 
@@ -23,7 +24,8 @@ RANK = int(os.getenv('RANK', -1))
 try:
     import wandb
 
-    assert hasattr(wandb, '__version__')  # verify package import not local dir
+    if not hasattr(wandb, '__version__'):
+        raise ImportError("wandb packge import from local dir")
     if pkg.parse_version(wandb.__version__) >= pkg.parse_version('0.12.2') and RANK in {0, -1}:
         try:
             wandb_login_success = wandb.login(timeout=30)
@@ -37,7 +39,8 @@ except (ImportError, AssertionError):
 try:
     import clearml
 
-    assert hasattr(clearml, '__version__')  # verify package import not local dir
+    if not hasattr(clearml, '__version__'):
+        raise ImportError("clearml packge import from local dir")
 except (ImportError, AssertionError):
     clearml = None
 
@@ -47,7 +50,8 @@ try:
     else:
         import comet_ml
 
-        assert hasattr(comet_ml, '__version__')  # verify package import not local dir
+        if not hasattr(comet_ml, '__version__'):
+            raise ImportError("comet_ml packge import from local dir")
         from utils.loggers.comet import CometLogger
 
 except (ModuleNotFoundError, ImportError, AssertionError):
@@ -229,7 +233,9 @@ class Loggers():
             file = self.save_dir / 'results.csv'
             n = len(x) + 1  # number of cols
             s = '' if file.exists() else (('%20s,' * n % tuple(['epoch'] + self.keys)).rstrip(',') + '\n')  # add header
-            with open(file, 'a') as f:
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(file, flags, mode), 'a') as f:
                 f.write(s + ('%20.5g,' * n % tuple([epoch] + vals)).rstrip(',') + '\n')
 
         if self.tb:
@@ -343,7 +349,9 @@ class GenericLogger:
             keys, vals = list(metrics.keys()), list(metrics.values())
             n = len(metrics) + 1  # number of cols
             s = '' if self.csv.exists() else (('%23s,' * n % tuple(['epoch'] + keys)).rstrip(',') + '\n')  # header
-            with open(self.csv, 'a') as f:
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(self.csv, flags, mode), 'a') as f:
                 f.write(s + ('%23.5g,' * n % tuple([epoch] + vals)).rstrip(',') + '\n')
 
         if self.tb:

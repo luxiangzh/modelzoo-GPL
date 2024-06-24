@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import stat
 
 from utils.google_utils import *
 from utils.layers import *
@@ -408,7 +410,9 @@ def load_darknet_weights(self, weights, cutoff=-1):
 def save_weights(self, path='model.weights', cutoff=-1):
     # Converts a PyTorch model to Darket format (*.pt to *.weights)
     # Note: Does not work if model.fuse() is applied
-    with open(path, 'wb') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(path, flags, mode), 'wb') as f:
         # Write Header https://github.com/AlexeyAB/darknet/issues/2914#issuecomment-496675346
         self.version.tofile(f)  # (int32) version info: major, minor, revision
         self.seen.tofile(f)  # (int64) number of images seen during training

@@ -34,6 +34,7 @@
 
 import logging
 import os
+import stat
 from urllib.parse import urlparse
 
 try:
@@ -87,7 +88,9 @@ def download_model_checkpoint(opt, experiment):
 
         model_binary = experiment.get_asset(asset_id, return_type="binary", stream=False)
         model_download_path = f"{model_dir}/{asset_filename}"
-        with open(model_download_path, "wb") as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(model_download_path, flags, mode), 'wb') as f:
             f.write(model_binary)
 
         opt.weights = model_download_path
@@ -123,7 +126,9 @@ def set_opt_parameters(opt, experiment):
     os.makedirs(save_dir, exist_ok=True)
 
     hyp_yaml_path = f"{save_dir}/hyp.yaml"
-    with open(hyp_yaml_path, "w") as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(hyp_yaml_path, flags, mode),'w') as f:
         yaml.dump(opt.hyp, f)
     opt.hyp = hyp_yaml_path
 

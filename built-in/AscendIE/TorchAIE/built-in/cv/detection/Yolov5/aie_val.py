@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import stat
 import yaml
 import json
 import argparse
@@ -43,7 +44,9 @@ def main(opt, cfg):
 
     pred_json_file = f"{os.path.basename(opt.model).split('.')[0]}_{opt.tag}_predictions.json"
     print(f'saving results to {pred_json_file}')
-    with open(pred_json_file, 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(pred_json_file, flags, mode), 'w') as f:
         json.dump(pred_results, f)
 
     # calculate infer throughput
@@ -71,5 +74,5 @@ if __name__ == '__main__':
     opt = parser.parse_args()
 
     with open(opt.cfg_file) as f:
-        cfg = yaml.load(f, Loader=yaml.FullLoader)
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
     main(opt, cfg)

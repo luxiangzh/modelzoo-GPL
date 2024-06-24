@@ -48,6 +48,7 @@ import argparse
 import contextlib
 import json
 import os
+import stat
 import platform
 import re
 import subprocess
@@ -178,7 +179,8 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
 
             LOGGER.info(f'{prefix} simplifying with onnx-simplifier {onnxsim.__version__}...')
             model_onnx, check = onnxsim.simplify(model_onnx)
-            assert check, 'assert check failed'
+            if not check:
+                raise ValueError('check failed')
             onnx.save(model_onnx, f)
         except Exception as e:
             LOGGER.info(f'{prefix} simplifier failure: {e}')
@@ -241,7 +243,8 @@ def export_coreml(model, im, file, int8, half, prefix=colorstr('CoreML:')):
 @try_export
 def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose=False, prefix=colorstr('TensorRT:')):
     # YOLOv5 TensorRT export https://developer.nvidia.com/tensorrt
-    assert im.device.type != 'cpu', 'export running on CPU but must be on GPU, i.e. `python export.py --device 0`'
+    if im.device.type == 'cpu':
+        raise ValueError('export running on CPU but must be on GPU, i.e. `python export.py --device 0`')
     try:
         import tensorrt as trt
     except Exception:
@@ -260,7 +263,8 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
     onnx = file.with_suffix('.onnx')
 
     LOGGER.info(f'\n{prefix} starting export with TensorRT {trt.__version__}...')
-    assert onnx.exists(), f'failed to export ONNX file: {onnx}'
+    if not onnx.exists():
+        raise ValueError(f'failed to export ONNX file: {onnx}')
     f = file.with_suffix('.engine')  # TensorRT engine file
     logger = trt.Logger(trt.Logger.INFO)
     if verbose:
@@ -295,7 +299,9 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
     LOGGER.info(f'{prefix} building FP{16 if builder.platform_has_fast_fp16 and half else 32} engine as {f}')
     if builder.platform_has_fast_fp16 and half:
         config.set_flag(trt.BuilderFlag.FP16)
-    with builder.build_engine(network, config) as engine, open(f, 'wb') as t:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with builder.build_engine(network, config) as engine, os.fdopen(os.open(f, flags, mode), 'wb') as t:
         t.write(engine.serialize())
     return f, None
 
@@ -396,7 +402,9 @@ def export_tflite(keras_model, im, file, int8, data, nms, agnostic_nms, prefix=c
         converter.target_spec.supported_ops.append(tf.lite.OpsSet.SELECT_TF_OPS)
 
     tflite_model = converter.convert()
-    open(f, "wb").write(tflite_model)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    os.fdopen(os.open(f, flags, mode), 'wb').write(tflite_model)
     return f, None
 
 
@@ -405,16 +413,17 @@ def export_edgetpu(file, prefix=colorstr('Edge TPU:')):
     # YOLOv5 Edge TPU export https://coral.ai/docs/edgetpu/models-intro/
     cmd = 'edgetpu_compiler --version'
     help_url = 'https://coral.ai/docs/edgetpu/compiler/'
-    assert platform.system() == 'Linux', f'export only supported on Linux. See {help_url}'
-    if subprocess.run(f'{cmd} >/dev/null', shell=True).returncode != 0:
+    if platform.system() != 'Linux':
+        raise ValueError(f'export only supported on Linux. See {help_url}')
+    if subprocess.run(f'{cmd} >/dev/null', shell=False).returncode != 0:
         LOGGER.info(f'\n{prefix} export requires Edge TPU compiler. Attempting install from {help_url}')
-        sudo = subprocess.run('sudo --version >/dev/null', shell=True).returncode == 0  # sudo installed on system
+        sudo = subprocess.run('sudo --version >/dev/null', shell=False).returncode == 0  # sudo installed on system
         for c in (
                 'curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -',
                 'echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list',
                 'sudo apt-get update', 'sudo apt-get install edgetpu-compiler'):
-            subprocess.run(c if sudo else c.replace('sudo ', ''), shell=True, check=True)
-    ver = subprocess.run(cmd, shell=True, capture_output=True, check=True).stdout.decode().split()[-1]
+            subprocess.run(c if sudo else c.replace('sudo ', ''), shell=False, check=True)
+    ver = subprocess.run(cmd, shell=False, capture_output=True, check=True).stdout.decode().split()[-1]
 
     LOGGER.info(f'\n{prefix} starting export with Edge TPU compiler {ver}...')
     f = str(file).replace('.pt', '-int8_edgetpu.tflite')  # Edge TPU model
@@ -441,7 +450,9 @@ def export_tfjs(file, prefix=colorstr('TensorFlow.js:')):
     subprocess.run(cmd.split())
 
     json = Path(f_json).read_text()
-    with open(f_json, 'w') as j:  # sort JSON Identity_* in ascending order
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(f_json, flags, mode), 'w') as j:# sort JSON Identity_* in ascending order
         subst = re.sub(
             r'{"outputs": {"Identity.?.?": {"name": "Identity.?.?"}, '
             r'"Identity.?.?": {"name": "Identity.?.?"}, '
@@ -463,7 +474,9 @@ def add_tflite_metadata(file, metadata, num_outputs):
         from tflite_support import metadata_schema_py_generated as _metadata_fb
 
         tmp_file = Path('/tmp/meta.txt')
-        with open(tmp_file, 'w') as meta_f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(tmp_file, flags, mode), 'w') as meta_f:
             meta_f.write(str(metadata))
 
         model_meta = _metadata_fb.ModelMetadataT()
@@ -516,21 +529,25 @@ def run(
     include = [x.lower() for x in include]  # to lowercase
     fmts = tuple(export_formats()['Argument'][1:])  # --include arguments
     flags = [x in include for x in fmts]
-    assert sum(flags) == len(include), f'ERROR: Invalid --include {include}, valid --include arguments are {fmts}'
+    if sum(flags) != len(include):
+        raise ValueError(f'ERROR: Invalid --include {include}, valid --include arguments are {fmts}')
     jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle = flags  # export booleans
     file = Path(url2file(weights) if str(weights).startswith(('http:/', 'https:/')) else weights)  # PyTorch weights
 
     # Load PyTorch model
     device = select_device(device)
     if half:
-        assert device.type != 'cpu' or coreml, '--half only compatible with GPU export, i.e. use --device 0'
-        assert not dynamic, '--half not compatible with --dynamic, i.e. use either --half or --dynamic but not both'
+        if device.type == 'cpu' and not coreml:
+            raise ValueError('--half only compatible with GPU export, i.e. use --device 0')
+        if dynamic:
+            raise ValueError('--half not compatible with --dynamic, i.e. use either --half or --dynamic but not both')
     model = attempt_load(weights, device=device, inplace=True, fuse=True)  # load FP32 model
 
     # Checks
     imgsz *= 2 if len(imgsz) == 1 else 1  # expand
     if optimize:
-        assert device.type == 'cpu', '--optimize not compatible with cuda devices, i.e. use --device cpu'
+        if device.type != 'cpu':
+            raise ValueError('--optimize not compatible with cuda devices, i.e. use --device cpu')
 
     # Input
     gs = int(max(model.stride))  # grid size (max stride)
@@ -567,8 +584,10 @@ def run(
     if coreml:  # CoreML
         f[4], _ = export_coreml(model, im, file, int8, half)
     if any((saved_model, pb, tflite, edgetpu, tfjs)):  # TensorFlow formats
-        assert not tflite or not tfjs, 'TFLite and TF.js models must be exported separately, please pass only one type.'
-        assert not isinstance(model, ClassificationModel), 'ClassificationModel export to TF formats not yet supported.'
+        if tflite and tfjs:
+            raise ValueError('TFLite and TF.js models must be exported separately, please pass only one type.')
+        if isinstance(model, ClassificationModel):
+            raise ValueError('ClassificationModel export to TF formats not yet supported.')
         f[5], s_model = export_saved_model(model.cpu(),
                                            im,
                                            file,

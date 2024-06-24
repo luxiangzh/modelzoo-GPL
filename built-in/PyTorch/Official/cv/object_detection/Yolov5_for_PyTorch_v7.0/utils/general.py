@@ -10,6 +10,7 @@ import logging
 import logging.config
 import math
 import os
+import stat
 import platform
 import random
 import re
@@ -104,7 +105,9 @@ def is_writeable(dir, test=False):
         return os.access(dir, os.W_OK)  # possible issues on Windows
     file = Path(dir) / 'tmp.txt'
     try:
-        with open(file, 'w'):  # open file with write permissions
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(file, flags, mode), 'w'):  # open file with write permissions
             pass
         file.unlink()  # remove file
         return True
@@ -304,8 +307,9 @@ def check_online():
 def git_describe(path=ROOT):  # path must be a directory
     # Return human-readable git description, i.e. v5.0-5-g3e25f1e https://git-scm.com/docs/git-describe
     try:
-        assert (Path(path) / '.git').is_dir()
-        return check_output(f'git -C {path} describe --tags --long --always', shell=True).decode()[:-1]
+        if not ((Path(path) / '.git').is_dir()):
+            raise FileNotFoundError()
+        return check_output(f'git -C {path} describe --tags --long --always', shell=False).decode()[:-1]
     except Exception:
         return ''
 
@@ -317,19 +321,21 @@ def check_git_status(repo='ultralytics/yolov5', branch='master'):
     url = f'https://github.com/{repo}'
     msg = f', for updates see {url}'
     s = colorstr('github: ')  # string
-    assert Path('.git').exists(), s + 'skipping check (not a git repository)' + msg
-    assert check_online(), s + 'skipping check (offline)' + msg
+    if not Path('.git').exists():
+        raise ValueError(s + 'skipping check (not a git repository)' + msg)
+    if not check_online():
+        raise ValueError(s + 'skipping check (offline)' + msg)
 
-    splits = re.split(pattern=r'\s', string=check_output('git remote -v', shell=True).decode())
+    splits = re.split(pattern=r'\s', string=check_output('git remote -v', shell=False).decode())
     matches = [repo in s for s in splits]
     if any(matches):
         remote = splits[matches.index(True) - 1]
     else:
         remote = 'ultralytics'
-        check_output(f'git remote add {remote} {url}', shell=True)
-    check_output(f'git fetch {remote}', shell=True, timeout=5)  # git fetch
-    local_branch = check_output('git rev-parse --abbrev-ref HEAD', shell=True).decode().strip()  # checked out
-    n = int(check_output(f'git rev-list {local_branch}..{remote}/{branch} --count', shell=True))  # commits behind
+        check_output(f'git remote add {remote} {url}', shell=False)
+    check_output(f'git fetch {remote}', shell=False, timeout=5)  # git fetch
+    local_branch = check_output('git rev-parse --abbrev-ref HEAD', shell=False).decode().strip()  # checked out
+    n = int(check_output(f'git rev-list {local_branch}..{remote}/{branch} --count', shell=False))  # commits behind
     if n > 0:
         pull = 'git pull' if remote == 'origin' else f'git pull {remote} {branch}'
         s += f"⚠️ YOLOv5 is out of date by {n} commit{'s' * (n > 1)}. Use `{pull}` or `git clone {url}` to update."
@@ -367,7 +373,8 @@ def check_version(current='0.0.0', minimum='0.0.0', name='version ', pinned=Fals
     result = (current == minimum) if pinned else (current >= minimum)  # bool
     s = f'WARNING ⚠️ {name}{minimum} is required by YOLOv5, but {name}{current} is currently installed'  # string
     if hard:
-        assert result, emojis(s)  # assert min requirements met
+        if not result:
+            raise ValueError(emojis(s))
     if verbose and not result:
         LOGGER.warning(s)
     return result
@@ -380,7 +387,8 @@ def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), insta
     check_python()  # check python version
     if isinstance(requirements, Path):  # requirements.txt file
         file = requirements.resolve()
-        assert file.exists(), f"{prefix} {file} not found, check failed."
+        if not file.exists():
+            raise ValueError(f"{prefix} {file} not found, check failed.")
         with file.open() as f:
             requirements = [f'{x.name}{x.specifier}' for x in pkg.parse_requirements(f) if x.name not in exclude]
     elif isinstance(requirements, str):
@@ -399,7 +407,7 @@ def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), insta
         LOGGER.info(f"{prefix} YOLOv5 requirement{'s' * (n > 1)} {s}not found, attempting AutoUpdate...")
         try:
             # assert check_online(), "AutoUpdate skipped (offline)"
-            LOGGER.info(check_output(f'pip install {s} {cmds}', shell=True).decode())
+            LOGGER.info(check_output(f'pip install {s} {cmds}', shell=False).decode())
             source = file if 'file' in locals() else requirements
             s = f"{prefix} {n} package{'s' * (n > 1)} updated per {source}\n" \
                 f"{prefix} ⚠️ {colorstr('bold', 'Restart runtime or rerun command for updates to take effect')}\n"
@@ -423,8 +431,10 @@ def check_img_size(imgsz, s=32, floor=0):
 def check_imshow(warn=False):
     # Check if environment supports image displays
     try:
-        assert not is_notebook()
-        assert not is_docker()
+        if is_notebook():
+            raise ValueError()
+        if is_docker():
+            raise ValueError()
         cv2.imshow('test', np.zeros((1, 1, 3)))
         cv2.waitKey(1)
         cv2.destroyAllWindows()
@@ -444,7 +454,8 @@ def check_suffix(file='yolov5s.pt', suffix=('.pt',), msg=''):
         for f in file if isinstance(file, (list, tuple)) else [file]:
             s = Path(f).suffix.lower()  # file suffix
             if len(s):
-                assert s in suffix, f"{msg}{f} acceptable suffix is {suffix}"
+                if s not in suffix:
+                    raise ValueError(f"{msg}{f} acceptable suffix is {suffix}")
 
 
 def check_yaml(file, suffix=('.yaml', '.yml')):
@@ -466,17 +477,21 @@ def check_file(file, suffix=''):
         else:
             LOGGER.info(f'Downloading {url} to {file}...')
             torch.hub.download_url_to_file(url, file)
-            assert Path(file).exists() and Path(file).stat().st_size > 0, f'File download failed: {url}'  # check
+            if not (Path(file).exists() and Path(file).stat().st_size > 0):
+                raise ValueError(f'File download failed: {url}')
         return file
     elif file.startswith('clearml://'):  # ClearML Dataset ID
-        assert 'clearml' in sys.modules, "ClearML is not installed, so cannot use ClearML dataset. Try running 'pip install clearml'."
+        if 'clearml' not in sys.modules:
+            raise ValueError("ClearML is not installed, so cannot use ClearML dataset. Try running 'pip install clearml'.")
         return file
     else:  # search
         files = []
         for d in 'data', 'models', 'utils':  # search directories
             files.extend(glob.glob(str(ROOT / d / '**' / file), recursive=True))  # find file
-        assert len(files), f'File not found: {file}'  # assert file was found
-        assert len(files) == 1, f"Multiple files match '{file}', specify exact path: {files}"  # assert unique
+        if not len(files):
+            raise FileNotFoundError(f'File not found: {file}')
+        if len(files) != 1:
+            raise ValueError(f"Multiple files match '{file}', specify exact path: {files}")
         return files[0]  # return file
 
 
@@ -506,10 +521,12 @@ def check_dataset(data, autodownload=True):
 
     # Checks
     for k in 'train', 'val', 'names':
-        assert k in data, emojis(f"data.yaml '{k}:' field missing ❌")
+        if k not in data:
+            raise KeyError(emojis(f"data.yaml '{k}:' field missing ❌"))
     if isinstance(data['names'], (list, tuple)):  # old array format
         data['names'] = dict(enumerate(data['names']))  # convert to dict
-    assert all(isinstance(k, int) for k in data['names'].keys()), 'data.yaml names keys must be integers, i.e. 2: car'
+    if not (all(isinstance(k, int) for k in data['names'].keys())):
+        raise ValueError('data.yaml names keys must be integers, i.e. 2: car')
     data['nc'] = len(data['names'])
 
     # Resolve paths
@@ -575,7 +592,8 @@ def check_amp(model):
     f = ROOT / 'data' / 'images' / 'bus.jpg'  # image to check
     im = f if f.exists() else 'https://ultralytics.com/images/bus.jpg' if check_online() else np.ones((640, 640, 3))
     try:
-        assert amp_allclose(deepcopy(model), im) or amp_allclose(DetectMultiBackend('yolov5n.pt', device), im)
+        if not (amp_allclose(deepcopy(model), im) or amp_allclose(DetectMultiBackend('yolov5n.pt', device), im)):
+            raise ValueError()
         LOGGER.info(f'{prefix}checks passed ✅')
         return True
     except Exception:
@@ -592,7 +610,9 @@ def yaml_load(file='data.yaml'):
 
 def yaml_save(file='data.yaml', data={}):
     # Single-line safe yaml saving
-    with open(file, 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(file, flags, mode), 'w') as f:
         yaml.safe_dump({k: str(v) if isinstance(v, Path) else v for k, v in data.items()}, f, sort_keys=False)
 
 
@@ -905,8 +925,10 @@ def non_max_suppression(
     xc = prediction[..., 4] > conf_thres  # candidates
 
     # Checks
-    assert 0 <= conf_thres <= 1, f'Invalid Confidence threshold {conf_thres}, valid values are between 0.0 and 1.0'
-    assert 0 <= iou_thres <= 1, f'Invalid IoU {iou_thres}, valid values are between 0.0 and 1.0'
+    if not (0 <= conf_thres <= 1):
+        raise ValueError(f'Invalid Confidence threshold {conf_thres}, valid values are between 0.0 and 1.0')
+    if not (0 <= iou_thres <= 1):
+        raise ValueError(f'Invalid IoU {iou_thres}, valid values are between 0.0 and 1.0')
 
     # Settings
     # min_wh = 2  # (pixels) minimum box width and height
@@ -1029,11 +1051,15 @@ def print_mutation(keys, results, hyp, save_dir, bucket, prefix=colorstr('evolve
 
     # Log to evolve.csv
     s = '' if evolve_csv.exists() else (('%20s,' * n % keys).rstrip(',') + '\n')  # add header
-    with open(evolve_csv, 'a') as f:
+    flags = os.O_WRONLY | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(evolve_csv, flags, mode), 'a') as f:
         f.write(s + ('%20.5g,' * n % vals).rstrip(',') + '\n')
 
     # Save yaml
-    with open(evolve_yaml, 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(evolve_yaml, flags, mode), 'w') as f:
         data = pd.read_csv(evolve_csv)
         data = data.rename(columns=lambda x: x.strip())  # strip keys
         i = np.argmax(fitness(data.values[:, :4]))  #

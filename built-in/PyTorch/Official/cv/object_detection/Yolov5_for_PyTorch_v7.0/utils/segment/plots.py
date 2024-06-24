@@ -148,7 +148,8 @@ def plot_results_with_masks(file="path/to/results.csv", dir="", best=True):
     fig, ax = plt.subplots(2, 8, figsize=(18, 6), tight_layout=True)
     ax = ax.ravel()
     files = list(save_dir.glob("results*.csv"))
-    assert len(files), f"No results.csv files found in {save_dir.resolve()}, nothing to plot."
+    if not len(files):
+        raise ValueError(f'No results.csv files found in {save_dir.resolve()}, nothing to plot.')
     for f in files:
         try:
             data = pd.read_csv(f)

@@ -71,7 +71,8 @@ class Annotator:
 
     #  Annotator for train/val mosaics and jpgs and detect/hub inference annotations
     def __init__(self, im, line_width=None, font_size=None, font='Arial.ttf', pil=False, example='abc'):
-        assert im.data.contiguous, 'Image not contiguous. Apply np.ascontiguousarray(im) to Annotator() input images.'
+        if not im.data.contiguous:
+            raise ValueError('Image not contiguous. Apply np.ascontiguousarray(im) to Annotator() input images.')
         self.pil = pil or not is_ascii(example) or is_chinese(example)
         if self.pil:  # use PIL
             self.im = im if isinstance(im, Image.Image) else Image.fromarray(im)
@@ -402,7 +403,8 @@ def plot_results(file='path/to/results.csv', dir=''):
     fig, ax = plt.subplots(2, 5, figsize=(12, 6), tight_layout=True)
     ax = ax.ravel()
     files = list(save_dir.glob('results*.csv'))
-    assert len(files), f'No results.csv files found in {save_dir.resolve()}, nothing to plot.'
+    if not len(files):
+        raise FileNotFoundError(f'No results.csv files found in {save_dir.resolve()}, nothing to plot.')
     for fi, f in enumerate(files):
         try:
             data = pd.read_csv(f)

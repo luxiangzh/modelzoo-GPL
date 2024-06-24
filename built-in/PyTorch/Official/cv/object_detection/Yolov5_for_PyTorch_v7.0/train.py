@@ -265,7 +265,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                                               shuffle=True)
     labels = np.concatenate(dataset.labels, 0)
     mlc = int(labels[:, 0].max())  # max label class
-    assert mlc < nc, f'Label class {mlc} exceeds nc={nc} in {data}. Possible class labels are 0-{nc - 1}'
+    if mlc >= nc:
+        raise ValueError(f'Label class {mlc} exceeds nc={nc} in {data}. Possible class labels are 0-{nc - 1}')
 
     # Process 0
     if RANK in {-1, 0}:
@@ -535,7 +536,8 @@ def main(opt, callbacks=Callbacks()):
     else:
         opt.data, opt.cfg, opt.hyp, opt.weights, opt.project = \
             check_file(opt.data), check_yaml(opt.cfg), check_yaml(opt.hyp), str(opt.weights), str(opt.project)  # checks
-        assert len(opt.cfg) or len(opt.weights), 'either --cfg or --weights must be specified'
+        if not (len(opt.cfg) or len(opt.weights)):
+            raise ValueError('either --cfg or --weights must be specified')
         if opt.evolve:
             if opt.project == str(ROOT / 'runs/train'):  # if default project name, rename to runs/evolve
                 opt.project = str(ROOT / 'runs/evolve')
@@ -549,11 +551,16 @@ def main(opt, callbacks=Callbacks()):
     
     if LOCAL_RANK != -1:
         msg = 'is not compatible with YOLOv5 Multi-GPU DDP training'
-        assert not opt.image_weights, f'--image-weights {msg}'
-        assert not opt.evolve, f'--evolve {msg}'
-        assert opt.batch_size != -1, f'AutoBatch with --batch-size -1 {msg}, please pass a valid --batch-size'
-        assert opt.batch_size % WORLD_SIZE == 0, f'--batch-size {opt.batch_size} must be multiple of WORLD_SIZE'
-        assert torch.npu.device_count() > LOCAL_RANK, 'insufficient CUDA devices for DDP command'
+        if opt.image_weights:
+            raise ValueError(f'--image-weights {msg}')
+        if opt.evolve:
+            raise ValueError(f'--evolve {msg}')
+        if opt.batch_size == -1:
+            raise ValueError(f'AutoBatch with --batch-size -1 {msg}, please pass a valid --batch-size')
+        if opt.batch_size % WORLD_SIZE != 0:
+            raise ValueError(f'--batch-size {opt.batch_size} must be multiple of WORLD_SIZE')
+        if torch.npu.device_count() <= LOCAL_RANK:
+            raise ValueError('insufficient npu devices for DDP command')
         torch.npu.set_device('npu:{}'.format(LOCAL_RANK))
         device = torch.device('npu:{}'.format(LOCAL_RANK))
         # dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo")

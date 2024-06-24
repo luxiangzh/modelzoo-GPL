@@ -27,7 +27,8 @@ class RandomNegativeSampler(AbstractNegativeSampler):
         return 'random'
 
     def generate_negative_samples(self):
-        assert self.seed is not None, 'Specify seed for random sampling'
+        if self.seed is None:
+            raise ValueError('Specify seed for random sampling')
         np.random.seed(self.seed)
         negative_samples = {}
         print('Sampling negative items')

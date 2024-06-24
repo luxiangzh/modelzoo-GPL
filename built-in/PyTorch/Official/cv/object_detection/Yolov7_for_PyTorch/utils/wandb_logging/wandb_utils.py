@@ -31,6 +31,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # ==========================================================================
 
+import os
+import stat
 import json
 import sys
 from pathlib import Path
@@ -105,7 +107,9 @@ def process_wandb_config_ddp_mode(opt):
         data_dict['val'] = str(val_path)
     if train_dir or val_dir:
         ddp_data_path = str(Path(val_dir) / 'wandb_local_data.yaml')
-        with open(ddp_data_path, 'w') as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(ddp_data_path, flags, mode), "w") as f:
             yaml.dump(data_dict, f)
         opt.data = ddp_data_path
 
@@ -120,7 +124,8 @@ class WandbLogger():
             if opt.resume.startswith(WANDB_ARTIFACT_PREFIX):
                 run_id, project, model_artifact_name = get_run_info(opt.resume)
                 model_artifact_name = WANDB_ARTIFACT_PREFIX + model_artifact_name
-                assert wandb, 'install wandb to resume wandb runs'
+                if not wandb:
+                    raise ValueError("Install wandb to resume wandb runs")
                 # Resume wandb-artifact:// runs here| workaround for not overwriting wandb.config
                 self.wandb_run = wandb.init(id=run_id, project=project, resume='allow')
                 opt.resume = model_artifact_name
@@ -146,7 +151,8 @@ class WandbLogger():
             print(f"{prefix}Install Weights & Biases for YOLOR logging with 'pip install wandb' (recommended)")
 
     def check_and_upload_dataset(self, opt):
-        assert wandb, 'Install wandb to upload dataset'
+        if not wandb:
+            raise ValueError("Install wandb to upload dataset")
         check_dataset(self.data_dict)
         config_path = self.log_dataset_artifact(opt.data,
                                                 opt.single_cls,
@@ -192,7 +198,8 @@ class WandbLogger():
     def download_dataset_artifact(self, path, alias):
         if isinstance(path, str) and path.startswith(WANDB_ARTIFACT_PREFIX):
             dataset_artifact = wandb.use_artifact(remove_prefix(path, WANDB_ARTIFACT_PREFIX) + ":" + alias)
-            assert dataset_artifact is not None, "'Error: W&B dataset artifact doesn\'t exist'"
+            if dataset_artifact is None:
+                raise ValueError('Error: W&B dataset artifact doesn\'t exist')
             datadir = dataset_artifact.download()
             return datadir, dataset_artifact
         return None, None
@@ -200,12 +207,13 @@ class WandbLogger():
     def download_model_artifact(self, opt):
         if opt.resume.startswith(WANDB_ARTIFACT_PREFIX):
             model_artifact = wandb.use_artifact(remove_prefix(opt.resume, WANDB_ARTIFACT_PREFIX) + ":latest")
-            assert model_artifact is not None, 'Error: W&B model artifact doesn\'t exist'
+            if model_artifact is None:
+                raise ValueError('Error: W&B model artifact doesn\'t exist')
             modeldir = model_artifact.download()
             epochs_trained = model_artifact.metadata.get('epochs_trained')
             total_epochs = model_artifact.metadata.get('total_epochs')
-            assert epochs_trained < total_epochs, 'training to %g epochs is finished, nothing to resume.' % (
-                total_epochs)
+            if epochs_trained >= total_epochs:
+                raise ValueError('training to %g epochs is finished, nothing to resume.' % (total_epochs))
             return modeldir, model_artifact
         return None, None
 
@@ -238,7 +246,9 @@ class WandbLogger():
             data['val'] = WANDB_ARTIFACT_PREFIX + str(Path(project) / 'val')
         path = data_file if overwrite_config else '_wandb.'.join(data_file.rsplit('.', 1))  # updated data.yaml path
         data.pop('download', None)
-        with open(path, 'w') as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(path, flags, mode), "w") as f:
             yaml.dump(data, f)
 
         if self.job_type == 'Training':  # builds correct artifact pipeline graph

@@ -12,6 +12,7 @@
 # limitations under the License.
 import argparse
 import os
+import stat
 import glob
 import time
 import json
@@ -139,8 +140,10 @@ def non_max_suppression(
     """
 
     # Checks
-    assert 0 <= conf_thres <= 1, f'Invalid Confidence threshold {conf_thres}, valid values are between 0.0 and 1.0'
-    assert 0 <= iou_thres <= 1, f'Invalid IoU {iou_thres}, valid values are between 0.0 and 1.0'
+    if conf_thres < 0 or conf_thres > 1:
+        raise ValueError(f'Invalid Confidence threshold {conf_thres}, valid values are between 0.0 and 1.0')
+    if iou_thres < 0 or iou_thres > 1:
+        raise ValueError(f'Invalid IoU {iou_thres}, valid values are between 0.0 and 1.0')
     if isinstance(prediction, (list, tuple)):  # YOLOv8 model in validation model, output = (inference_out, loss_out)
         prediction = prediction[0]  # select only inference output
     
@@ -370,7 +373,8 @@ def eval_json(args, stats):
             from pycocotools.cocoeval import COCOeval  # noqa
 
             for x in anno_json, pred_json:
-                assert x.is_file(), f"{x} file not found"
+                if not x.is_file():
+                    raise FileNotFoundError(f"{x} file not found")
             anno = COCO(str(anno_json))  # init annotations api
             pred = anno.loadRes(str(pred_json))  # init predictions api (must pass string, not Path)
             eval = COCOeval(anno, pred, 'bbox')
@@ -447,7 +451,9 @@ def val(input_args):
     args.logger.info('Speed: %.1fms pre-process, %.1fms inference, %.1fms post-process per image' % speed)
     
     if args.save_json and args.jdict:
-        with open(str(args.save_dir / "predictions.json"), 'w') as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(str(args.save_dir / "predictions.json"), flags, mode), 'w') as f:
             args.logger.info(f"Saving {f.name}...")
             json.dump(args.jdict, f)  # flatten and save
         eval_json(args, stats)  # update stats

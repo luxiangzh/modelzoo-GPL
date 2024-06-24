@@ -505,8 +505,10 @@ class RepConv(nn.Module):
         self.in_channels = c1
         self.out_channels = c2
 
-        assert k == 3
-        assert autopad(k, p) == 1
+        if k != 3:
+            raise ValueError()
+        if autopad(k, p) != 1:
+            raise ValueError()
 
         padding_11 = autopad(k, p) - k // 2
 
@@ -565,7 +567,8 @@ class RepConv(nn.Module):
             beta = branch[1].bias
             eps = branch[1].eps
         else:
-            assert isinstance(branch, nn.BatchNorm2d)
+            if not isinstance(branch, nn.BatchNorm2d):
+                raise ValueError()
             if not hasattr(self, "id_tensor"):
                 input_dim = self.in_channels // self.groups
                 kernel_value = np.zeros(
@@ -1120,7 +1123,8 @@ class OREPA_3x3_RepConv(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.groups = groups
-        assert padding == kernel_size // 2
+        if padding != kernel_size // 2:
+            raise ValueError()
 
         self.stride = stride
         self.padding = padding
@@ -1267,8 +1271,10 @@ class RepConv_OREPA(nn.Module):
         self.dilation = dilation
         self.groups = groups
 
-        assert k == 3
-        assert padding == 1
+        if k != 3:
+            raise ValueError()
+        if padding != 1:
+            raise ValueError()
 
         padding_11 = padding - k // 2
 
@@ -1489,7 +1495,8 @@ class Mlp(nn.Module):
 def window_partition(x, window_size):
 
     B, H, W, C = x.shape
-    assert H % window_size == 0, 'feature map h and w can not divide by window size'
+    if H % window_size != 0:
+        raise ValueError('feature map h and w can not divide by window size')
     x = x.view(B, H // window_size, window_size, W // window_size, window_size, C)
     windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
     return windows
@@ -1517,7 +1524,8 @@ class SwinTransformerLayer(nn.Module):
         #     # if window size is larger than input resolution, we don't partition windows
         #     self.shift_size = 0
         #     self.window_size = min(self.input_resolution)
-        assert 0 <= self.shift_size < self.window_size, "shift_size must in 0-window_size"
+        if not (0 <= self.shift_size < self.window_size):
+            raise ValueError("shift_size must in 0-window_size")
 
         self.norm1 = norm_layer(dim)
         self.attn = WindowAttention(
@@ -1862,7 +1870,8 @@ class SwinTransformerLayer_v2(nn.Module):
         #    # if window size is larger than input resolution, we don't partition windows
         #    self.shift_size = 0
         #    self.window_size = min(self.input_resolution)
-        assert 0 <= self.shift_size < self.window_size, "shift_size must in 0-window_size"
+        if not (0 <= self.shift_size < self.window_size):
+            raise ValueError("shift_size must in 0-window_size")
 
         self.norm1 = norm_layer(dim)
         self.attn = WindowAttention_v2(

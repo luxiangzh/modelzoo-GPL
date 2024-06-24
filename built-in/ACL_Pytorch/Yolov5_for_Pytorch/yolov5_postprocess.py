@@ -14,6 +14,7 @@ import json
 import argparse
 import re
 import os
+import stat
 import sys
 import torch
 import numpy as np
@@ -98,7 +99,9 @@ def postprocess(opt, cfg):
 
     pred_json_file = f"{opt.onnx.split('.')[0]}_predictions.json"
 
-    with open(pred_json_file, 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(pred_json_file, flags, mode), 'w') as f:
         json.dump(pred_results, f)
     print(f"saving results to {pred_json_file}")
 
@@ -128,7 +131,9 @@ if __name__ == '__main__':
 
     opt = parser.parse_args()
 
-    with open(opt.cfg_file) as f:
-        cfg = yaml.load(f, Loader=yaml.FullLoader)
+    flags = os.O_RDONLY
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(opt.cfg_file, flags, mode), 'r') as f:
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
 
     postprocess(opt, cfg)

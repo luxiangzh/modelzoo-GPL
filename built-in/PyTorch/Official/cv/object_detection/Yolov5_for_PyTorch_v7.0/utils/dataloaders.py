@@ -42,6 +42,7 @@ import hashlib
 import json
 import math
 import os
+import stat
 import random
 import shutil
 import time
@@ -301,8 +302,9 @@ class LoadImages:
             self._new_video(videos[0])  # new video
         else:
             self.cap = None
-        assert self.nf > 0, f'No images or videos found in {p}. ' \
-                            f'Supported formats are:\nimages: {IMG_FORMATS}\nvideos: {VID_FORMATS}'
+        if self.nf <= 0:
+            raise ValueError(f'No images or videos found in {p}. ' \
+                            f'Supported formats are:\nimages: {IMG_FORMATS}\nvideos: {VID_FORMATS}')
 
     def __iter__(self):
         self.count = 0
@@ -336,7 +338,8 @@ class LoadImages:
             # Read image
             self.count += 1
             im0 = cv2.imread(path)  # BGR
-            assert im0 is not None, f'Image Not Found {path}'
+            if im0 is None:
+                raise ValueError(f'Image Not Found {path}')
             s = f'image {self.count}/{self.nf} {path}: '
 
         if self.transforms:
@@ -392,10 +395,13 @@ class LoadStreams:
                 s = pafy.new(s).getbest(preftype="mp4").url  # YouTube URL
             s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam
             if s == 0:
-                assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
-                assert not is_kaggle(), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
+                if is_colab():
+                    raise ValueError('--source 0 webcam unsupported on Colab. Rerun command in a local environment.')
+                if is_kaggle():
+                    raise ValueError('--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.')
             cap = cv2.VideoCapture(s)
-            assert cap.isOpened(), f'{st}Failed to open {s}'
+            if not cap.isOpened():
+                raise ValueError(f'{st}Failed to open {s}')
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS)  # warning: may return 0 or nan
@@ -509,7 +515,8 @@ class LoadImagesAndLabels(Dataset):
                     raise FileNotFoundError(f'{prefix}{p} does not exist')
             self.im_files = sorted(x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in IMG_FORMATS)
             # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in IMG_FORMATS])  # pathlib
-            assert self.im_files, f'{prefix}No images found'
+            if self.im_files is None:
+                raise ValueError(f'{prefix}No images found')
         except Exception as e:
             raise Exception(f'{prefix}Error loading data from {path}: {e}\n{HELP_URL}') from e
 
@@ -518,8 +525,10 @@ class LoadImagesAndLabels(Dataset):
         cache_path = (p if p.is_file() else Path(self.label_files[0]).parent + '_yolov5_v7.0.cache')
         try:
             cache, exists = np.load(cache_path, allow_pickle=True).item(), True  # load dict
-            assert cache['version'] == self.cache_version  # matches current version
-            assert cache['hash'] == get_hash(self.label_files + self.im_files)  # identical hash
+            if cache['version'] != self.cache_version:
+                raise ValueError("cache verision not current match")
+            if cache['hash'] != get_hash(self.label_files + self.im_files):
+                raise ValueError("hash not identical")
         except Exception:
             cache, exists = self.cache_labels(cache_path, prefix), False  # run cache ops
 
@@ -530,13 +539,15 @@ class LoadImagesAndLabels(Dataset):
             tqdm(None, desc=prefix + d, total=n, initial=n, bar_format=TQDM_BAR_FORMAT)  # display cache results
             if cache['msgs']:
                 LOGGER.info('\n'.join(cache['msgs']))  # display warnings
-        assert nf > 0 or not augment, f'{prefix}No labels found in {cache_path}, can not start training. {HELP_URL}'
+        if nf <= 0 and augment:
+            raise ValueError(f'{prefix}No labels found in {cache_path}, can not start training. {HELP_URL}')
 
         # Read cache
         [cache.pop(k) for k in ('hash', 'version', 'msgs')]  # remove items
         labels, shapes, self.segments = zip(*cache.values())
         nl = len(np.concatenate(labels, 0))  # number of labels
-        assert nl > 0 or not augment, f'{prefix}All labels empty in {cache_path}, can not start training. {HELP_URL}'
+        if nl <= 0 and augment:
+            raise ValueError(f'{prefix}All labels empty in {cache_path}, can not start training. {HELP_URL}')
         self.labels = list(labels)
         self.shapes = np.array(shapes)
         self.im_files = list(cache.keys())  # update
@@ -767,7 +778,8 @@ class LoadImagesAndLabels(Dataset):
                 im = np.load(fn)
             else:  # read image
                 im = cv2.imread(f)  # BGR
-                assert im is not None, f'Image Not Found {f}'
+                if im is None:
+                    raise ValueError(f'Image Not Found {f}')
             h0, w0 = im.shape[:2]  # orig hw
             r = self.img_size / max(h0, w0)  # ratio
             if r != 1:  # if sizes are not equal
@@ -995,7 +1007,8 @@ def extract_boxes(path=DATASETS_DIR / 'coco128'):  # from utils.dataloaders impo
 
                     b[[0, 2]] = np.clip(b[[0, 2]], 0, w)  # clip boxes outside of image
                     b[[1, 3]] = np.clip(b[[1, 3]], 0, h)
-                    assert cv2.imwrite(str(f), im[b[1]:b[3], b[0]:b[2]]), f'box failure in {f}'
+                    if not cv2.imwrite(str(f), im[b[1]:b[3], b[0]:b[2]]):
+                        raise ValueError(f'box failure in {f}')
 
 
 def autosplit(path=DATASETS_DIR / 'coco128/images', weights=(0.9, 0.1, 0.0), annotated_only=False):
@@ -1020,7 +1033,9 @@ def autosplit(path=DATASETS_DIR / 'coco128/images', weights=(0.9, 0.1, 0.0), ann
     print(f'Autosplitting images from {path}' + ', using *.txt labeled images only' * annotated_only)
     for i, img in tqdm(zip(indices, files), total=n):
         if not annotated_only or Path(img2label_paths([str(img)])[0]).exists():  # check label
-            with open(path.parent / txt[i], 'a') as f:
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(path.parent / txt[i], flags, mode), 'a') as f:
                 f.write(f'./{img.relative_to(path.parent).as_posix()}' + '\n')  # add image to txt file
 
 
@@ -1033,8 +1048,10 @@ def verify_image_label(args):
         im = Image.open(im_file)
         im.verify()  # PIL verify
         shape = exif_size(im)  # image size
-        assert (shape[0] > 9) & (shape[1] > 9), f'image size {shape} <10 pixels'
-        assert im.format.lower() in IMG_FORMATS, f'invalid image format {im.format}'
+        if not ((shape[0] > 9) & (shape[1] > 9)):
+            raise ValueError(f'image size {shape} <10 pixels')
+        if im.format.lower() not in IMG_FORMATS:
+            raise ValueError(f'invalid image format {im.format}')
         if im.format.lower() in ('jpg', 'jpeg'):
             with open(im_file, 'rb') as f:
                 f.seek(-2, 2)
@@ -1054,9 +1071,12 @@ def verify_image_label(args):
                 lb = np.array(lb, dtype=np.float32)
             nl = len(lb)
             if nl:
-                assert lb.shape[1] == 5, f'labels require 5 columns, {lb.shape[1]} columns detected'
-                assert (lb >= 0).all(), f'negative label values {lb[lb < 0]}'
-                assert (lb[:, 1:] <= 1).all(), f'non-normalized or out of bounds coordinates {lb[:, 1:][lb[:, 1:] > 1]}'
+                if lb.shape[1] != 5:
+                    raise ValueError(f'labels require 5 columns, {lb.shape[1]} columns detected')
+                if not (lb >= 0).all():
+                    raise ValueError(f'negative label values {lb[lb < 0]}')
+                if not (lb[:, 1:] <= 1).all():
+                    raise ValueError(f'non-normalized or out of bounds coordinates {lb[:, 1:][lb[:, 1:] > 1]}')
                 _, i = np.unique(lb, axis=0, return_index=True)
                 if len(i) < nl:  # duplicate row check
                     lb = lb[i]  # remove duplicates
@@ -1113,21 +1133,26 @@ class HUBDatasetStats():
     def _find_yaml(dir):
         # Return data.yaml file
         files = list(dir.glob('*.yaml')) or list(dir.rglob('*.yaml'))  # try root level first and then recursive
-        assert files, f'No *.yaml file found in {dir}'
+        if not files:
+            raise ValueError(f'No *.yaml file found in {dir}')
         if len(files) > 1:
             files = [f for f in files if f.stem == dir.stem]  # prefer *.yaml files that match dir name
-            assert files, f'Multiple *.yaml files found in {dir}, only 1 *.yaml file allowed'
-        assert len(files) == 1, f'Multiple *.yaml files found: {files}, only 1 *.yaml file allowed in {dir}'
+            if not files:
+                raise ValueError(f'Multiple *.yaml files found in {dir}, only 1 *.yaml file allowed')
+        if len(files) != 1:
+            raise ValueError(f'Multiple *.yaml files found: {files}, only 1 *.yaml file allowed in {dir}')
         return files[0]
 
     def _unzip(self, path):
         # Unzip data.zip
         if not str(path).endswith('.zip'):  # path is data.yaml
             return False, None, path
-        assert Path(path).is_file(), f'Error unzipping {path}, file not found'
+        if not Path(path).is_file():
+            raise ValueError(f'Error unzipping {path}, file not found')
         unzip_file(path, path=path.parent)
         dir = path.with_suffix('')  # dataset directory == zip name
-        assert dir.is_dir(), f'Error unzipping {path}, {dir} not found. path/to/abc.zip MUST unzip to path/to/abc/'
+        if not dir.is_dir():
+            raise ValueError(f'Error unzipping {path}, {dir} not found. path/to/abc.zip MUST unzip to path/to/abc/')
         return True, str(dir), self._find_yaml(dir)  # zipped, data_dir, yaml_path
 
     def _hub_ops(self, f, max_dim=1920):
@@ -1177,7 +1202,9 @@ class HUBDatasetStats():
         if save:
             stats_path = self.hub_dir / 'stats.json'
             print(f'Saving {stats_path.resolve()}...')
-            with open(stats_path, 'w') as f:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(stats_path, flags, mode), 'w') as f:
                 json.dump(self.stats, f)  # save stats.json
         if verbose:
             print(json.dumps(self.stats, indent=2, sort_keys=False))

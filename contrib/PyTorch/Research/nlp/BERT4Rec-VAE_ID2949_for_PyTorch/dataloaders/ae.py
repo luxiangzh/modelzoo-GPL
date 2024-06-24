@@ -106,7 +106,8 @@ class AETrainDataset(data_utils.Dataset):
             item_col.extend(useritem)
         
         # Construct sparse matrix
-        assert len(user_row) == len(item_col)
+        if len(user_row) != len(item_col):
+            raise ValueError("len of user row is not same as item col")
         sparse_data = sparse.csr_matrix((np.ones(len(user_row)), (user_row, item_col)), 
                                         dtype='float64', shape=(len(user2items), item_count))
         

@@ -127,14 +127,16 @@ def main():
 
     # load weight from a checkpoint
     if configs.pretrained_path is not None:
-        assert os.path.isfile(configs.pretrained_path), "=> no checkpoint found at '{}'".format(configs.pretrained_path)
+        if not os.path.isfile(configs.pretrained_path):
+            raise FileNotFoundError("=> no checkpoint found at '{}'".format(configs.pretrained_path))
         model.load_state_dict(torch.load(configs.pretrained_path, map_location=device))
         if logger is not None:
             logger.info('loaded pretrained model at {}'.format(configs.pretrained_path))
 
     # resume weights of model from a checkpoint
     if configs.resume_path is not None:
-        assert os.path.isfile(configs.resume_path), "=> no checkpoint found at '{}'".format(configs.resume_path)
+        if not os.path.isfile(configs.resume_path):
+            raise FileNotFoundError("=> no checkpoint found at '{}'".format(configs.resume_path))
         model.load_state_dict(torch.load(configs.resume_path, map_location=device))
         if logger is not None:
             logger.info('resume training model from checkpoint {}'.format(configs.resume_path))
@@ -153,7 +155,8 @@ def main():
     # resume optimizer, lr_scheduler from a checkpoint
     if configs.resume_path is not None:
         utils_path = configs.resume_path.replace('Model_', 'Utils_')
-        assert os.path.isfile(utils_path), "=> no checkpoint found at '{}'".format(utils_path)
+        if not os.path.isfile(utils_path):
+            raise FileNotFoundError("=> no checkpoint found at '{}'".format(utils_path))
         utils_state_dict = torch.load(utils_path, map_location='npu:{}'.format(configs.local_rank))
         optimizer.load_state_dict(utils_state_dict['optimizer'])
         lr_scheduler.load_state_dict(utils_state_dict['lr_scheduler'])

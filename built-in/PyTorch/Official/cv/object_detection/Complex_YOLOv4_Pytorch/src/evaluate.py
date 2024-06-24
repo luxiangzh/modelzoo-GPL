@@ -154,7 +154,8 @@ if __name__ == '__main__':
     model = create_model(configs)
     # model.print_network()
     print('\n\n' + '-*=' * 30 + '\n\n')
-    assert os.path.isfile(configs.pretrained_path), "No file at {}".format(configs.pretrained_path)
+    if not os.path.isfile(configs.pretrained_path):
+        raise FileNotFoundError("No file at {}".format(configs.pretrained_path))
     device = torch.device('npu:{}'.format(configs.local_rank))
     model.load_state_dict(torch.load(configs.pretrained_path, map_location=device))
     model = model.to(device)

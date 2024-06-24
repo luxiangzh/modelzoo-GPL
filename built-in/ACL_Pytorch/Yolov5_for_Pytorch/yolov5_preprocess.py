@@ -88,5 +88,5 @@ if __name__ == '__main__':
     opt = parser.parse_args()
 
     with open(opt.cfg_file) as f:
-        cfg = yaml.load(f, Loader=yaml.FullLoader)
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
     main(opt, cfg)

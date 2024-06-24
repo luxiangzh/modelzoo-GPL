@@ -1,6 +1,8 @@
 import argparse
 import time
 from pathlib import Path
+import os
+import stat
 
 import cv2
 import torch
@@ -105,7 +107,9 @@ def detect(save_img=False):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
-                        with open(txt_path + '.txt', 'a') as f:
+                        flags = os.O_WRONLY | os.O_EXCL
+                        mode = stat.S_IWUSR | stat.S_IRUSR
+                        with os.fdopen(os.open(txt_path + '.txt', flags, mode), 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
                     if save_img or view_img:  # Add bbox to image

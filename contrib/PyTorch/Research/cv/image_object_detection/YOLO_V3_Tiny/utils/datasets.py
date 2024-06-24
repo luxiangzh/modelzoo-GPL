@@ -14,6 +14,7 @@
 import glob
 import math
 import os
+import stat
 import random
 import shutil
 import time
@@ -77,7 +78,8 @@ class LoadImages:  # for inference
             self.new_video(videos[0])  # new video
         else:
             self.cap = None
-        assert self.nF > 0, 'No images or videos found in ' + path
+        if self.nF <= 0:
+            raise FileNotFoundError('No images or videos found in ' + path)
 
     def __iter__(self):
         self.count = 0
@@ -109,7 +111,8 @@ class LoadImages:  # for inference
             # Read image
             self.count += 1
             img0 = cv2.imread(path)  # BGR
-            assert img0 is not None, 'Image Not Found ' + path
+            if img0 is None:
+                raise FileNotFoundError('Image Not Found ' + path)
             print('image %g/%g %s: ' % (self.count, self.nF, path), end='')
 
         # Padded resize
@@ -179,7 +182,8 @@ class LoadWebcam:  # for inference
                         break
 
         # Print
-        assert ret_val, 'Camera Error %s' % self.pipe
+        if not ret_val:
+            raise ValueError('Camera Error %s' % self.pipe)
         img_path = 'webcam.jpg'
         print('webcam %g: ' % self.count, end='')
 
@@ -202,7 +206,9 @@ class LoadStreams:  # multiple IP or RTSP cameras
         self.img_size = img_size
 
         if os.path.isfile(sources):
-            with open(sources, 'r') as f:
+            flags = os.O_RDONLY  
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(sources, flags, mode), 'r') as f:
                 sources = [x.strip() for x in f.read().splitlines() if len(x.strip())]
         else:
             sources = [sources]
@@ -214,7 +220,8 @@ class LoadStreams:  # multiple IP or RTSP cameras
             # Start the thread to read frames from the video stream
             print('%g/%g: %s... ' % (i + 1, n, s), end='')
             cap = cv2.VideoCapture(0 if s == '0' else s)
-            assert cap.isOpened(), 'Failed to open %s' % s
+            if not cap.isOpened():
+                raise ValueError('Failed to open %s' % s)
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS) % 100
@@ -273,13 +280,17 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, path, img_size=416, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
                  cache_images=False, single_cls=False):
         path = str(Path(path))  # os-agnostic
-        assert os.path.isfile(path), 'File not found %s. See %s' % (path, help_url)
-        with open(path, 'r') as f:
+        if not os.path.isfile(path):
+            raise FileNotFoundError('File not found %s. See %s' % (path, help_url))
+        flags = os.O_RDONLY  
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(path, flags, mode), 'r') as f:
             self.img_files = [path.replace(path.split(os.sep)[-1], "") + x.replace('./', "") for x in
                               f.read().splitlines()  # os-agnostic
                               if os.path.splitext(x)[-1].lower() in img_formats]
         n = len(self.img_files)
-        assert n > 0, 'No images found in %s. See %s' % (path, help_url)
+        if n <= 0:
+            raise FileNotFoundError('No images found in %s. See %s' % (path, help_url))
         bi = np.floor(np.arange(n) / batch_size).astype(np.int)  # batch index
         nb = bi[-1] + 1  # number of batches
 
@@ -300,9 +311,12 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             # Read image shapes (wh)
             sp = path.replace('.txt', '.shapes')  # shapefile path
             try:
-                with open(sp, 'r') as f:  # read existing shapefile
+                flags = os.O_RDONLY    # read existing shapefile
+                mode = stat.S_IWUSR | stat.S_IRUSR
+                with os.fdopen(os.open(sp, flags, mode), 'r') as f:
                     s = [x.split() for x in f.read().splitlines()]
-                    assert len(s) == n, 'Shapefile out of sync'
+                    if len(s) != n:
+                        raise ValueError('Shapefile out of sync')
             except:
                 s = [exif_size(Image.open(f)) for f in tqdm(self.img_files, desc='Reading image shapes')]
                 np.savetxt(sp, s, fmt='%g')  # overwrites existing (if any)
@@ -337,16 +351,21 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         nm, nf, ne, ns, nd = 0, 0, 0, 0, 0  # number missing, found, empty, datasubset, duplicate
         for i, file in enumerate(pbar):
             try:
-                with open(file, 'r') as f:
+                flags = os.O_RDONLY
+                mode = stat.S_IWUSR | stat.S_IRUSR
+                with os.fdopen(os.open(file, flags, mode), 'r') as f:
                     l = np.array([x.split() for x in f.read().splitlines()], dtype=np.float32)
             except:
                 nm += 1  # print('missing labels for image %s' % self.img_files[i])  # file missing
                 continue
 
             if l.shape[0]:
-                assert l.shape[1] == 5, '> 5 label columns: %s' % file
-                assert (l >= 0).all(), 'negative labels: %s' % file
-                assert (l[:, 1:] <= 1).all(), 'non-normalized or out of bounds coordinate labels: %s' % file
+                if l.shape[1] != 5:
+                    raise ValueError('> 5 label columns: %s' % file)
+                if not (l >= 0).all():
+                    raise ValueError('negative labels: %s' % file)
+                if not (l[:, 1:] <= 1).all():
+                    raise ValueError('non-normalized or out of bounds coordinate labels: %s' % file)
                 if np.unique(l, axis=0).shape[0] < l.shape[0]:  # duplicate rows
                     nd += 1  # print('WARNING: duplicate rows in %s' % self.label_files[i])  # duplicate rows
                 if single_cls:
@@ -363,7 +382,9 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                     if exclude_classes not in l[:, 0]:
                         ns += 1
                         # shutil.copy(src=self.img_files[i], dst='./datasubset/images/')  # copy image
-                        with open('./datasubset/images.txt', 'a') as f:
+                        flags = os.O_WRONLY | os.O_EXCL
+                        mode = stat.S_IWUSR | stat.S_IRUSR
+                        with os.fdopen(os.open('./datasubset/images.txt', flags, mode), 'a') as f:
                             f.write(self.img_files[i] + '\n')
 
                 # Extract object detection boxes for a second stage classifier
@@ -383,14 +404,16 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
                         b[[0, 2]] = np.clip(b[[0, 2]], 0, w)  # clip boxes outside of image
                         b[[1, 3]] = np.clip(b[[1, 3]], 0, h)
-                        assert cv2.imwrite(f, img[b[1]:b[3], b[0]:b[2]]), 'Failure extracting classifier boxes'
+                        if not cv2.imwrite(f, img[b[1]:b[3], b[0]:b[2]]):
+                            raise ValueError('Failure extracting classifier boxes')
             else:
                 ne += 1  # print('empty labels for image %s' % self.img_files[i])  # file empty
                 # os.system("rm '%s' '%s'" % (self.img_files[i], self.label_files[i]))  # remove
 
             pbar.desc = 'Caching labels (%g found, %g missing, %g empty, %g duplicate, for %g images)' % (
                 nf, nm, ne, nd, n)
-        assert nf > 0, 'No labels found in %s. See %s' % (os.path.dirname(file) + os.sep, help_url)
+        if nf <= 0:
+            raise FileNotFoundError('No labels found in %s. See %s' % (os.path.dirname(file) + os.sep, help_url))
 
         # Cache images into memory for faster training (WARNING: large datasets may exceed system RAM)
         if cache_images:  # if training
@@ -515,7 +538,8 @@ def load_image(self, index):
     if img is None:  # not cached
         path = self.img_files[index]
         img = cv2.imread(path)  # BGR
-        assert img is not None, 'Image Not Found ' + path
+        if img is None:
+            raise FileNotFoundError('Image Not Found ' + path)
         h0, w0 = img.shape[:2]  # orig hw
         r = self.img_size / max(h0, w0)  # resize image to img_size
         if r < 1 or (self.augment and r != 1):  # always resize down, only resize up if training with augmentation
@@ -783,14 +807,18 @@ def convert_images2bmp():  # from utils.datasets import *; convert_images2bmp()
     # Save labels
     # for path in ['../coco/trainvalno5k.txt', '../coco/5k.txt']:
     for file in ['../data/sm4/out_train.txt', '../data/sm4/out_test.txt']:
-        with open(file, 'r') as f:
+        flags = os.O_RDONLY
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(file, flags, mode), 'r') as f:
             lines = f.read()
             # lines = f.read().replace('2014/', '2014bmp/')  # coco
             lines = lines.replace('/images', '/imagesbmp')
             lines = lines.replace('/background', '/backgroundbmp')
         for ext in formats:
             lines = lines.replace(ext, '.bmp')
-        with open(file.replace('.txt', 'bmp.txt'), 'w') as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(file.replace('.txt', 'bmp.txt'), flags, mode), 'w') as f:
             f.write(lines)
 
 
@@ -802,11 +830,15 @@ def recursive_dataset2bmp(dataset='../data/sm4_bmp'):  # from utils.datasets imp
             p = a + '/' + file
             s = Path(file).suffix
             if s == '.txt':  # replace text
-                with open(p, 'r') as f:
+                flags = os.O_RDONLY
+                mode = stat.S_IWUSR | stat.S_IRUSR
+                with os.fdopen(os.open(p, flags, mode), 'r') as f:
                     lines = f.read()
                 for f in formats:
                     lines = lines.replace(f, '.bmp')
-                with open(p, 'w') as f:
+                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                mode = stat.S_IWUSR | stat.S_IRUSR
+                with os.fdopen(os.open(p, flags, mode), 'w') as f:
                     f.write(lines)
             elif s in formats:  # replace image
                 cv2.imwrite(p.replace(s, '.bmp'), cv2.imread(p))
@@ -817,7 +849,9 @@ def recursive_dataset2bmp(dataset='../data/sm4_bmp'):  # from utils.datasets imp
 def imagelist2folder(path='data/coco_64img.txt'):  # from utils.datasets import *; imagelist2folder()
     # Copies all the images in a text file (list of images) into a folder
     create_folder(path[:-4])
-    with open(path, 'r') as f:
+    flags = os.O_RDONLY
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(path, flags, mode), 'r') as f:
         for line in f.read().splitlines():
             os.system('cp "%s" %s' % (line, path[:-4]))
             print(line)

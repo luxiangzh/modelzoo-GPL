@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
+import stat
 import argparse
 from sys import platform
 
@@ -137,7 +138,9 @@ def detect(save_img=False):
                 # Write results
                 for *xyxy, conf, cls in det:
                     if save_txt:  # Write to file
-                        with open(save_path + '.txt', 'a') as file:
+                        flags = os.O_WRONLY | os.O_EXCL
+                        mode = stat.S_IWUSR | stat.S_IRUSR
+                        with os.fdopen(os.open(save_path + '.txt', flags, mode), 'a') as file:
                             file.write(('%g ' * 6 + '\n') % (*xyxy, cls, conf))
 
                     if save_img or view_img:  # Add bbox to image

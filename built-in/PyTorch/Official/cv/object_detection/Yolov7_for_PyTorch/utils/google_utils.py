@@ -45,7 +45,7 @@ import torch
 
 def gsutil_getsize(url=''):
     # gs://bucket/file size https://cloud.google.com/storage/docs/gsutil/commands/du
-    s = subprocess.check_output(f'gsutil du {url}', shell=True).decode('utf-8')
+    s = subprocess.check_output(f'gsutil du {url}', shell=False).decode('utf-8')
     return eval(s.split(' ')[0]) if len(s) else 0  # bytes
 
 
@@ -61,7 +61,7 @@ def attempt_download(file, repo='WongKinYiu/yolov7'):
         except:  # fallback plan
             assets = ['yolov7.pt', 'yolov7-tiny.pt', 'yolov7x.pt', 'yolov7-d6.pt', 'yolov7-e6.pt', 
                       'yolov7-e6e.pt', 'yolov7-w6.pt']
-            tag = subprocess.check_output('git tag', shell=True).decode().split()[-1]
+            tag = subprocess.check_output('git tag', shell=False).decode().split()[-1]
 
         name = file.name
         if name in assets:
@@ -71,10 +71,13 @@ def attempt_download(file, repo='WongKinYiu/yolov7'):
                 url = f'https://github.com/{repo}/releases/download/{tag}/{name}'
                 print(f'Downloading {url} to {file}...')
                 torch.hub.download_url_to_file(url, file)
-                assert file.exists() and file.stat().st_size > 1E6  # check
+                if not file.exists() or file.stat().st_size < 1E6:  # check
+                    file.unlink(missing_ok=True)  # remove partial downloads
+                    raise ValueError(f'ERROR: Download failure: {msg}')
             except Exception as e:  # GCP
                 print(f'Download error: {e}')
-                assert redundant, 'No secondary mirror'
+                if not redundant:
+                    raise ValueError('No secondary mirror')
                 url = f'https://storage.googleapis.com/{repo}/ckpt/{name}'
                 print(f'Downloading {url} to {file}...')
                 os.system(f'curl -L {url} -o {file}')  # torch.hub.download_url_to_file(url, weights)
