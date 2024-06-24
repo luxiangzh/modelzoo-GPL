@@ -47,7 +47,7 @@ def create_model(configs):
         print('using darknet')
         model = Darknet(cfgfile=configs.cfgfile, use_giou_loss=configs.use_giou_loss)
     else:
-        assert False, 'Undefined model backbone'
+        raise ValueError('Undefined model backbone')
 
     return model
 

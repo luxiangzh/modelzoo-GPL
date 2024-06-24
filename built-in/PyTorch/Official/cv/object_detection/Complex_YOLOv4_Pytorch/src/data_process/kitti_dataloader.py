@@ -1,10 +1,5 @@
 """
 # -*- coding: utf-8 -*-
------------------------------------------------------------------------------------
-# Author: Nguyen Mau Dung
-# DoC: 2020.07.05
-# email: nguyenmaudung93.kstn@gmail.com
------------------------------------------------------------------------------------
 # Description: This script for creating the dataloader for training/validation/test phase
 """
 

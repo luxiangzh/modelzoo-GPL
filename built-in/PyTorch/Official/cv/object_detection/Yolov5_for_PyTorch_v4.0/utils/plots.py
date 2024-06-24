@@ -334,7 +334,7 @@ def plot_labels(labels, save_dir=Path(''), loggers=None):
 def plot_evolution(yaml_file='data/hyp.finetune.yaml'):  # from utils.plots import *; plot_evolution()
     # Plot hyperparameter evolution results in evolve.txt
     with open(yaml_file) as f:
-        hyp = yaml.load(f, Loader=yaml.FullLoader)
+        hyp = yaml.load(f, Loader=yaml.SafeLoader)
     x = np.loadtxt('evolve.txt', ndmin=2)
     f = fitness(x)
     # weights = (f - f.min()) ** 2  # for weighted results
@@ -423,7 +423,8 @@ def plot_results(start=0, stop=0, bucket='', id=(), labels=(), save_dir=''):
         os.system(c)
     else:
         files = list(Path(save_dir).glob('results*.txt'))
-    assert len(files), 'No results.txt files found in %s, nothing to plot.' % os.path.abspath(save_dir)
+    if not len(files):
+        raise FileNotFoundError('No results.txt files found in %s, nothing to plot.' % os.path.abspath(save_dir))
     for fi, f in enumerate(files):
         try:
             results = np.loadtxt(f, usecols=[2, 3, 4, 8, 9, 12, 13, 14, 10, 11], ndmin=2).T

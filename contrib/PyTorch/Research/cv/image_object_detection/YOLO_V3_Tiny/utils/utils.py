@@ -14,6 +14,7 @@
 import glob
 import math
 import os
+import stat
 import random
 import shutil
 import subprocess
@@ -47,14 +48,16 @@ def init_seeds(seed=0):
 
 def check_git_status():
     # Suggest 'git pull' if repo is out of date
-    s = subprocess.check_output('if [ -d .git ]; then git fetch && git status -uno; fi', shell=True).decode('utf-8')
+    s = subprocess.check_output('if [ -d .git ]; then git fetch && git status -uno; fi', shell=False).decode('utf-8')
     if 'Your branch is behind' in s:
         print(s[s.find('Your branch is behind'):s.find('\n\n')] + '\n')
 
 
 def load_classes(path):
     # Loads *.names file at 'path'
-    with open(path, 'r') as f:
+    flags = os.O_RDONLY
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(path, flags, mode), 'r') as f:
         names = f.read().split('\n')
     return list(filter(None, names))  # filter removes empty strings (such as last line)
 
@@ -534,9 +537,10 @@ def build_targets(p, targets, model):
         # Class
         tcls.append(c)
         if c.shape[0]:  # if any targets
-            assert c.max() < model.nc, 'Model accepts %g classes labeled from 0-%g, however you labelled a class %g. ' \
-                                       'See https://github.com/ultralytics/yolov3/wiki/Train-Custom-Data' % (
-                                           model.nc, model.nc - 1, c.max())
+            if c.max() >= model.nc:
+                raise ValueError('Model accepts %g classes labeled from 0-%g, however you labelled a class %g. ' \
+                                'See https://github.com/ultralytics/yolov3/wiki/Train-Custom-Data' % (
+                                model.nc, model.nc - 1, c.max()))
 
     return tcls, tbox, indices, av, targets_mask, targets_sum_mask
 
@@ -724,15 +728,19 @@ def coco_single_class_labels(path='../coco/labels/train2014/', label_class=43):
     os.makedirs('new/labels/')
     os.makedirs('new/images/')
     for file in tqdm(sorted(glob.glob('%s/*.*' % path))):
-        with open(file, 'r') as f:
+        flags = os.O_RDONLY
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(file, flags, mode), 'r') as f:
             labels = np.array([x.split() for x in f.read().splitlines()], dtype=np.float32)
         i = labels[:, 0] == label_class
         if any(i):
             img_file = file.replace('labels', 'images').replace('txt', 'jpg')
             labels[:, 0] = 0  # reset class to 0
-            with open('new/images.txt', 'a') as f:  # add image to dataset list
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open('new/images.txt', flags, mode), 'a') as f:  # add image to dataset list
                 f.write(img_file + '\n')
-            with open('new/labels/' + Path(file).name, 'a') as f:  # write label
+            with os.fdopen(os.open('new/labels/' + Path(file).name, flags, mode), 'a') as f:  # write label
                 for l in labels[i]:
                     f.write('%g %.6f %.6f %.6f %.6f\n' % tuple(l))
             shutil.copyfile(src=img_file, dst='new/images/' + Path(file).name.replace('txt', 'jpg'))  # copy images
@@ -827,7 +835,9 @@ def print_mutation(hyp, results, bucket=''):
     if bucket:
         os.system('gsutil cp gs://%s/evolve.txt .' % bucket)  # download evolve.txt
 
-    with open('evolve.txt', 'a') as f:  # append result
+    flags = os.O_WRONLY | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open('evolve.txt', flags, mode), 'a') as f:  # append result
         f.write(c + b + '\n')
     x = np.unique(np.loadtxt('evolve.txt', ndmin=2), axis=0)  # load unique rows
     np.savetxt('evolve.txt', x[np.argsort(-fitness(x))], '%10.3g')  # save sort by fitness

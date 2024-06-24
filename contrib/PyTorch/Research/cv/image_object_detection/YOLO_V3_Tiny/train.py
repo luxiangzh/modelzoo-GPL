@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
+import stat
 import argparse
 import torchsnooper
 import torch.distributed as dist
@@ -87,7 +88,8 @@ def train(local_rank, nprocs, opt):
     imgsz_min, imgsz_max, imgsz_test = opt.img_size  # img sizes (min, max, test)
     # Image Sizes
     gs = 64  # (pixels) grid size
-    assert math.fmod(imgsz_min, gs) == 0, '--img-size %g must be a %g-multiple' % (imgsz_min, gs)
+    if math.fmod(imgsz_min, gs) != 0:
+        raise ValueError('--img-size %g must be a %g-multiple' % (imgsz_min, gs))
     opt.multi_scale |= imgsz_min != imgsz_max  # multi if different (min, max)
     opt.multi_scale = False
     # opt.multi_scale = False
@@ -157,7 +159,9 @@ def train(local_rank, nprocs, opt):
 
         # load results
         if chkpt.get('training_results') is not None:
-            with open(results_file, 'w') as file:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(results_file, flags, mode), 'w') as file:
                 file.write(chkpt['training_results'])  # write results.txt
 
         start_epoch = chkpt['epoch'] + 1
@@ -251,7 +255,9 @@ def train(local_rank, nprocs, opt):
 
         mloss = torch.zeros(4).to(device)  # mean losses
         if local_rank in [0, -1]:
-            with open(results_file, 'a') as f:
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(results_file, flags, mode), 'a') as f:
                 f.write(('%10s' * 9 + '\n') % (
                     'Epoch', 'gpu_mem', 'GIoU', 'obj', 'cls', 'total', 'targets', 'img_size', 'FPS'))
             print(
@@ -333,7 +339,9 @@ def train(local_rank, nprocs, opt):
 
         # Write
         if local_rank in [0, -1]:
-            with open(results_file, 'a') as f:
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(results_file, flags, mode), 'a') as f:
                 f.write(s + '\n')  # P, R, mAP, F1, test_losses=(GIoU, obj, cls)
         if len(opt.name) and opt.bucket:
             os.system('gsutil cp results.txt gs://%s/results/results%s.txt' % (opt.bucket, opt.name))
@@ -347,7 +355,9 @@ def train(local_rank, nprocs, opt):
             save = (not opt.nosave) or (final_epoch and not opt.evolve)
 
         if local_rank in [0, -1] and save:
-            with open(results_file, 'r') as f:  # create checkpoint
+            flags = os.O_RDONLY  
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(results_file, flags, mode), 'r') as f:
                 chkpt = {'epoch': epoch,
                          'best_fitness': best_fitness,
                          'training_results': f.read(),

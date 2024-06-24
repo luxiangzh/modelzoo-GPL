@@ -17,7 +17,7 @@ import torch
 
 def gsutil_getsize(url=''):
     # gs://bucket/file size https://cloud.google.com/storage/docs/gsutil/commands/du
-    s = subprocess.check_output(f'gsutil du {url}', shell=True).decode('utf-8')
+    s = subprocess.check_output(f'gsutil du {url}', shell=False).decode('utf-8')
     return eval(s.split(' ')[0]) if len(s) else 0  # bytes
 
 
@@ -28,7 +28,8 @@ def safe_download(file, url, url2=None, min_bytes=1E0, error_msg=''):
     try:  # url1
         print(f'Downloading {url} to {file}...')
         torch.hub.download_url_to_file(url, str(file))
-        assert file.exists() and file.stat().st_size > min_bytes, assert_msg  # check
+        if not (file.exists() and file.stat().st_size > min_bytes):
+            raise ValueError(assert_msg)
     except Exception as e:  # url2
         file.unlink(missing_ok=True)  # remove partial downloads
         print(f'ERROR: {e}\nRe-attempting {url2 or url} to {file}...')
@@ -63,7 +64,7 @@ def attempt_download(file, repo='ultralytics/yolov5'):  # from utils.downloads i
             assets = ['yolov5s.pt', 'yolov5m.pt', 'yolov5l.pt', 'yolov5x.pt',
                       'yolov5s6.pt', 'yolov5m6.pt', 'yolov5l6.pt', 'yolov5x6.pt']
             try:
-                tag = subprocess.check_output('git tag', shell=True, stderr=subprocess.STDOUT).decode().split()[-1]
+                tag = subprocess.check_output('git tag', shell=False, stderr=subprocess.STDOUT).decode().split()[-1]
             except:
                 tag = 'v5.0'  # current release
 

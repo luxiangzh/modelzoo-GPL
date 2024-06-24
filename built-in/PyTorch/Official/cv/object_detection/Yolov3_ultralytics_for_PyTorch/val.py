@@ -9,6 +9,7 @@ Usage:
 import argparse
 import json
 import os
+import stat
 import sys
 from pathlib import Path
 from threading import Thread
@@ -42,7 +43,9 @@ def save_one_txt(predn, save_conf, shape, file):
     for *xyxy, conf, cls in predn.tolist():
         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
-        with open(file, 'a') as f:
+        flags = os.O_WRONLY | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(file, flags, mode), "a") as f:
             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
 
@@ -262,7 +265,10 @@ def run(data,
             LOGGER.info(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
 
     # Print speeds
-    t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
+    try:
+        t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
+    except ZeroDivisionError:
+        raise ZeroDivisionError("You can't divide by 0!")
     if not training:
         shape = (batch_size, 3, imgsz, imgsz)
         LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {shape}' % t)
@@ -278,7 +284,9 @@ def run(data,
         anno_json = str(Path(data.get('path', './data/coco')) / 'annotations/instances_val2017.json')  # annotations json
         pred_json = str(save_dir / f"{w}_predictions.json")  # predictions json
         LOGGER.info(f'\nEvaluating pycocotools mAP... saving {pred_json}...')
-        with open(pred_json, 'w') as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(pred_json, flags, mode),"w") as f:
             json.dump(jdict, f)
 
         try:  # https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb

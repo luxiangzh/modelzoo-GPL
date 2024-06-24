@@ -66,7 +66,7 @@ def create_optimizer(configs, model):
     elif configs.optimizer_type == 'adam':
         optimizer = apex.optimizers.NpuFusedAdam(pg0, lr=configs.lr)
     else:
-        assert False, "Unknown optimizer type"
+        raise ValueError("Unknown optimizer type")
 
     optimizer.add_param_group({'params': pg1, 'weight_decay': configs.weight_decay})  # add pg1 with weight_decay
     optimizer.add_param_group({'params': pg2})  # add pg2 (biases)

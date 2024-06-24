@@ -6,6 +6,7 @@ Logging utils
 import glob
 import math
 import os
+import stat
 import random
 import shutil
 import subprocess
@@ -66,7 +67,7 @@ def get_latest_run(search_dir='./runs'):
 def check_git_status():
     # Suggest 'git pull' if repo is out of date
     if platform in ['linux', 'darwin'] and not os.path.isfile('/.dockerenv'):
-        s = subprocess.check_output('if [ -d .git ]; then git fetch && git status -uno; fi', shell=True).decode('utf-8')
+        s = subprocess.check_output('if [ -d .git ]; then git fetch && git status -uno; fi', shell=False).decode('utf-8')
         if 'Your branch is behind' in s:
             print(s[s.find('Your branch is behind'):s.find('\n\n')] + '\n')
 
@@ -128,7 +129,8 @@ def check_file(file):
         return file
     else:
         files = glob.glob('./**/' + file, recursive=True)  # find file
-        assert len(files), 'File Not Found: %s' % file  # assert file was found
+        if not len(files):
+            raise FileNotFoundError('File Not Found: %s' % file)
         return files[0]  # return first file if multiple found
 
 
@@ -774,15 +776,19 @@ def coco_single_class_labels(path='../coco/labels/train2014/', label_class=43):
     os.makedirs('new/labels/')
     os.makedirs('new/images/')
     for file in tqdm(sorted(glob.glob('%s/*.*' % path))):
-        with open(file, 'r') as f:
+        flags = os.O_RDONLY
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(file, flags, mode), 'r') as f:
             labels = np.array([x.split() for x in f.read().splitlines()], dtype=np.float32)
         i = labels[:, 0] == label_class
         if any(i):
             img_file = file.replace('labels', 'images').replace('txt', 'jpg')
             labels[:, 0] = 0  # reset class to 0
-            with open('new/images.txt', 'a') as f:  # add image to dataset list
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open('new/images.txt', flags, mode), 'a') as f:  # add image to dataset list
                 f.write(img_file + '\n')
-            with open('new/labels/' + Path(file).name, 'a') as f:  # write label
+            with os.fdopen(os.open('new/labels/' + Path(file).name, flags, mode), 'a') as f:  # write label
                 for l in labels[i]:
                     f.write('%g %.6f %.6f %.6f %.6f\n' % tuple(l))
             shutil.copyfile(src=img_file, dst='new/images/' + Path(file).name.replace('txt', 'jpg'))  # copy images
@@ -828,8 +834,10 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
         return k
 
     if isinstance(path, str):  # *.yaml file
-        with open(path) as f:
-            data_dict = yaml.load(f, Loader=yaml.FullLoader)  # model dict
+        flags = os.O_RDONLY
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(path, flags, mode), 'r') as f:
+            data_dict = yaml.load(f, Loader=yaml.SafeLoader)  # model dict
         from utils.datasets import LoadImagesAndLabels
         dataset = LoadImagesAndLabels(data_dict['train'], augment=True, rect=True)
     else:
@@ -898,7 +906,9 @@ def print_mutation(hyp, results, bucket=''):
     if bucket:
         os.system('gsutil cp gs://%s/evolve.txt .' % bucket)  # download evolve.txt
 
-    with open('evolve.txt', 'a') as f:  # append result
+    flags = os.O_WRONLY | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open('evolve.txt', flags, mode), 'a') as f:  # append result
         f.write(c + b + '\n')
     x = np.unique(np.loadtxt('evolve.txt', ndmin=2), axis=0)  # load unique rows
     np.savetxt('evolve.txt', x[np.argsort(-fitness(x))], '%10.3g')  # save sort by fitness

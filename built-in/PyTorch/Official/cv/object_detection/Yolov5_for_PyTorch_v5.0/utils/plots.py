@@ -410,7 +410,8 @@ def plot_results(start=0, stop=0, bucket='', id=(), labels=(), save_dir=''):
         os.system(c)
     else:
         files = list(Path(save_dir).glob('results*.txt'))
-    assert len(files), 'No results.txt files found in %s, nothing to plot.' % os.path.abspath(save_dir)
+    if not len(files):
+        raise ValueError('No results.txt files found in %s, nothing to plot.' % os.path.abspath(save_dir))
     for fi, f in enumerate(files):
         try:
             results = np.loadtxt(f, usecols=[2, 3, 4, 8, 9, 12, 13, 14, 10, 11], ndmin=2).T

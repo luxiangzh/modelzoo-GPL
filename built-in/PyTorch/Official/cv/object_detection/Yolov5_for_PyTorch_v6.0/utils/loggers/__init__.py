@@ -3,6 +3,8 @@
 Logging utils
 """
 
+import os
+import stat
 import warnings
 from threading import Thread
 
@@ -19,7 +21,8 @@ LOGGERS = ('csv', 'tb', 'wandb')  # text-file, TensorBoard, Weights & Biases
 try:
     import wandb
 
-    assert hasattr(wandb, '__version__')  # verify package import not local dir
+    if not hasattr(wandb, '__version__'):
+        raise ImportError("wandb packge import from local dir")
 except (ImportError, AssertionError):
     wandb = None
 
@@ -108,7 +111,9 @@ class Loggers():
             file = self.save_dir / 'results.csv'
             n = len(x) + 1  # number of cols
             s = '' if file.exists() else (('%20s,' * n % tuple(['epoch'] + self.keys)).rstrip(',') + '\n')  # add header
-            with open(file, 'a') as f:
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(file, flags, mode), 'a') as f:
                 f.write(s + ('%20.5g,' * n % tuple([epoch] + vals)).rstrip(',') + '\n')
 
         if self.tb:

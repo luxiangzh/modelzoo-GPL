@@ -32,6 +32,8 @@
 # ==========================================================================
 '''
 import argparse
+import os
+import stat
 
 import torch
 if torch.__version__ >= "1.8":
@@ -109,9 +111,11 @@ def train(hyp, tb_writer, opt, device):
     # Since I see lots of print here, the logging configuration is skipped here. We may see repeated outputs.
 
     # Save run settings
-    with open(Path(log_dir) / 'hyp.yaml', 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(Path(log_dir) / 'hyp.yaml', flags, mode), 'w') as f:
         yaml.dump(hyp, f, sort_keys=False)
-    with open(Path(log_dir) / 'opt.yaml', 'w') as f:
+    with os.fdopen(os.open(Path(log_dir) / 'opt.yaml', flags, mode), 'w') as f:
         yaml.dump(vars(opt), f, sort_keys=False)
 
     # Configure
@@ -121,7 +125,8 @@ def train(hyp, tb_writer, opt, device):
     train_path = data_dict['train']
     test_path = data_dict['val']
     nc, names = (1, ['item']) if opt.single_cls else (int(data_dict['nc']), data_dict['names'])  # number classes, names
-    assert len(names) == nc, '%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data)  # check
+    if len(names) != nc:
+        raise ValueError('%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data))
 
     # Remove previous results
     if rank in [-1, 0]:
@@ -233,7 +238,8 @@ def train(hyp, tb_writer, opt, device):
                                             world_size=opt.world_size, workers=opt.workers)
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
     nb = len(dataloader)  # number of batches
-    assert mlc < nc, 'Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g' % (mlc, nc, opt.data, nc - 1)
+    if mlc >= nc:
+        raise ValueError('Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g' % (mlc, nc, opt.data, nc - 1))
 
     # Model parameters
     hyp['cls'] *= nc / 80.  # scale coco-tuned hyp['cls'] to current dataset
@@ -503,17 +509,20 @@ def main_worker(npu, ngpus_per_node, opt):
         mixed_precision = False
     elif opt.local_rank != -1 and device.type == 'cuda':
         # DDP mode
-        assert torch.cuda.device_count() > opt.local_rank
+        if torch.cuda.device_count() <= opt.local_rank:
+            raise ValueError('insufficient npu devices for DDP command')
         torch.cuda.set_device(opt.local_rank)
         device = torch.device("cuda", opt.local_rank)
         dist.init_process_group(backend='nccl', init_method='env://')  # distributed backend
 
         opt.world_size = dist.get_world_size()
-        assert opt.batch_size % opt.world_size == 0, "Batch size is not a multiple of the number of devices given!"
+        if opt.batch_size % opt.world_size != 0:
+            raise ValueError('Batch size is not a multiple of the number of devices given!')
         opt.batch_size = opt.total_batch_size // opt.world_size
     elif opt.local_rank != -1 and device.type == 'npu':
         dist.init_process_group(backend='hccl', world_size=opt.world_size, rank=opt.local_rank)
-        assert opt.batch_size % opt.world_size == 0, "Batch size is not a multiple of the number of devices given!"
+        if opt.batch_size % opt.world_size != 0:
+            raise ValueError('Batch size is not a multiple of the number of devices given!')
         opt.batch_size = opt.total_batch_size // opt.world_size
         
     print(opt)
@@ -529,7 +538,8 @@ def main_worker(npu, ngpus_per_node, opt):
 
     # Evolve hyperparameters (optional)
     else:
-        assert opt.local_rank == -1, "DDP mode currently not implemented for Evolve!"
+        if opt.local_rank != -1:
+            raise ValueError("DDP mode currently not implemented for Evolve!")
 
         tb_writer = None
         opt.notest, opt.nosave = True, True  # only test/save final epoch

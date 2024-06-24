@@ -120,7 +120,8 @@ def iou_rotated_boxes_targets_vs_anchors(anchors_polygons, anchors_areas, target
 
 
 def iou_pred_vs_target_boxes(pred_boxes, target_boxes, GIoU=False, DIoU=False, CIoU=False):
-    assert pred_boxes.size() == target_boxes.size(), "Unmatch size of pred_boxes and target_boxes"
+    if pred_boxes.size() != target_boxes.size():
+        raise ValueError("Unmatch size of pred_boxes and target_boxes")
     device = pred_boxes.device
     n_boxes = pred_boxes.size(0)
 

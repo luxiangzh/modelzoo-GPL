@@ -37,6 +37,7 @@ import glob
 import logging
 import math
 import os
+import stat
 import platform
 import random
 import re
@@ -81,7 +82,7 @@ def get_latest_run(search_dir='.'):
 def check_git_status():
     # Suggest 'git pull' if repo is out of date
     if platform.system() in ['Linux', 'Darwin'] and not os.path.isfile('/.dockerenv'):
-        s = subprocess.check_output('if [ -d .git ]; then git fetch && git status -uno; fi', shell=True).decode('utf-8')
+        s = subprocess.check_output('if [ -d .git ]; then git fetch && git status -uno; fi', shell=False).decode('utf-8')
         if 'Your branch is behind' in s:
             print(s[s.find('Your branch is behind'):s.find('\n\n')] + '\n')
 
@@ -100,8 +101,10 @@ def check_file(file):
         return file
     else:
         files = glob.glob('./**/' + file, recursive=True)  # find file
-        assert len(files), 'File Not Found: %s' % file  # assert file was found
-        assert len(files) == 1, "Multiple files match '%s', specify exact path: %s" % (file, files)  # assert unique
+        if not len(files):
+            raise ValueError('File Not Found: %s' % file)
+        if len(files) != 1:
+            raise ValueError("Multiple files match '%s', specify exact path: %s" % (file, files))
         return files[0]  # return file
 
 
@@ -422,7 +425,9 @@ def print_mutation(hyp, results, yaml_file='hyp_evolved.yaml', bucket=''):
         if gsutil_getsize(url) > (os.path.getsize('evolve.txt') if os.path.exists('evolve.txt') else 0):
             os.system('gsutil cp %s .' % url)  # download evolve.txt if larger than local
 
-    with open('evolve.txt', 'a') as f:  # append result
+    flags = os.O_WRONLY | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open('evolve.txt', flags, mode), 'a') as f:  # append result
         f.write(c + b + '\n')
     x = np.unique(np.loadtxt('evolve.txt', ndmin=2), axis=0)  # load unique rows
     x = x[np.argsort(-fitness(x))]  # sort
@@ -431,7 +436,9 @@ def print_mutation(hyp, results, yaml_file='hyp_evolved.yaml', bucket=''):
     # Save yaml
     for i, k in enumerate(hyp.keys()):
         hyp[k] = float(x[0, i + 7])
-    with open(yaml_file, 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(yaml_file, flags, mode), 'w') as f:
         results = tuple(x[0, :7])
         c = '%10.4g' * len(results) % results  # results (P, R, mAP@0.5, mAP@0.5:0.95, val_losses x 3)
         f.write('# Hyperparameter Evolution Results\n# Generations: %g\n# Metrics: ' % len(x) + c + '\n\n')

@@ -229,7 +229,8 @@ class ONNX_TRT(nn.Module):
     '''onnx module with TensorRT NMS operation.'''
     def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=None ,device=None, n_classes=80):
         super().__init__()
-        assert max_wh is None
+        if max_wh is not None:
+            raise ValueError("max_wh is not None")
         self.device = device if device else torch.device('cpu')
         self.background_class = -1,
         self.box_coding = 1,
@@ -261,7 +262,8 @@ class End2End(nn.Module):
     def __init__(self, model, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=None, device=None, n_classes=80):
         super().__init__()
         device = device if device else torch.device('cpu')
-        assert isinstance(max_wh,(int)) or max_wh is None
+        if not isinstance(max_wh,(int)) and max_wh is not None:
+            raise ValueError("the instance of max_wh is not int")
         self.model = model.to(device)
         self.model.model[-1].end2end = True
         self.patch_model = ONNX_TRT if max_wh is None else ONNX_ORT

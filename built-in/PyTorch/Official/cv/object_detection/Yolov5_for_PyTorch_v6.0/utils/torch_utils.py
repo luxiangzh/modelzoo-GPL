@@ -50,7 +50,7 @@ def git_describe(path=Path(__file__).parent):  # path must be a directory
     # return human-readable git description, i.e. v5.0-5-g3e25f1e https://git-scm.com/docs/git-describe
     s = f'git -C {path} describe --tags --long --always'
     try:
-        return subprocess.check_output(s, shell=True, stderr=subprocess.STDOUT).decode()[:-1]
+        return subprocess.check_output(s, shell=False, stderr=subprocess.STDOUT).decode()[:-1]
     except subprocess.CalledProcessError as e:
         return ''  # not a git repository
 
@@ -69,14 +69,16 @@ def select_device(device='', npu_id='0', batch_size=None):
     if cpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # force torch.cuda.is_available() = False
     elif device:  # non-cpu device requested
-        assert torch.npu.is_available(), f'CUDA unavailable, invalid device {device} requested'  # check availability
+        if not torch.npu.is_available():
+            raise ValueError(f'CUDA unavailable, invalid device {device} requested')
 
     cuda = not cpu and torch.npu.is_available()
     if cuda:
         devices = device.split(',') if device else '0'  # range(torch.cuda.device_count())  # i.e. 0,1,6,7
         n = len(devices)  # device count
         if n > 1 and batch_size:  # check batch_size is divisible by device_count
-            assert batch_size % n == 0, f'batch-size {batch_size} not multiple of GPU count {n}'
+            if batch_size % n != 0:
+                raise ValueError(f'batch-size {batch_size} not multiple of GPU count {n}')
         space = ' ' * (len(s) + 1)
         for i, d in enumerate(devices):
             p = torch.npu.get_device_properties(i)

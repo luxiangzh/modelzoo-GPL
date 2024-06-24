@@ -1,10 +1,6 @@
 """
 # -*- coding: utf-8 -*-
------------------------------------------------------------------------------------
-# Author: Nguyen Mau Dung
-# DoC: 2020.07.05
-# email: nguyenmaudung93.kstn@gmail.com
------------------------------------------------------------------------------------
+
 # Description: This script for the KITTI dataset
 
 # Refer: https://github.com/ghimiredhikura/Complex-YOLOv3
@@ -30,7 +26,8 @@ class KittiDataset(Dataset):
     def __init__(self, dataset_dir, mode='train', lidar_transforms=None, aug_transforms=None, multiscale=False,
                  num_samples=None, mosaic=False, random_padding=False):
         self.dataset_dir = dataset_dir
-        assert mode in ['train', 'val', 'test'], 'Invalid mode: {}'.format(mode)
+        if mode not in ['train', 'val', 'test']:
+            raise KeyError('Invalid mode: {}'.format(mode))
         self.mode = mode
         self.is_test = (self.mode == 'test')
         sub_folder = 'testing' if self.is_test else 'training'

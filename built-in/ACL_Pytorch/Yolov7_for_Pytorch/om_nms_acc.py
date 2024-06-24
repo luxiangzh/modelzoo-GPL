@@ -17,6 +17,7 @@ import glob
 import json
 import numpy as np
 import os
+import stat
 
 import aclruntime
 import cv2
@@ -337,7 +338,9 @@ if __name__ == '__main__':
                                         'score': round(p[4], 5)})
 
     print('saveing predictions.json to output/')
-    with open(f'{args.output_dir}/predictions.json', 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(f'{args.output_dir}/predictions.json', flags, mode), 'w') as f:
         json.dump(det_result_dict, f)
 
     # evaluate mAP

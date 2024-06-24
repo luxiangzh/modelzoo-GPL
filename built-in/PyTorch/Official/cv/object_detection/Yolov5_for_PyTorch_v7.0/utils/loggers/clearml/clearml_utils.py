@@ -46,7 +46,8 @@ try:
     import clearml
     from clearml import Dataset, Task
 
-    assert hasattr(clearml, '__version__')  # verify package import not local dir
+    if not hasattr(clearml, '__version__'): # verify package import not local dir
+        raise ImportError("package clearml import from local dir") 
 except (ImportError, AssertionError):
     clearml = None
 
@@ -61,17 +62,17 @@ def construct_dataset(clearml_info_string):
     # We'll search for the yaml file definition in the dataset
     yaml_filenames = list(glob.glob(str(dataset_root_path / "*.yaml")) + glob.glob(str(dataset_root_path / "*.yml")))
     if len(yaml_filenames) > 1:
-        raise ValueError('More than one yaml file was found in the dataset root, cannot determine which one contains '
+        raise FileNotFoundError('More than one yaml file was found in the dataset root, cannot determine which one contains '
                          'the dataset definition this way.')
     elif len(yaml_filenames) == 0:
-        raise ValueError('No yaml definition found in dataset root path, check that there is a correct yaml file '
+        raise FileNotFoundError('No yaml definition found in dataset root path, check that there is a correct yaml file '
                          'inside the dataset root path.')
     with open(yaml_filenames[0]) as f:
         dataset_definition = yaml.safe_load(f)
 
-    assert set(dataset_definition.keys()).issuperset(
-        {'train', 'test', 'val', 'nc', 'names'}
-    ), "The right keys were not found in the yaml file, make sure it at least has the following keys: ('train', 'test', 'val', 'nc', 'names')"
+    if not set(dataset_definition.keys()).issuperset({'train', 'test', 'val', 'nc', 'names'}):
+        raise KeyError("The right keys were not found in the yaml file, make sure it at least has the following keys:\
+         ('train', 'test', 'val', 'nc', 'names')")
 
     data_dict = dict()
     data_dict['train'] = str(

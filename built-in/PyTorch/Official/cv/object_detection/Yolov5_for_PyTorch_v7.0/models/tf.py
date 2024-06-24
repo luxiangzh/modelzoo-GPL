@@ -68,7 +68,8 @@ class TFConv(keras.layers.Layer):
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True, w=None):
         # ch_in, ch_out, weights, kernel, stride, padding, groups
         super().__init__()
-        assert g == 1, "TF v2.2 Conv2D does not support 'groups' argument"
+        if g != 1:
+            raise ValueError("TF v2.2 Conv2D does not support 'groups' argument")
         # TensorFlow convolution padding is inconsistent with PyTorch (e.g. k=3 s=2 'SAME' padding)
         # see https://stackoverflow.com/questions/52975843/comparing-conv2d-with-padding-between-tensorflow-and-pytorch
         conv = keras.layers.Conv2D(
@@ -92,7 +93,8 @@ class TFDWConv(keras.layers.Layer):
     def __init__(self, c1, c2, k=1, s=1, p=None, act=True, w=None):
         # ch_in, ch_out, weights, kernel, stride, padding, groups
         super().__init__()
-        assert c2 % c1 == 0, f'TFDWConv() output={c2} must be a multiple of input={c1} channels'
+        if c2 % c1 != 0:
+            raise ValueError(f'TFDWConv() output={c2} must be a multiple of input={c1} channels')
         conv = keras.layers.DepthwiseConv2D(
             kernel_size=k,
             depth_multiplier=c2 // c1,
@@ -114,8 +116,10 @@ class TFDWConvTranspose2d(keras.layers.Layer):
     def __init__(self, c1, c2, k=1, s=1, p1=0, p2=0, w=None):
         # ch_in, ch_out, weights, kernel, stride, padding, groups
         super().__init__()
-        assert c1 == c2, f'TFDWConv() output={c2} must be equal to input={c1} channels'
-        assert k == 4 and p1 == 1, 'TFDWConv() only valid for k=4 and p1=1'
+        if c1 != c2:
+            raise ValueError(f'TFDWConv() output={c2} must be equal to input={c1} channels')
+        if not (k == 4 and p1 == 1):
+            raise ValueError('TFDWConv() only valid for k=4 and p1=1')
         weight, bias = w.weight.permute(2, 3, 1, 0).numpy(), w.bias.numpy()
         self.c1 = c1
         self.conv = [
@@ -175,7 +179,8 @@ class TFConv2d(keras.layers.Layer):
     # Substitution for PyTorch nn.Conv2D
     def __init__(self, c1, c2, k, s=1, g=1, bias=True, w=None):
         super().__init__()
-        assert g == 1, "TF v2.2 Conv2D does not support 'groups' argument"
+        if g != 1:
+            raise ValueError("TF v2.2 Conv2D does not support 'groups' argument")
         self.conv = keras.layers.Conv2D(filters=c2,
                                         kernel_size=k,
                                         strides=s,
@@ -356,7 +361,8 @@ class TFUpsample(keras.layers.Layer):
     # TF version of torch.nn.Upsample()
     def __init__(self, size, scale_factor, mode, w=None):  # warning: all arguments needed including 'w'
         super().__init__()
-        assert scale_factor % 2 == 0, "scale_factor must be multiple of 2"
+        if scale_factor % 2 != 0:
+            raise ValueError("scale_factor must be multiple of 2")
         self.upsample = lambda x: tf.image.resize(x, (x.shape[1] * scale_factor, x.shape[2] * scale_factor), mode)
         # self.upsample = keras.layers.UpSampling2D(size=scale_factor, interpolation=mode)
         # with default arguments: align_corners=False, half_pixel_centers=False
@@ -371,7 +377,8 @@ class TFConcat(keras.layers.Layer):
     # TF version of torch.concat()
     def __init__(self, dimension=1, w=None):
         super().__init__()
-        assert dimension == 1, "convert only NCHW to NHWC concat"
+        if dimension != 1:
+            raise ValueError("convert only NCHW to NHWC concat")
         self.d = 3
 
     def call(self, inputs):
@@ -444,7 +451,7 @@ class TFModel:
             import yaml  # for torch hub
             self.yaml_file = Path(cfg).name
             with open(cfg) as f:
-                self.yaml = yaml.load(f, Loader=yaml.FullLoader)  # model dict
+                self.yaml = yaml.load(f, Loader=yaml.SafeLoader)  # model dict
 
         # Define model
         if nc and nc != self.yaml['nc']:

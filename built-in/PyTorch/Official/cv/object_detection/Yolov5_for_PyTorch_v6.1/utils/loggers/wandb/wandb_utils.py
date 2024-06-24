@@ -2,6 +2,7 @@
 
 import logging
 import os
+import stat
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -21,7 +22,8 @@ from utils.general import LOGGER, check_dataset, check_file
 try:
     import wandb
 
-    assert hasattr(wandb, '__version__')  # verify package import not local dir
+    if not hasattr(wandb, '__version__'):
+        raise ImportError("wandb packge import from local dir")
 except (ImportError, AssertionError):
     wandb = None
 
@@ -98,7 +100,9 @@ def process_wandb_config_ddp_mode(opt):
         data_dict['val'] = str(val_path)
     if train_dir or val_dir:
         ddp_data_path = str(Path(val_dir) / 'wandb_local_data.yaml')
-        with open(ddp_data_path, 'w') as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(ddp_data_path, flags, mode), "w") as f:
             yaml.safe_dump(data_dict, f)
         opt.data = ddp_data_path
 
@@ -147,7 +151,8 @@ class WandbLogger():
             if opt.resume.startswith(WANDB_ARTIFACT_PREFIX):
                 entity, project, run_id, model_artifact_name = get_run_info(opt.resume)
                 model_artifact_name = WANDB_ARTIFACT_PREFIX + model_artifact_name
-                assert wandb, 'install wandb to resume wandb runs'
+                if not wandb:
+                    raise ValueError("Install wandb to resume wandb runs")
                 # Resume wandb-artifact:// runs here| workaround for not overwriting wandb.config
                 self.wandb_run = wandb.init(id=run_id,
                                             project=project,
@@ -199,7 +204,8 @@ class WandbLogger():
         returns:
         Updated dataset info dictionary where local dataset paths are replaced by WAND_ARFACT_PREFIX links.
         """
-        assert wandb, 'Install wandb to upload dataset'
+        if not wandb:
+            raise ValueError("Install wandb to upload dataset")
         config_path = self.log_dataset_artifact(opt.data,
                                                 opt.single_cls,
                                                 'YOLOv5' if opt.project == 'runs/train' else Path(opt.project).stem)
@@ -274,7 +280,8 @@ class WandbLogger():
         if isinstance(path, str) and path.startswith(WANDB_ARTIFACT_PREFIX):
             artifact_path = Path(remove_prefix(path, WANDB_ARTIFACT_PREFIX) + ":" + alias)
             dataset_artifact = wandb.use_artifact(artifact_path.as_posix().replace("\\", "/"))
-            assert dataset_artifact is not None, "'Error: W&B dataset artifact doesn\'t exist'"
+            if dataset_artifact is None:
+                raise ValueError('Error: W&B dataset artifact doesn\'t exist')
             datadir = dataset_artifact.download()
             return datadir, dataset_artifact
         return None, None
@@ -288,12 +295,14 @@ class WandbLogger():
         """
         if opt.resume.startswith(WANDB_ARTIFACT_PREFIX):
             model_artifact = wandb.use_artifact(remove_prefix(opt.resume, WANDB_ARTIFACT_PREFIX) + ":latest")
-            assert model_artifact is not None, 'Error: W&B model artifact doesn\'t exist'
+            if model_artifact is None:
+                raise ValueError('Error: W&B model artifact doesn\'t exist')
             modeldir = model_artifact.download()
             # epochs_trained = model_artifact.metadata.get('epochs_trained')
             total_epochs = model_artifact.metadata.get('total_epochs')
             is_finished = total_epochs is None
-            assert not is_finished, 'training is finished, can only resume incomplete runs.'
+            if is_finished:
+                raise ValueError('training is finished, can only resume incomplete runs.')
             return modeldir, model_artifact
         return None, None
 
@@ -361,7 +370,9 @@ class WandbLogger():
             path = ROOT / 'data' / path
             data.pop('download', None)
             data.pop('path', None)
-            with open(path, 'w') as f:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(path, flags, mdoe), "w") as f:
                 yaml.safe_dump(data, f)
                 LOGGER.info(f"Created dataset config file {path}")
 

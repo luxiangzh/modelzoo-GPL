@@ -90,9 +90,9 @@ def smartCrossEntropyLoss(label_smoothing=0.0):
 
 def smart_DDP(model):
     # Model DDP creation with checks
-    assert not check_version(torch.__version__, '1.12.0', pinned=True), \
-        'torch==1.12.0 torchvision==0.13.0 DDP training is not supported due to a known issue. ' \
-        'Please upgrade or downgrade torch to use DDP. See https://github.com/ultralytics/yolov5/issues/8395'
+    if check_version(torch.__version__, '1.12.0', pinned=True):
+        raise ValueError('torch==1.12.0 torchvision==0.13.0 DDP training is not supported due to a known issue. ' \
+        'Please upgrade or downgrade torch to use DDP. See https://github.com/ultralytics/yolov5/issues/8395')
     if check_version(torch.__version__, '1.11.0'):
         return DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK, static_graph=True)
     else:
@@ -135,10 +135,11 @@ def torch_distributed_zero_first(local_rank: int):
 
 def device_count():
     # Returns number of CUDA devices available. Safe version of torch.cuda.device_count(). Supports Linux and Windows
-    assert platform.system() in ('Linux', 'Windows'), 'device_count() only supported on Linux or Windows'
+    if platform.system() not in ('Linux', 'Windows'):
+        raise KeyError('device_count() only supported on Linux or Windows')
     try:
         cmd = 'nvidia-smi -L | wc -l' if platform.system() == 'Linux' else 'nvidia-smi -L | find /c /v ""'  # Windows
-        return int(subprocess.run(cmd, shell=True, capture_output=True, check=True).stdout.decode().split()[-1])
+        return int(subprocess.run(cmd, shell=False, capture_output=True, check=True).stdout.decode().split()[-1])
     except Exception:
         return 0
 
@@ -153,14 +154,15 @@ def select_device(device='', batch_size=0, newline=True):
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # force torch.cuda.is_available() = False
     elif device:  # non-cpu device requested
         os.environ['CUDA_VISIBLE_DEVICES'] = device  # set environment variable - must be before assert is_available()
-        assert torch.npu.is_available() and torch.npu.device_count() >= len(device.replace(',', '')), \
-            f"Invalid CUDA '--device {device}' requested, use '--device cpu' or pass valid CUDA device(s)"
+        if not (torch.npu.is_available() and torch.npu.device_count() >= len(device.replace(',', ''))):
+            raise ValueError(f"Invalid CUDA '--device {device}' requested, use '--device cpu' or pass valid CUDA device(s)")
 
     if not cpu and not mps and torch.npu.is_available():  # prefer GPU if available
         devices = device.split(',') if device else '0'  # range(torch.cuda.device_count())  # i.e. 0,1,6,7
         n = len(devices)  # device count
         if n > 1 and batch_size > 0:  # check batch_size is divisible by device_count
-            assert batch_size % n == 0, f'batch-size {batch_size} not multiple of GPU count {n}'
+            if batch_size % n != 0:
+                raise ValueError(f'batch-size {batch_size} not multiple of GPU count {n}')
         arg = 'npu:0'
     elif mps and getattr(torch, 'has_mps', False) and torch.backends.mps.is_available():  # prefer MPS if available
         s += 'MPS\n'
@@ -407,8 +409,9 @@ def smart_resume(ckpt, optimizer, ema=None, weights='yolov5s.pt', epochs=300, re
         ema.ema.load_state_dict(ckpt['ema'].float().state_dict())  # EMA
         ema.updates = ckpt['updates']
     if resume:
-        assert start_epoch > 0, f'{weights} training to {epochs} epochs is finished, nothing to resume.\n' \
-                                f"Start a new training without --resume, i.e. 'python train.py --weights {weights}'"
+        if start_epoch <= 0:
+            raise ValueError(f'{weights} training to {epochs} epochs is finished, nothing to resume.\n' \
+                            f"Start a new training without --resume, i.e. 'python train.py --weights {weights}'")
         LOGGER.info(f'Resuming training from {weights} from epoch {start_epoch} to {epochs} total epochs')
     if epochs < start_epoch:
         LOGGER.info(f"{weights} has been trained for {ckpt['epoch']} epochs. Fine-tuning for {epochs} more epochs.")

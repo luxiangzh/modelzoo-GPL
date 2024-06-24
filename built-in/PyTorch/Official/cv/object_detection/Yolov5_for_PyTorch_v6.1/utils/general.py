@@ -8,6 +8,7 @@ import glob
 import logging
 import math
 import os
+import stat
 import platform
 import random
 import re
@@ -51,8 +52,10 @@ os.environ['NUMEXPR_MAX_THREADS'] = str(NUM_THREADS)  # NumExpr max threads
 def is_kaggle():
     # Is environment a Kaggle Notebook?
     try:
-        assert os.environ.get('PWD') == '/kaggle/working'
-        assert os.environ.get('KAGGLE_URL_BASE') == 'https://www.kaggle.com'
+        if os.environ.get('PWD') != '/kaggle/working':
+            raise ValueError()
+        if os.environ.get('KAGGLE_URL_BASE') != 'https://www.kaggle.com':
+            raise ValueError()
         return True
     except AssertionError:
         return False
@@ -63,7 +66,9 @@ def is_writeable(dir, test=False):
     if test:  # method 1
         file = Path(dir) / 'tmp.txt'
         try:
-            with open(file, 'w'):  # open file with write permissions
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(file, flags, mode), 'w'):  # open file with write permissions
                 pass
             file.unlink()  # remove file
             return True
@@ -254,14 +259,17 @@ def check_git_status():
     # Recommend 'git pull' if code is out of date
     msg = ', for updates see https://github.com/ultralytics/yolov5'
     s = colorstr('github: ')  # string
-    assert Path('.git').exists(), s + 'skipping check (not a git repository)' + msg
-    assert not is_docker(), s + 'skipping check (Docker image)' + msg
-    assert check_online(), s + 'skipping check (offline)' + msg
+    if not Path('.git').exists():
+        raise ValueError(s + 'skipping check (not a git repository)' + msg)
+    if is_docker():
+        raise ValueError(s + 'skipping check (Docker image)' + msg)
+    if not check_online():
+        raise ValueError(s + 'skipping check (offline)' + msg)
 
     cmd = 'git fetch && git config --get remote.origin.url'
-    url = check_output(cmd, shell=True, timeout=5).decode().strip().rstrip('.git')  # git fetch
-    branch = check_output('git rev-parse --abbrev-ref HEAD', shell=True).decode().strip()  # checked out
-    n = int(check_output(f'git rev-list {branch}..origin/master --count', shell=True))  # commits behind
+    url = check_output(cmd, shell=False, timeout=5).decode().strip().rstrip('.git')  # git fetch
+    branch = check_output('git rev-parse --abbrev-ref HEAD', shell=False).decode().strip()  # checked out
+    n = int(check_output(f'git rev-list {branch}..origin/master --count', shell=False))  # commits behind
     if n > 0:
         s += f"⚠️ YOLOv5 is out of date by {n} commit{'s' * (n > 1)}. Use `git pull` or `git clone {url}` to update."
     else:
@@ -280,7 +288,8 @@ def check_version(current='0.0.0', minimum='0.0.0', name='version ', pinned=Fals
     result = (current == minimum) if pinned else (current >= minimum)  # bool
     s = f'{name}{minimum} required by YOLOv5, but {name}{current} is currently installed'  # string
     if hard:
-        assert result, s  # assert min requirements met
+        if not result:  # assert min requirements met
+            raise ValueError(s) 
     if verbose and not result:
         LOGGER.warning(s)
     return result
@@ -293,7 +302,8 @@ def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), insta
     check_python()  # check python version
     if isinstance(requirements, (str, Path)):  # requirements.txt file
         file = Path(requirements)
-        assert file.exists(), f"{prefix} {file.resolve()} not found, check failed."
+        if not file.exists():
+            raise ValueError(f"{prefix} {file.resolve()} not found, check failed.")
         with file.open() as f:
             requirements = [f'{x.name}{x.specifier}' for x in pkg.parse_requirements(f) if x.name not in exclude]
     else:  # list or tuple of packages
@@ -308,8 +318,9 @@ def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), insta
             if install:
                 LOGGER.info(f"{s}, attempting auto-update...")
                 try:
-                    assert check_online(), f"'pip install {r}' skipped (offline)"
-                    LOGGER.info(check_output(f"pip install '{r}'", shell=True).decode())
+                    if not check_online():
+                        raise ValueError(f"'pip install {r}' skipped (offline)")
+                    LOGGER.info(check_output(f"pip install '{r}'", shell=False).decode())
                     n += 1
                 except Exception as e:
                     LOGGER.warning(f'{prefix} {e}')
@@ -337,8 +348,10 @@ def check_img_size(imgsz, s=32, floor=0):
 def check_imshow():
     # Check if environment supports image displays
     try:
-        assert not is_docker(), 'cv2.imshow() is disabled in Docker environments'
-        assert not is_colab(), 'cv2.imshow() is disabled in Google Colab environments'
+        if is_docker():
+            raise ValueError('cv2.imshow() is disabled in Docker environments')
+        if is_colab():
+            raise ValueError('cv2.imshow() is disabled in Google Colab environments')
         cv2.imshow('test', np.zeros((1, 1, 3)))
         cv2.waitKey(1)
         cv2.destroyAllWindows()
@@ -357,7 +370,8 @@ def check_suffix(file='yolov5s.pt', suffix=('.pt',), msg=''):
         for f in file if isinstance(file, (list, tuple)) else [file]:
             s = Path(f).suffix.lower()  # file suffix
             if len(s):
-                assert s in suffix, f"{msg}{f} acceptable suffix is {suffix}"
+                if s not in suffix:
+                    raise ValueError(f"{msg}{f} acceptable suffix is {suffix}")
 
 
 def check_yaml(file, suffix=('.yaml', '.yml')):
@@ -379,14 +393,17 @@ def check_file(file, suffix=''):
         else:
             LOGGER.info(f'Downloading {url} to {file}...')
             torch.hub.download_url_to_file(url, file)
-            assert Path(file).exists() and Path(file).stat().st_size > 0, f'File download failed: {url}'  # check
+            if not (Path(file).exists() and Path(file).stat().st_size > 0):
+                raise ValueError(f'File download failed: {url}')
         return file
     else:  # search
         files = []
         for d in 'data', 'models', 'utils':  # search directories
             files.extend(glob.glob(str(ROOT / d / '**' / file), recursive=True))  # find file
-        assert len(files), f'File not found: {file}'  # assert file was found
-        assert len(files) == 1, f"Multiple files match '{file}', specify exact path: {files}"  # assert unique
+        if not len(files):
+            raise ValueError(f'File not found: {file}')
+        if len(files) != 1:
+            raise ValueError(f"Multiple files match '{file}', specify exact path: {files}")
         return files[0]  # return file
 
 
@@ -424,7 +441,8 @@ def check_dataset(data, autodownload=True):
             data[k] = str(path / data[k]) if isinstance(data[k], str) else [str(path / x) for x in data[k]]
 
     # Parse yaml
-    assert 'nc' in data, "Dataset 'nc' key missing."
+    if 'nc' not in data:
+        raise ValueError("Dataset 'nc' key missing.")
     if 'names' not in data:
         data['names'] = [f'class{i}' for i in range(data['nc'])]  # assign class names if missing
     train, val, test, s = (data.get(x) for x in ('train', 'val', 'test', 'download'))
@@ -694,8 +712,10 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     xc = prediction[..., 4] > conf_thres  # candidates
 
     # Checks
-    assert 0 <= conf_thres <= 1, f'Invalid Confidence threshold {conf_thres}, valid values are between 0.0 and 1.0'
-    assert 0 <= iou_thres <= 1, f'Invalid IoU {iou_thres}, valid values are between 0.0 and 1.0'
+    if not (0 <= conf_thres <= 1):
+        raise ValueError(f'Invalid Confidence threshold {conf_thres}, valid values are between 0.0 and 1.0')
+    if not (0 <= iou_thres <= 1):
+        raise ValueError(f'Invalid IoU {iou_thres}, valid values are between 0.0 and 1.0')
 
     # Settings
     min_wh, max_wh = 2, 7680  # (pixels) minimum and maximum box width and height
@@ -811,11 +831,15 @@ def print_mutation(results, hyp, save_dir, bucket, prefix=colorstr('evolve: ')):
 
     # Log to evolve.csv
     s = '' if evolve_csv.exists() else (('%20s,' * n % keys).rstrip(',') + '\n')  # add header
-    with open(evolve_csv, 'a') as f:
+    flags = os.O_WRONLY | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(evolve_csv, flags, mode), 'a') as f:
         f.write(s + ('%20.5g,' * n % vals).rstrip(',') + '\n')
 
     # Save yaml
-    with open(evolve_yaml, 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(evolve_yaml, flags, mode), 'w') as f:
         data = pd.read_csv(evolve_csv)
         data = data.rename(columns=lambda x: x.strip())  # strip keys
         i = np.argmax(fitness(data.values[:, :4]))  #

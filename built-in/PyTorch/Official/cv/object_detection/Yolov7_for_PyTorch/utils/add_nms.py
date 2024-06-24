@@ -51,7 +51,8 @@ class RegisterNMS(object):
     ):
 
         self.graph = gs.import_onnx(onnx.load(onnx_model_path))
-        assert self.graph
+        if not self.graph:
+            raise ValueError("ONNX graph creates failed")
         LOGGER.info("ONNX graph created successfully")
         # Fold constants via ONNX-GS that PyTorch2ONNX may have missed
         self.graph.fold_constants()

@@ -33,13 +33,16 @@
 '''
 
 import os
+import stat
 
 from sklearn.model_selection import train_test_split
 
 if __name__ == '__main__':
     dataset_dir = '../dataset/kitti'
-    train_file = open(os.path.join(dataset_dir, 'train.txt'), 'w')
-    val_file = open(os.path.join(dataset_dir, 'val.txt'), 'w')
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    train_file = os.fdopen(os.open(os.path.join(dataset_dir, 'train.txt'), flags, mode), 'w')
+    val_file = os.fdopen(os.open(os.path.join(dataset_dir, 'val.txt'), flags, mode), 'w')
     file_ids = ["%06d\n" % i for i in range(0, 7481)]
     train_ids, val_ids = train_test_split(file_ids, test_size=0.5037)
     print(train_ids)

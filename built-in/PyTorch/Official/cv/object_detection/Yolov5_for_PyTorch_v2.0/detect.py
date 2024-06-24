@@ -31,6 +31,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # ==========================================================================
 '''
+import os
+import stat
 import argparse
 
 import torch.backends.cudnn as cudnn
@@ -83,7 +85,8 @@ def detect(save_img=False):
         with open(opt.data) as f:
             data_dict = yaml.load(f, Loader=yaml.FullLoader)  # model dict
         nc, names = (1, ['item']) if opt.single_cls else (int(data_dict['nc']), data_dict['names'])  # number classes, names
-        assert len(names) == nc, '%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data)  # check
+        if len(names) != nc:   # check
+            raise ValueError('%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data))
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(names))]
 
     # Run inference
@@ -133,7 +136,9 @@ def detect(save_img=False):
                 for *xyxy, conf, cls in det:
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        with open(txt_path + '.txt', 'a') as f:
+                        flags = os.O_WRONLY | os.O_EXCL
+                        mode = stat.S_IWUSR | stat.S_IRUSR
+                        with os.fdopen(os.open(txt_path + '.txt', flags, mode), 'a') as f:
                             f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
 
                     if save_img or view_img:  # Add bbox to image
