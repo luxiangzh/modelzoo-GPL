@@ -35,6 +35,7 @@
 from pycocotools.coco import COCO
 import shutil
 import os
+import stat
 
 def convert(size, box):
     dw = 1. / size[0]
@@ -75,7 +76,9 @@ def coco2yolo(dataType):
         os.makedirs('./labels/%s' % dataType)
 
     coco = COCO(annFile)
-    list_file = open('%s.txt' % dataType, 'w')
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    list_file = os.fdopen(os.open('%s.txt' % dataType, flags, mode), 'w')
 
     imgIds = coco.getImgIds()
     catIds = coco.getCatIds()
@@ -94,7 +97,9 @@ def coco2yolo(dataType):
 
             if cat in classes:
                 objCount = objCount + 1
-                out_file = open('labels/%s/%s.txt' % (dataType, filename[:-4]), 'a')
+                flags = os.O_WRONLY | os.O_EXCL
+                mode = stat.S_IWUSR | stat.S_IRUSR
+                out_file =  os.fdopen(os.open('labels/%s/%s.txt' % (dataType, filename[:-4]), flags, mode), 'a')
                 cls_id = classes[cat]
                 box = anns['bbox']
                 size = [width, height]

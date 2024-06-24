@@ -45,6 +45,7 @@ TensorFlow.js:
 import argparse
 import json
 import os
+import stat
 import platform
 import subprocess
 import sys
@@ -143,7 +144,8 @@ def export_onnx(model, im, file, opset, train, dynamic, simplify, prefix=colorst
                     model_onnx,
                     dynamic_input_shape=dynamic,
                     input_shapes={'images': list(im.shape)} if dynamic else None)
-                assert check, 'assert check failed'
+                if not check:
+                    raise ValueError('check failed')
                 onnx.save(model_onnx, f)
             except Exception as e:
                 LOGGER.info(f'{prefix} simplifier failure: {e}')
@@ -163,7 +165,7 @@ def export_openvino(model, im, file, prefix=colorstr('OpenVINO:')):
         f = str(file).replace('.pt', '_openvino_model' + os.sep)
 
         cmd = f"mo --input_model {file.with_suffix('.onnx')} --output_dir {f}"
-        subprocess.check_output(cmd, shell=True)
+        subprocess.check_output(cmd, shell=False)
 
         LOGGER.info(f'{prefix} export success, saved as {f} ({file_size(f):.1f} MB)')
         return f
@@ -208,8 +210,10 @@ def export_engine(model, im, file, train, half, simplify, workspace=4, verbose=F
         onnx = file.with_suffix('.onnx')
 
         LOGGER.info(f'\n{prefix} starting export with TensorRT {trt.__version__}...')
-        assert im.device.type != 'cpu', 'export running on CPU but must be on GPU, i.e. `python export.py --device 0`'
-        assert onnx.exists(), f'failed to export ONNX file: {onnx}'
+        if im.device.type == 'cpu':
+            raise ValueError('export running on CPU but must be on GPU, i.e. `python export.py --device 0`')
+        if not onnx.exists():
+            raise ValueError(f'failed to export ONNX file: {onnx}')
         f = file.with_suffix('.engine')  # TensorRT engine file
         logger = trt.Logger(trt.Logger.INFO)
         if verbose:
@@ -237,7 +241,9 @@ def export_engine(model, im, file, train, half, simplify, workspace=4, verbose=F
         LOGGER.info(f'{prefix} building FP{16 if half else 32} engine in {f}')
         if half:
             config.set_flag(trt.BuilderFlag.FP16)
-        with builder.build_engine(network, config) as engine, open(f, 'wb') as t:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with builder.build_engine(network, config) as engine, os.fdopen(os.open(f, flags, mode), 'wb') as t:
             t.write(engine.serialize())
         LOGGER.info(f'{prefix} export success, saved as {f} ({file_size(f):.1f} MB)')
         return f
@@ -335,7 +341,9 @@ def export_tflite(keras_model, im, file, int8, data, ncalib, prefix=colorstr('Te
             f = str(file).replace('.pt', '-int8.tflite')
 
         tflite_model = converter.convert()
-        open(f, "wb").write(tflite_model)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        os.fdopen(os.open(f, flags, mode), 'wb').write(tflite_model)
         LOGGER.info(f'{prefix} export success, saved as {f} ({file_size(f):.1f} MB)')
         return f
     except Exception as e:
@@ -347,23 +355,24 @@ def export_edgetpu(keras_model, im, file, prefix=colorstr('Edge TPU:')):
     try:
         cmd = 'edgetpu_compiler --version'
         help_url = 'https://coral.ai/docs/edgetpu/compiler/'
-        assert platform.system() == 'Linux', f'export only supported on Linux. See {help_url}'
-        if subprocess.run(cmd + ' >/dev/null', shell=True).returncode != 0:
+        if platform.system() != 'Linux':
+            raise ValueError(f'export only supported on Linux. See {help_url}')
+        if subprocess.run(cmd + ' >/dev/null', shell=False).returncode != 0:
             LOGGER.info(f'\n{prefix} export requires Edge TPU compiler. Attempting install from {help_url}')
-            sudo = subprocess.run('sudo --version >/dev/null', shell=True).returncode == 0  # sudo installed on system
+            sudo = subprocess.run('sudo --version >/dev/null', shell=False).returncode == 0  # sudo installed on system
             for c in ['curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -',
                       'echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list',
                       'sudo apt-get update',
                       'sudo apt-get install edgetpu-compiler']:
-                subprocess.run(c if sudo else c.replace('sudo ', ''), shell=True, check=True)
-        ver = subprocess.run(cmd, shell=True, capture_output=True, check=True).stdout.decode().split()[-1]
+                subprocess.run(c if sudo else c.replace('sudo ', ''), shell=False, check=True)
+        ver = subprocess.run(cmd, shell=False, capture_output=True, check=True).stdout.decode().split()[-1]
 
         LOGGER.info(f'\n{prefix} starting export with Edge TPU compiler {ver}...')
         f = str(file).replace('.pt', '-int8_edgetpu.tflite')  # Edge TPU model
         f_tfl = str(file).replace('.pt', '-int8.tflite')  # TFLite model
 
         cmd = f"edgetpu_compiler -s {f_tfl}"
-        subprocess.run(cmd, shell=True, check=True)
+        subprocess.run(cmd, shell=False, check=True)
 
         LOGGER.info(f'{prefix} export success, saved as {f} ({file_size(f):.1f} MB)')
         return f
@@ -386,10 +395,12 @@ def export_tfjs(keras_model, im, file, prefix=colorstr('TensorFlow.js:')):
 
         cmd = f'tensorflowjs_converter --input_format=tf_frozen_model ' \
               f'--output_node_names="Identity,Identity_1,Identity_2,Identity_3" {f_pb} {f}'
-        subprocess.run(cmd, shell=True)
+        subprocess.run(cmd, shell=False)
 
         json = open(f_json).read()
-        with open(f_json, 'w') as j:  # sort JSON Identity_* in ascending order
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(f_json, flags, mode), 'w') as j:  # sort JSON Identity_* in ascending order
             subst = re.sub(
                 r'{"outputs": {"Identity.?.?": {"name": "Identity.?.?"}, '
                 r'"Identity.?.?": {"name": "Identity.?.?"}, '
@@ -436,20 +447,23 @@ def run(data=ROOT / 'data/coco128.yaml',  # 'dataset.yaml path'
     include = [x.lower() for x in include]  # to lowercase
     formats = tuple(export_formats()['Argument'][1:])  # --include arguments
     flags = [x in include for x in formats]
-    assert sum(flags) == len(include), f'ERROR: Invalid --include {include}, valid --include arguments are {formats}'
+    if sum(flags) != len(include):
+        raise ValueError(f'ERROR: Invalid --include {include}, valid --include arguments are {formats}')
     jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs = flags  # export booleans
     file = Path(url2file(weights) if str(weights).startswith(('http:/', 'https:/')) else weights)  # PyTorch weights
 
     # Load PyTorch model
     device = select_device(device)
-    assert not (device.type == 'cpu' and half), '--half only compatible with GPU export, i.e. use --device 0'
+    if device.type == 'cpu' and half:
+        raise ValueError('--half only compatible with GPU export, i.e. use --device 0')
     model = attempt_load(weights, map_location=device, inplace=True, fuse=True)  # load FP32 model
     nc, names = model.nc, model.names  # number of classes, class names
 
     # Checks
     imgsz *= 2 if len(imgsz) == 1 else 1  # expand
     opset = 12 if ('openvino' in include) else opset  # OpenVINO requires opset <= 12
-    assert nc == len(names), f'Model class count {nc} != len(names) {len(names)}'
+    if nc != len(names):
+        raise ValueError(f'Model class count {nc} != len(names) {len(names)}')
 
     # Input
     gs = int(max(model.stride))  # grid size (max stride)
@@ -493,7 +507,8 @@ def run(data=ROOT / 'data/coco128.yaml',  # 'dataset.yaml path'
     if any((saved_model, pb, tflite, edgetpu, tfjs)):
         if int8 or edgetpu:  # TFLite --int8 bug https://github.com/ultralytics/yolov5/issues/5707
             check_requirements(('flatbuffers==1.12',))  # required before `import tensorflow`
-        assert not (tflite and tfjs), 'TFLite and TF.js models must be exported separately, please pass only one type.'
+        if tflite and tfjs:
+            raise ValueError('TFLite and TF.js models must be exported separately, please pass only one type.')
         model, f[5] = export_saved_model(model, im, file, dynamic, tf_nms=nms or agnostic_nms or tfjs,
                                          agnostic_nms=agnostic_nms or tfjs, topk_per_class=topk_per_class,
                                          topk_all=topk_all, conf_thres=conf_thres, iou_thres=iou_thres)  # keras model

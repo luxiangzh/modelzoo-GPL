@@ -16,6 +16,7 @@ from config import *
 
 import json
 import os
+import stat
 import pprint as pp
 import random
 from datetime import date
@@ -72,7 +73,9 @@ def save_test_result(export_root, result):
 
 
 def export_experiments_config_as_json(args, experiment_path):
-    with open(os.path.join(experiment_path, 'config.json'), 'w') as outfile:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(os.path.join(experiment_path, 'config.json'), flags, mode), 'w') as outfile:
         json.dump(vars(args), outfile, indent=2)
 
 

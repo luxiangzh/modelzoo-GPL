@@ -13,6 +13,7 @@ import glob
 import logging
 import math
 import os
+import stat
 import random
 import shutil
 import time
@@ -158,8 +159,9 @@ class LoadImages:  # for inference
             self.new_video(videos[0])  # new video
         else:
             self.cap = None
-        assert self.nf > 0, f'No images or videos found in {p}. ' \
-                            f'Supported formats are:\nimages: {img_formats}\nvideos: {vid_formats}'
+        if self.nf <= 0:
+            raise FileNotFoundError(f'No images or videos found in {p}. ' \
+                            f'Supported formats are:\nimages: {img_formats}\nvideos: {vid_formats}')
 
     def __iter__(self):
         self.count = 0
@@ -191,7 +193,8 @@ class LoadImages:  # for inference
             # Read image
             self.count += 1
             img0 = cv2.imread(path)  # BGR
-            assert img0 is not None, 'Image Not Found ' + path
+            if img0 is None:
+                raise FileNotFoundError('Image Not Found ' + path)
             print(f'image {self.count}/{self.nf} {path}: ', end='')
 
         # Padded resize
@@ -253,7 +256,8 @@ class LoadWebcam:  # for inference
                         break
 
         # Print
-        assert ret_val, f'Camera Error {self.pipe}'
+        if not ret_val:
+            raise ValueError(f'Camera Error {self.pipe}')
         img_path = 'webcam.jpg'
         print(f'webcam {self.count}: ', end='')
 
@@ -294,7 +298,8 @@ class LoadStreams:  # multiple IP or RTSP cameras
                 import pafy
                 url = pafy.new(url).getbest(preftype="mp4").url
             cap = cv2.VideoCapture(url)
-            assert cap.isOpened(), f'Failed to open {s}'
+            if not cap.isOpened():
+                raise ValueError(f'Failed to open {s}')
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             self.fps = cap.get(cv2.CAP_PROP_FPS) % 100
@@ -387,7 +392,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                     raise Exception(f'{prefix}{p} does not exist')
             self.img_files = sorted([x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in img_formats])
             # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in img_formats])  # pathlib
-            assert self.img_files, f'{prefix}No images found'
+            if not self.img_files:
+                raise FileNotFoundError(f'{prefix}No images found')
         except Exception as e:
             raise Exception(f'{prefix}Error loading data from {path}: {e}\nSee {help_url}')
 
@@ -406,7 +412,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         if exists:
             d = f"Scanning '{cache_path}' images and labels... {nf} found, {nm} missing, {ne} empty, {nc} corrupted"
             tqdm(None, desc=prefix + d, total=n, initial=n)  # display cache results
-        assert nf > 0 or not augment, f'{prefix}No labels in {cache_path}. Can not train without labels. See {help_url}'
+        if not (nf > 0 or not augment):
+            raise ValueError(f'{prefix}No labels in {cache_path}. Can not train without labels. See {help_url}')
 
         # Read cache
         cache.pop('hash')  # remove hash
@@ -476,8 +483,10 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 im.verify()  # PIL verify
                 shape = exif_size(im)  # image size
                 segments = []  # instance segments
-                assert (shape[0] > 9) & (shape[1] > 9), f'image size {shape} <10 pixels'
-                assert im.format.lower() in img_formats, f'invalid image format {im.format}'
+                if not ((shape[0] > 9) & (shape[1] > 9)):
+                    raise ValueError(f'image size {shape} <10 pixels')
+                if im.format.lower() not in img_formats:
+                    raise KeyError(f'invalid image format {im.format}')
 
                 # verify labels
                 if os.path.isfile(lb_file):
@@ -490,10 +499,14 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                             l = np.concatenate((classes.reshape(-1, 1), segments2boxes(segments)), 1)  # (cls, xywh)
                         l = np.array(l, dtype=np.float32)
                     if len(l):
-                        assert l.shape[1] == 5, 'labels require 5 columns each'
-                        assert (l >= 0).all(), 'negative labels'
-                        assert (l[:, 1:] <= 1).all(), 'non-normalized or out of bounds coordinate labels'
-                        assert np.unique(l, axis=0).shape[0] == l.shape[0], 'duplicate labels'
+                        if l.shape[1] != 5:
+                            raise ValueError('labels require 5 columns each')
+                        if not (l >= 0).all():
+                            raise ValueError('negative labels')
+                        if not (l[:, 1:] <= 1).all():
+                            raise ValueError('non-normalized or out of bounds coordinate labels')
+                        if not np.unique(l, axis=0).shape[0] == l.shape[0]:
+                            raise ValueError('duplicate labels')
                     else:
                         ne += 1  # label empty
                         l = np.zeros((0, 5), dtype=np.float32)
@@ -645,7 +658,8 @@ def load_image(self, index):
     if img is None:  # not cached
         path = self.img_files[index]
         img = cv2.imread(path)  # BGR
-        assert img is not None, 'Image Not Found ' + path
+        if img is None:
+            raise FileNotFoundError('Image Not Found ' + path)
         h0, w0 = img.shape[:2]  # orig hw
         r = self.img_size / max(h0, w0)  # resize image to img_size
         if r != 1:  # always resize down, only resize up if training with augmentation
@@ -1051,7 +1065,8 @@ def extract_boxes(path='../coco128/'):  # from utils.datasets import *; extract_
 
                     b[[0, 2]] = np.clip(b[[0, 2]], 0, w)  # clip boxes outside of image
                     b[[1, 3]] = np.clip(b[[1, 3]], 0, h)
-                    assert cv2.imwrite(str(f), im[b[1]:b[3], b[0]:b[2]]), f'box failure in {f}'
+                    if not cv2.imwrite(str(f), im[b[1]:b[3], b[0]:b[2]]):
+                        raise ValueError(f'box failure in {f}')
 
 
 def autosplit(path='../coco128', weights=(0.9, 0.1, 0.0), annotated_only=False):
@@ -1073,5 +1088,7 @@ def autosplit(path='../coco128', weights=(0.9, 0.1, 0.0), annotated_only=False):
     print(f'Autosplitting images from {path}' + ', using *.txt labeled images only' * annotated_only)
     for i, img in tqdm(zip(indices, files), total=n):
         if not annotated_only or Path(img2label_paths([str(img)])[0]).exists():  # check label
-            with open(path / txt[i], 'a') as f:
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(path / txt[i], flags, mode), 'a') as f:
                 f.write(str(img) + '\n')  # add image to txt file

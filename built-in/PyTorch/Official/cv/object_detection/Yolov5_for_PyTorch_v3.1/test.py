@@ -39,6 +39,7 @@ import argparse
 import glob
 import json
 import os
+import stat
 import shutil
 from pathlib import Path
 
@@ -110,7 +111,7 @@ def test(data,
     # Configure
     model.eval()
     with open(data) as f:
-        data = yaml.load(f, Loader=yaml.FullLoader)  # model dict
+        data = yaml.load(f, Loader=yaml.SafeLoader)  # model dict
 
     nc = 1 if single_cls else int(data['nc'])  # number of classes
     iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
@@ -175,7 +176,9 @@ def test(data,
                 for *xyxy, conf, cls in x:
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                     line = (cls, conf, *xywh) if save_conf else (cls, *xywh)  # label format
-                    with open(str(out / Path(paths[si]).stem) + '.txt', 'a') as f:
+                    flags = os.O_WRONLY | os.O_EXCL
+                    mode = stat.S_IWUSR | stat.S_IRUSR
+                    with os.fdopen(os.open(str(out / Path(paths[si]).stem) + '.txt', flags, mode), 'a') as f:
                         f.write(('%g ' * len(line) + '\n') % line)
 
             # Clip boxes to image bounds
@@ -244,7 +247,10 @@ def test(data,
 
 
     # Print speeds
-    t = tuple(x / seen * 1E3 for x in (t0, t1, t0 + t1)) + (imgsz, imgsz, batch_size)  # tuple
+    try:
+        t = tuple(x / seen * 1E3 for x in (t0, t1, t0 + t1)) + (imgsz, imgsz, batch_size)  # tuple
+    except ZeroDivisionError:
+        raise ZeroDivisionError("You can't devide by 0!")
     if not training:
         print('Speed: %.1f/%.1f/%.1f ms inference/NMS/total per %gx%g image at batch-size %g' % t)
 
@@ -253,7 +259,9 @@ def test(data,
         w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
         file = save_dir / f"detections_val2017_{w}_results.json"  # predicted annotations file
         print('\nCOCO mAP with pycocotools... saving %s...' % file)
-        with open(file, 'w') as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(file, flags, mode), 'w') as f:
             json.dump(jdict, f)
 
         try:  # https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb

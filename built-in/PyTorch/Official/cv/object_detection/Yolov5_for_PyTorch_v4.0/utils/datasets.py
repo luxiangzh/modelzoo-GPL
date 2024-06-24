@@ -37,6 +37,7 @@ import glob
 import logging
 import math
 import os
+import stat
 import random
 import shutil
 import time
@@ -179,8 +180,9 @@ class LoadImages:  # for inference
             self.new_video(videos[0])  # new video
         else:
             self.cap = None
-        assert self.nf > 0, 'No images or videos found in %s. Supported formats are:\nimages: %s\nvideos: %s' % \
-                            (p, img_formats, vid_formats)
+        if self.nf <= 0:
+            raise FileNotFoundError('No images or videos found in %s. Supported formats are:\nimages: %s\nvideos: %s' % \
+                            (p, img_formats, vid_formats))
 
     def __iter__(self):
         self.count = 0
@@ -212,7 +214,8 @@ class LoadImages:  # for inference
             # Read image
             self.count += 1
             img0 = cv2.imread(path)  # BGR
-            assert img0 is not None, 'Image Not Found ' + path
+            if img0 is None:
+                raise FileNotFoundError('Image Not Found ' + path)
             print('image %g/%g %s: ' % (self.count, self.nf, path), end='')
 
         # Padded resize
@@ -273,7 +276,8 @@ class LoadWebcam:  # for inference
                         break
 
         # Print
-        assert ret_val, 'Camera Error %s' % self.pipe
+        if not ret_val:
+            raise ValueError('Camera Error %s' % self.pipe)
         img_path = 'webcam.jpg'
         print('webcam %g: ' % self.count, end='')
 
@@ -308,7 +312,8 @@ class LoadStreams:  # multiple IP or RTSP cameras
             # Start the thread to read frames from the video stream
             print('%g/%g: %s... ' % (i + 1, n, s), end='')
             cap = cv2.VideoCapture(eval(s) if s.isnumeric() else s)
-            assert cap.isOpened(), 'Failed to open %s' % s
+            if not cap.isOpened():
+                raise ValueError('Failed to open %s' % s)
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS) % 100
@@ -395,7 +400,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 else:
                     raise Exception('%s does not exist' % p)
             self.img_files = sorted([x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in img_formats])
-            assert self.img_files, 'No images found'
+            if not self.img_files:
+                raise FileNotFoundError('No images found')
         except Exception as e:
             raise Exception('Error loading data from %s: %s\nSee %s' % (path, e, help_url))
 
@@ -413,7 +419,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         [nf, nm, ne, nc, n] = cache.pop('results')  # found, missing, empty, corrupted, total
         desc = f"Scanning '{cache_path}' for images and labels... {nf} found, {nm} missing, {ne} empty, {nc} corrupted"
         tqdm(None, desc=desc, total=n, initial=n)
-        assert nf > 0 or not augment, f'No labels found in {cache_path}. Can not train without labels. See {help_url}'
+        if not (nf > 0 or not augment):
+            raise FileNotFoundError(f'No labels found in {cache_path}. Can not train without labels. See {help_url}')
 
         # Read cache
         cache.pop('hash')  # remove hash
@@ -480,7 +487,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 im = Image.open(im_file)
                 im.verify()  # PIL verify
                 shape = exif_size(im)  # image size
-                assert (shape[0] > 9) & (shape[1] > 9), 'image size <10 pixels'
+                if not ((shape[0] > 9) & (shape[1] > 9)):
+                    raise ValueError('image size <10 pixels')
 
                 # verify labels
                 if os.path.isfile(lb_file):
@@ -488,10 +496,14 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                     with open(lb_file, 'r') as f:
                         l = np.array([x.split() for x in f.read().strip().splitlines()], dtype=np.float32)  # labels
                     if len(l):
-                        assert l.shape[1] == 5, 'labels require 5 columns each'
-                        assert (l >= 0).all(), 'negative labels'
-                        assert (l[:, 1:] <= 1).all(), 'non-normalized or out of bounds coordinate labels'
-                        assert np.unique(l, axis=0).shape[0] == l.shape[0], 'duplicate labels'
+                        if l.shape[1] != 5:
+                            raise ValueError('labels require 5 columns each')
+                        if not (l >= 0).all():
+                            raise ValueError('negative labels')
+                        if not (l[:, 1:] <= 1).all():
+                            raise ValueError('non-normalized or out of bounds coordinate labels')
+                        if not np.unique(l, axis=0).shape[0] == l.shape[0]:
+                            raise ValueError('duplicate labels')
                     else:
                         ne += 1  # label empty
                         l = np.zeros((0, 5), dtype=np.float32)
@@ -648,7 +660,8 @@ def load_image(self, index):
     if img is None:  # not cached
         path = self.img_files[index]
         img = cv2.imread(path)  # BGR
-        assert img is not None, 'Image Not Found ' + path
+        if img is None:
+            raise FileNotFoundError('Image Not Found ' + path)
         h0, w0 = img.shape[:2]  # orig hw
         r = self.img_size / max(h0, w0)  # resize image to img_size
         if r != 1:  # always resize down, only resize up if training with augmentation
@@ -1048,7 +1061,8 @@ def extract_boxes(path='../coco128/'):  # from utils.datasets import *; extract_
 
                     b[[0, 2]] = np.clip(b[[0, 2]], 0, w)  # clip boxes outside of image
                     b[[1, 3]] = np.clip(b[[1, 3]], 0, h)
-                    assert cv2.imwrite(str(f), im[b[1]:b[3], b[0]:b[2]]), f'box failure in {f}'
+                    if not cv2.imwrite(str(f), im[b[1]:b[3], b[0]:b[2]]):
+                        raise ValueError(f'box failure in {f}')
 
 
 def autosplit(path='../coco128', weights=(0.9, 0.1, 0.0)):  # from utils.datasets import *; autosplit('../coco128')
@@ -1065,5 +1079,7 @@ def autosplit(path='../coco128', weights=(0.9, 0.1, 0.0)):  # from utils.dataset
     [(path / x).unlink() for x in txt if (path / x).exists()]  # remove existing
     for i, img in tqdm(zip(indices, files), total=n):
         if img.suffix[1:] in img_formats:
-            with open(path / txt[i], 'a') as f:
+            flags = os.O_WRONLY | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(path / txt[i], flags, mode), 'a') as f:
                 f.write(str(img) + '\n')  # add image to txt file

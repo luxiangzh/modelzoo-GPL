@@ -65,19 +65,24 @@ def run(
     model_type = type(attempt_load(weights, fuse=False))  # DetectionModel, SegmentationModel, etc.
     for i, (name, f, suffix, cpu, gpu) in export.export_formats().iterrows():  # index, (name, file, suffix, CPU, GPU)
         try:
-            assert i not in (9, 10), 'inference not supported'  # Edge TPU and TF.js are unsupported
-            assert i != 5 or platform.system() == 'Darwin', 'inference only supported on macOS>=10.13'  # CoreML
+            if i in (9, 10):  # Edge TPU and TF.js are unsupported
+                raise ValueError('inference not supported')
+            if not (i != 5 or platform.system() == 'Darwin'):
+                raise ValueError('inference only supported on macOS>=10.13' )
             if 'cpu' in device.type:
-                assert cpu, 'inference not supported on CPU'
+                if not cpu:
+                    raise ValueError('inference not supported on CPU')
             if 'cuda' in device.type:
-                assert gpu, 'inference not supported on GPU'
+                if not gpu:
+                    raise ValueError('inference not supported on GPU')
 
             # Export
             if f == '-':
                 w = weights  # PyTorch format
             else:
                 w = export.run(weights=weights, imgsz=[imgsz], include=[f], device=device, half=half)[-1]  # all others
-            assert suffix in str(w), 'export failed'
+            if suffix not in str(w):
+                raise ValueError('export failed')
 
             # Validate
             if model_type == SegmentationModel:
@@ -90,7 +95,8 @@ def run(
             y.append([name, round(file_size(w), 1), round(metric, 4), round(speed, 2)])  # MB, mAP, t_inference
         except Exception as e:
             if hard_fail:
-                assert type(e) is AssertionError, f'Benchmark --hard-fail for {name}: {e}'
+                if type(e) is not AssertionError:
+                    raise ValueError(f'Benchmark --hard-fail for {name}: {e}')
             LOGGER.warning(f'WARNING ⚠️ Benchmark failure for {name}: {e}')
             y.append([name, None, None, None])  # mAP, t_inference
         if pt_only and i == 0:
@@ -107,7 +113,8 @@ def run(
     if hard_fail and isinstance(hard_fail, str):
         metrics = py['mAP50-95'].array  # values to compare to floor
         floor = eval(hard_fail)  # minimum metric floor to pass, i.e. = 0.29 mAP for YOLOv5n
-        assert all(x > floor for x in metrics if pd.notna(x)), f'HARD FAIL: mAP50-95 < floor {floor}'
+        if not all(x > floor for x in metrics if pd.notna(x)):
+            raise ValueError(f'HARD FAIL: mAP50-95 < floor {floor}')
     return py
 
 
@@ -128,7 +135,8 @@ def test(
         try:
             w = weights if f == '-' else \
                 export.run(weights=weights, imgsz=[imgsz], include=[f], device=device, half=half)[-1]  # weights
-            assert suffix in str(w), 'export failed'
+            if suffix not in str(w):
+                raise ValueError('export failed')
             y.append([name, True])
         except Exception:
             y.append([name, False])  # mAP, t_inference

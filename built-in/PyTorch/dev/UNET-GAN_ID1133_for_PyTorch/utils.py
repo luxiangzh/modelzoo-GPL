@@ -43,6 +43,7 @@ or train_fns.py.
 from __future__ import print_function
 import sys
 import os
+import stat
 import numpy as np
 import time
 import datetime
@@ -835,7 +836,9 @@ class MetricsLogger(object):
       record = {}
     record.update(kwargs)
     record['_stamp'] = time.time()
-    with open(self.fname, 'a') as f:
+    flags = os.O_WRONLY | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(self.fname, flags, mode), 'a') as f:
       f.write(json.dumps(record, ensure_ascii=True) + '\n')
 
 
@@ -883,7 +886,9 @@ class MyLogger(object):
       elif self.logstyle == 'mat':
         print('.mat logstyle not currently supported...')
       else:
-        with open('%s/%s.log' % (self.root, arg), 'a') as f:
+        flags = os.O_WRONLY | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open('%s/%s.log' % (self.root, arg), flags, mode), 'a') as f:
           if isinstance(kwargs[arg],str):
             f.write( str(itr) + ": "  +  kwargs[arg] + "\n")
           else:
@@ -892,8 +897,10 @@ class MyLogger(object):
 
 # Write some metadata to the logs directory
 def write_metadata(logs_root, experiment_name, config, state_dict):
-  with open(('%s/%s/metalog.txt' %
-             (logs_root, experiment_name)), 'w') as writefile:
+  flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+  mode = stat.S_IWUSR | stat.S_IRUSR
+  with os.fdopen(os.open(('%s/%s/metalog.txt' %
+             (logs_root, experiment_name)), flags, mode), 'w') as writefile:
     writefile.write('datetime: %s\n' % str(datetime.datetime.now()))
     writefile.write('config: %s\n' % str(config))
     writefile.write('state: %s\n' %str(state_dict))

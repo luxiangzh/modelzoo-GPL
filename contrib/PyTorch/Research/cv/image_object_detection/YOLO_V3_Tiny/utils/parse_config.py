@@ -59,7 +59,8 @@ def parse_model_cfg(path):
     for x in mdefs[1:]:
         [f.append(k) for k in x if k not in f]
     u = [x for x in f if x not in supported]  # unsupported fields
-    assert not any(u), "Unsupported fields %s in %s. See https://github.com/ultralytics/yolov3/issues/631" % (u, path)
+    if any(u):
+        raise ValueError("Unsupported fields %s in %s. See https://github.com/ultralytics/yolov3/issues/631" % (u, path))
 
     return mdefs
 

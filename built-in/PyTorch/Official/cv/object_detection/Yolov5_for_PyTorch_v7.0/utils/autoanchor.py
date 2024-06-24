@@ -129,10 +129,12 @@ def kmean_anchors(dataset='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen
     # Kmeans init
     try:
         LOGGER.info(f'{PREFIX}Running kmeans for {n} anchors on {len(wh)} points...')
-        assert n <= len(wh)  # apply overdetermined constraint
+        if n > len(wh):
+            raise ValueError('ERROR: apply overdetermined constraint')
         s = wh.std(0)  # sigmas for whitening
         k = kmeans(wh / s, n, iter=30)[0] * s  # points
-        assert n == len(k)  # kmeans may return fewer points than requested if wh is insufficient or too similar
+        if len(k) != n:
+            raise ValueError(f'{prefix}ERROR: scipy.cluster.vq.kmeans requested {n} points but returned only {len(k)}')
     except Exception:
         LOGGER.warning(f'{PREFIX}WARNING ⚠️ switching strategies from kmeans to random init')
         k = np.sort(npr.rand(n * 2)).reshape(n, 2) * img_size  # random init

@@ -39,6 +39,7 @@
     by A. Brock, J. Donahue, and K. Simonyan (arXiv 1809.11096).
     Let's go. """
 import os
+import stat
 import functools
 import math
 import numpy as np
@@ -504,7 +505,9 @@ def run(config):
                 inception_metrics_dict["fid"].append((state_dict['itr'] , fid ) )
 
             if (i + 1) % loss_steps == 0:
-                with open(os.path.join(config["base_root"],"logs/inception_metrics_"+config["random_number_string"]+".p"), "wb") as h:
+                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                mode = stat.S_IWUSR | stat.S_IRUSR
+                with os.fdopen(os.open(os.path.join(config["base_root"],"logs/inception_metrics_"+config["random_number_string"]+".p"), flags, mode), 'wb') as h:
                     pickle.dump(inception_metrics_dict,h)
                     print("saved FID and IS at", os.path.join(config["base_root"],"logs/inception_metrics_"+config["random_number_string"]+".p") )
 

@@ -397,7 +397,8 @@ class Cutout(object):
     def __init__(self, n_holes, ratio, fill_value=0., p=1.0):
         self.n_holes = n_holes
         self.ratio = ratio
-        assert 0. <= fill_value <= 1., "the fill value is in a range of 0 to 1"
+        if fill_value < 0. or fill_value > 1.:
+            raise ValueError("the fill value is in a range of 0 to 1")
         self.fill_value = fill_value
         self.p = p
 

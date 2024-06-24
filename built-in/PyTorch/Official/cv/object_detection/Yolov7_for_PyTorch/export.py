@@ -217,7 +217,8 @@ if __name__ == '__main__':
 
                 print('\nStarting to simplify ONNX...')
                 onnx_model, check = onnxsim.simplify(onnx_model)
-                assert check, 'assert check failed'
+                if not check:
+                    raise ValueError('check failed')
             except Exception as e:
                 print(f'Simplifier failure: {e}')
 

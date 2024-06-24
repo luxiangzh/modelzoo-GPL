@@ -174,11 +174,10 @@ def numpy_calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
 
   sigma1 = np.atleast_2d(sigma1)
   sigma2 = np.atleast_2d(sigma2)
-
-  assert mu1.shape == mu2.shape, \
-    'Training and test mean vectors have different lengths'
-  assert sigma1.shape == sigma2.shape, \
-    'Training and test covariances have different dimensions'
+  if mu1.shape != mu2.shape:
+    raise ValueError('Training and test mean vectors have different lengths')
+  if sigma1.shape != sigma2.shape:
+    raise ValueError('Training and test covariances have different dimensions')
 
   diff = mu1 - mu2
 
@@ -225,11 +224,10 @@ def torch_calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
   --   : The Frechet Distance.
   """
 
-
-  assert mu1.shape == mu2.shape, \
-    'Training and test mean vectors have different lengths'
-  assert sigma1.shape == sigma2.shape, \
-    'Training and test covariances have different dimensions'
+  if mu1.shape != mu2.shape:
+    raise ValueError('Training and test mean vectors have different lengths')
+  if sigma1.shape != sigma2.shape:
+    raise ValueError('Training and test covariances have different dimensions')
 
   diff = mu1 - mu2
   # Run 50 itrs of newton-schulz to get the matrix sqrt of sigma1 dot sigma2

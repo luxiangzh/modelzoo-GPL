@@ -13,7 +13,7 @@ import torch
 
 def gsutil_getsize(url=''):
     # gs://bucket/file size https://cloud.google.com/storage/docs/gsutil/commands/du
-    s = subprocess.check_output('gsutil du %s' % url, shell=True).decode('utf-8')
+    s = subprocess.check_output('gsutil du %s' % url, shell=False).decode('utf-8')
     return eval(s.split(' ')[0]) if len(s) else 0  # bytes
 
 
@@ -39,7 +39,9 @@ def attempt_download(weights):
             url = 'https://github.com/ultralytics/yolov5/releases/download/v3.0/' + file
             print('Downloading %s to %s...' % (url, weights))
             torch.hub.download_url_to_file(url, weights)
-            assert os.path.exists(weights) and os.path.getsize(weights) > 1E6  # check
+            if not (os.path.exists(weights) and os.path.getsize(weights) > 1E6):  # check
+                os.remove(weights) if os.path.exists(weights) else None  # remove partial downloads
+                raise ValueError('ERROR: Download failure: %s' % msg)
         except Exception as e:  # GCP
             print('Download error: %s' % e)
             url = 'https://storage.googleapis.com/ultralytics/yolov5/ckpt/' + file

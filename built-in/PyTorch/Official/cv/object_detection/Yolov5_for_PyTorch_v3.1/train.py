@@ -38,6 +38,7 @@ if torch.__version__ >= '1.8':
 import argparse
 import logging
 import os
+import stat
 import random
 import shutil
 import time
@@ -95,22 +96,26 @@ def train(hyp, opt, device, tb_writer=None):
         opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
 
     # Save run settings
-    with open(log_dir / 'hyp.yaml', 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(log_dir / 'hyp.yaml', flags, mode), 'w') as f:
         yaml.dump(hyp, f, sort_keys=False)
-    with open(log_dir / 'opt.yaml', 'w') as f:
+    flags = os.O_WRONLY | os.O_EXCL
+    with os.fdopen(os.open(log_dir / 'opt.yaml', flags, mode), 'w') as f:
         yaml.dump(vars(opt), f, sort_keys=False)
 
     # Configure
     npu = device.type != 'cpu'
     init_seeds(2 + rank)
     with open(opt.data) as f:
-        data_dict = yaml.load(f, Loader=yaml.FullLoader)  # data dict
+        data_dict = yaml.load(f, Loader=yaml.SafeLoader)  # data dict
     with torch_distributed_zero_first(rank):
         check_dataset(data_dict)  # check
     train_path = data_dict['train']
     test_path = data_dict['val']
     nc, names = (1, ['item']) if opt.single_cls else (int(data_dict['nc']), data_dict['names'])  # number classes, names
-    assert len(names) == nc, '%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data)  # check
+    if len(names) != nc:  # check
+        raise ValueError('%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data))
 
     # Model
     pretrained = weights.endswith('.pt')
@@ -183,13 +188,16 @@ def train(hyp, opt, device, tb_writer=None):
 
         # Results
         if ckpt.get('training_results') is not None:
-            with open(results_file, 'w') as file:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            mode = stat.S_IWUSR | stat.S_IRUSR
+            with os.fdopen(os.open(results_file, flags, mode), 'w') as file:
                 file.write(ckpt['training_results'])  # write results.txt
 
         # Epochs
         start_epoch = ckpt['epoch'] + 1
         if opt.resume:
-            assert start_epoch > 0, '%s training to %g epochs is finished, nothing to resume.' % (weights, epochs)
+            if start_epoch <= 0:
+                raise ValueError('%s training to %g epochs is finished, nothing to resume.' % (weights, epochs))
             shutil.copytree(wdir, wdir.parent / f'weights_backup_epoch{start_epoch - 1}')  # save previous weights
         if epochs < start_epoch:
             logger.info('%s has been trained for %g epochs. Fine-tuning for %g additional epochs.' %
@@ -224,7 +232,8 @@ def train(hyp, opt, device, tb_writer=None):
                                             rank=rank, world_size=opt.world_size, workers=opt.workers)
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
     nb = len(dataloader)  # number of batches
-    assert mlc < nc, 'Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g' % (mlc, nc, opt.data, nc - 1)
+    if mlc >= nc:
+        raise ValueError('Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g' % (mlc, nc, opt.data, nc - 1))
 
     # Process 0
     if rank in [-1, 0]:
@@ -452,16 +461,18 @@ if __name__ == '__main__':
     if opt.resume:  # resume an interrupted run
         ckpt = opt.resume if isinstance(opt.resume, str) else get_latest_run()  # specified or most recent path
         log_dir = Path(ckpt).parent.parent  # runs/exp0
-        assert os.path.isfile(ckpt), 'ERROR: --resume checkpoint does not exist'
+        if not os.path.isfile(ckpt):
+            raise FileNotFoundError('ERROR: --resume checkpoint does not exist')
         with open(log_dir / 'opt.yaml') as f:
-            opt = argparse.Namespace(**yaml.load(f, Loader=yaml.FullLoader))  # replace
+            opt = argparse.Namespace(**yaml.load(f, Loader=yaml.SafeLoader))  # replace
         opt.cfg, opt.weights, opt.resume = '', ckpt, True
         logger.info('Resuming training from %s' % ckpt)
 
     else:
         # opt.hyp = opt.hyp or ('hyp.finetune.yaml' if opt.weights else 'hyp.scratch.yaml')
         opt.data, opt.cfg, opt.hyp = check_file(opt.data), check_file(opt.cfg), check_file(opt.hyp)  # check files
-        assert len(opt.cfg) or len(opt.weights), 'either --cfg or --weights must be specified'
+        if not (len(opt.cfg) or len(opt.weights)):
+            raise ValueError('either --cfg or --weights must be specified')
         opt.img_size.extend([opt.img_size[-1]] * (2 - len(opt.img_size)))  # extend to 2 sizes (train, test)
         log_dir = increment_dir(Path(opt.logdir) / 'exp', opt.name)  # runs/exp1
 
@@ -469,14 +480,16 @@ if __name__ == '__main__':
     torch.npu.set_device("npu:{}".format(opt.local_rank)) 
     device = torch.device("npu:{}".format(opt.local_rank)) 
     if opt.device != '0':
-        assert torch.npu.device_count() > opt.local_rank
+        if torch.npu.device_count() <= opt.local_rank:
+            raise ValueError('insufficient npu devices for DDP command')
         dist.init_process_group(backend='hccl', world_size=opt.world_size, rank=opt.local_rank)  # distributed backend
-        assert opt.batch_size % opt.world_size == 0, '--batch-size must be multiple of npu device count'
+        if opt.batch_size % opt.world_size != 0:
+            raise ValueError('--batch-size must be multiple of npu device count')
         opt.batch_size = opt.total_batch_size // opt.world_size
 
     # Hyperparameters
     with open(opt.hyp) as f:
-        hyp = yaml.load(f, Loader=yaml.FullLoader)  # load hyps
+        hyp = yaml.load(f, Loader=yaml.SafeLoader)  # load hyps
         if 'box' not in hyp:
             warn('Compatibility: %s missing "box" which was renamed from "giou" in %s' %
                  (opt.hyp, 'https://github.com/ultralytics/yolov5/pull/1120'))
@@ -524,7 +537,8 @@ if __name__ == '__main__':
                 'mosaic': (1, 0.0, 1.0),  # image mixup (probability)
                 'mixup': (1, 0.0, 1.0)}  # image mixup (probability)
 
-        assert opt.local_rank == -1, 'DDP mode not implemented for --evolve'
+        if opt.local_rank != -1:
+            raise ValueError('DDP mode not implemented for --evolve')
         opt.notest, opt.nosave = True, True  # only test/save final epoch
         # ei = [isinstance(x, (int, float)) for x in hyp.values()]  # evolvable indices
         yaml_file = Path(opt.logdir) / 'evolve' / 'hyp_evolved.yaml'  # save best result here

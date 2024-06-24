@@ -64,8 +64,10 @@ class TFConv(keras.layers.Layer):
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True, w=None):
         # ch_in, ch_out, weights, kernel, stride, padding, groups
         super().__init__()
-        assert g == 1, "TF v2.2 Conv2D does not support 'groups' argument"
-        assert isinstance(k, int), "Convolution with multiple kernels are not allowed."
+        if g != 1:
+            raise ValueError("TF v2.2 Conv2D does not support 'groups' argument")
+        if not isinstance(k, int):
+            raise ValueError("Convolution with multiple kernels are not allowed.")
         # TensorFlow convolution padding is inconsistent with PyTorch (e.g. k=3 s=2 'SAME' padding)
         # see https://stackoverflow.com/questions/52975843/comparing-conv2d-with-padding-between-tensorflow-and-pytorch
 
@@ -122,7 +124,8 @@ class TFConv2d(keras.layers.Layer):
     # Substitution for PyTorch nn.Conv2D
     def __init__(self, c1, c2, k, s=1, g=1, bias=True, w=None):
         super().__init__()
-        assert g == 1, "TF v2.2 Conv2D does not support 'groups' argument"
+        if g != 1:
+            raise ValueError("TF v2.2 Conv2D does not support 'groups' argument")
         self.conv = keras.layers.Conv2D(
             c2, k, s, 'VALID', use_bias=bias,
             kernel_initializer=keras.initializers.Constant(w.weight.permute(2, 3, 1, 0).numpy()),
@@ -248,7 +251,8 @@ class TFDetect(keras.layers.Layer):
 class TFUpsample(keras.layers.Layer):
     def __init__(self, size, scale_factor, mode, w=None):  # warning: all arguments needed including 'w'
         super().__init__()
-        assert scale_factor == 2, "scale_factor must be 2"
+        if scale_factor != 2:
+            raise ValueError("scale_factor must be 2")
         self.upsample = lambda x: tf.image.resize(x, (x.shape[1] * 2, x.shape[2] * 2), method=mode)
         # self.upsample = keras.layers.UpSampling2D(size=scale_factor, interpolation=mode)
         # with default arguments: align_corners=False, half_pixel_centers=False
@@ -262,7 +266,8 @@ class TFUpsample(keras.layers.Layer):
 class TFConcat(keras.layers.Layer):
     def __init__(self, dimension=1, w=None):
         super().__init__()
-        assert dimension == 1, "convert only NCHW to NHWC concat"
+        if dimension != 1:
+            raise ValueError("convert only NCHW to NHWC concat")
         self.d = 3
 
     def call(self, inputs):
@@ -330,7 +335,7 @@ class TFModel:
             import yaml  # for torch hub
             self.yaml_file = Path(cfg).name
             with open(cfg) as f:
-                self.yaml = yaml.load(f, Loader=yaml.FullLoader)  # model dict
+                self.yaml = yaml.load(f, Loader=yaml.SafeLoader)  # model dict
 
         # Define model
         if nc and nc != self.yaml['nc']:

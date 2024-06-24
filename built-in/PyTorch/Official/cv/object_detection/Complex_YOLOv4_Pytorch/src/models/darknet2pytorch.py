@@ -68,7 +68,8 @@ class Upsample_expand(nn.Module):
 
     def forward(self, x):
         stride = self.stride
-        assert (x.data.dim() == 4)
+        if x.data.dim() != 4:
+            raise RuntimeError("data's dim in not 4")
         B = x.data.size(0)
         C = x.data.size(1)
         H = x.data.size(2)
@@ -103,13 +104,16 @@ class Reorg(nn.Module):
 
     def forward(self, x):
         stride = self.stride
-        assert (x.data.dim() == 4)
+        if x.data.dim() != 4:
+            raise RuntimeError("data's dim in not 4")
         B = x.data.size(0)
         C = x.data.size(1)
         H = x.data.size(2)
         W = x.data.size(3)
-        assert (H % stride == 0)
-        assert (W % stride == 0)
+        if H % stride != 0:
+            raise RuntimeError("H % stride is not 0")
+        if H % stride != 0:
+            raise RuntimeError("W % stride is not 0")
         ws = stride
         hs = stride
         x = x.view(B, C, H / hs, hs, W / ws, ws).transpose(3, 4).contiguous()
@@ -340,11 +344,13 @@ class Darknet(nn.Module):
                         prev_filters = out_filters[layers[0]] // int(block['groups'])
                         prev_stride = out_strides[layers[0]] // int(block['groups'])
                 elif len(layers) == 2:
-                    assert (layers[0] == ind - 1 or layers[1] == ind - 1)
+                    if not (layers[0] == ind - 1 or layers[1] == ind - 1):
+                        raise RuntimeError("layers error")
                     prev_filters = out_filters[layers[0]] + out_filters[layers[1]]
                     prev_stride = out_strides[layers[0]]
                 elif len(layers) == 4:
-                    assert (layers[0] == ind - 1)
+                    if not (layers[0] == ind - 1):
+                        raise RuntimeError("layers error")
                     prev_filters = out_filters[layers[0]] + out_filters[layers[1]] + out_filters[layers[2]] + \
                                    out_filters[layers[3]]
                     prev_stride = out_strides[layers[0]]

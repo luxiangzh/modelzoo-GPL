@@ -18,7 +18,8 @@ def is_url(url, check=True):
     try:
         url = str(url)
         result = urllib.parse.urlparse(url)
-        assert all([result.scheme, result.netloc])  # check if is url
+        if not all([result.scheme, result.netloc]):
+            raise ValueError()
         return (urllib.request.urlopen(url).getcode() == 200) if check else True  # check if exists online
     except (AssertionError, urllib.request.HTTPError):
         return False
@@ -26,7 +27,7 @@ def is_url(url, check=True):
 
 def gsutil_getsize(url=''):
     # gs://bucket/file size https://cloud.google.com/storage/docs/gsutil/commands/du
-    s = subprocess.check_output(f'gsutil du {url}', shell=True).decode('utf-8')
+    s = subprocess.check_output(f'gsutil du {url}', shell=False).decode('utf-8')
     return eval(s.split(' ')[0]) if len(s) else 0  # bytes
 
 
@@ -45,7 +46,8 @@ def safe_download(file, url, url2=None, min_bytes=1E0, error_msg=''):
     try:  # url1
         LOGGER.info(f'Downloading {url} to {file}...')
         torch.hub.download_url_to_file(url, str(file), progress=LOGGER.level <= logging.INFO)
-        assert file.exists() and file.stat().st_size > min_bytes, assert_msg  # check
+        if not (file.exists() and file.stat().st_size > min_bytes):
+            raise ValueError(assert_msg)
     except Exception as e:  # url2
         if file.exists():
             file.unlink()  # remove partial downloads
@@ -92,7 +94,7 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0'):
                 tag, assets = github_assets(repo)  # latest release
             except Exception:
                 try:
-                    tag = subprocess.check_output('git tag', shell=True, stderr=subprocess.STDOUT).decode().split()[-1]
+                    tag = subprocess.check_output('git tag', shell=False, stderr=subprocess.STDOUT).decode().split()[-1]
                 except Exception:
                     tag = release
 
